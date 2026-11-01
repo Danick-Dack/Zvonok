@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Уроки 7Б</string>
-    <string name="widget_desc">Текущий урок, время до звонка и следующий кабинет</string>
+    <string name="widget_desc">Текущий урок, таймер до звонка и следующий кабинет</string>
+    <string name="widget_mini_name">Уроки 7Б · мини</string>
+    <string name="widget_mini_desc">Таймер до звонка и кабинет следующего урока</string>
 </resources>

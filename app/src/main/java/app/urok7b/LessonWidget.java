@@ -29,7 +29,7 @@ public class LessonWidget extends AppWidgetProvider {
 
     /** @return true, если на экране есть хотя бы один виджет. */
     static boolean updateAll(Context ctx, Updater.Display d) {
-        int[] ids = Updater.widgetIds(ctx);
+        int[] ids = Updater.widgetIds(ctx, LessonWidget.class);
         if (ids == null || ids.length == 0) return false;
 
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget);
