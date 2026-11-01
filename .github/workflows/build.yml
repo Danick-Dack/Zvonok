@@ -22,7 +22,19 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: Version
+        id: ver
+        run: echo "name=$(grep -oP 'versionName "\K[^"]+' app/build.gradle)" >> "$GITHUB_OUTPUT"
+
+      - name: Signing key
+        env:
+          SIGNING_KEY_B64: ${{ secrets.SIGNING_KEY_B64 }}
+        run: |
+          if [ -n "$SIGNING_KEY_B64" ]; then echo "$SIGNING_KEY_B64" | base64 -d > app/uroki7b.jks; fi
+
       - name: Build
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: gradle assembleRelease --no-daemon
 
       - name: Rename APK
@@ -36,7 +48,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: Уроки 7Б (сборка ${{ github.run_number }})
+          tag_name: v${{ steps.ver.outputs.name }}-build-${{ github.run_number }}
+          name: Уроки 7Б v${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})
+          body_path: .github/release-notes.md
           files: Uroki7B.apk
           make_latest: true

@@ -3,11 +3,11 @@ package app.urok7b;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
-import android.os.SystemClock;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
 
-/** Маленький виджет 2×1: таймер до звонка и кабинет следующего урока. */
+/** Маленький виджет 2×1: таймер до звонка слева, кабинет и предмет следующего урока справа. */
 public class MiniWidget extends AppWidgetProvider {
 
     @Override
@@ -20,28 +20,26 @@ public class MiniWidget extends AppWidgetProvider {
         Updater.update(ctx);
     }
 
+    @Override
+    public void onAppWidgetOptionsChanged(Context ctx, AppWidgetManager m, int id, Bundle options) {
+        Updater.update(ctx);
+    }
+
     static boolean updateAll(Context ctx, Updater.Display d) {
         int[] ids = Updater.widgetIds(ctx, MiniWidget.class);
-        if (ids == null || ids.length == 0) return false;
+        if (ids.length == 0) return false;
 
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_mini);
         rv.setTextViewText(R.id.m_label, d.miniLabel);
-
-        if (d.timer) {
-            long base = SystemClock.elapsedRealtime() + (d.target - System.currentTimeMillis());
-            rv.setViewVisibility(R.id.m_chrono, View.VISIBLE);
-            rv.setViewVisibility(R.id.m_title, View.GONE);
-            rv.setChronometer(R.id.m_chrono, base, null, true);
-            rv.setChronometerCountDown(R.id.m_chrono, true);
+        Updater.bindTimer(rv, R.id.m_chrono, R.id.m_big, d);
+        if (d.miniRoom.isEmpty() && d.miniSub.isEmpty()) {
+            rv.setViewVisibility(R.id.m_right, View.GONE);
         } else {
-            rv.setChronometer(R.id.m_chrono, SystemClock.elapsedRealtime(), null, false);
-            rv.setViewVisibility(R.id.m_chrono, View.GONE);
-            rv.setViewVisibility(R.id.m_title, View.VISIBLE);
-            rv.setTextViewText(R.id.m_title, d.title);
+            rv.setViewVisibility(R.id.m_right, View.VISIBLE);
+            Updater.bindRoom(rv, R.id.m_room, d.miniRoom);
+            rv.setTextViewText(R.id.m_sub, d.miniSub);
         }
-
-        rv.setTextViewText(R.id.m_next, d.miniNext);
-        rv.setViewVisibility(R.id.m_next, d.miniNext.isEmpty() ? View.GONE : View.VISIBLE);
+        Updater.bindProgress(rv, R.id.m_progress, d.progress);
 
         rv.setOnClickPendingIntent(R.id.m_root, Updater.openApp(ctx));
         AppWidgetManager.getInstance(ctx).updateAppWidget(ids, rv);

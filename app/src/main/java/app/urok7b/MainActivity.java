@@ -3,8 +3,12 @@ package app.urok7b;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -13,14 +17,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.SystemClock;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.Chronometer;
-import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -32,179 +34,269 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.List;
 
-/** Главный экран: живой таймер, расписание по дням и настройки. Чёрный минимализм. */
+/** Главный экран: живой таймер, расписание по дням и проверка настроек. Чёрный минимализм. */
 public class MainActivity extends Activity {
 
     private static final int BG = Color.BLACK;
     private static final int CARD = Color.parseColor("#0B0B0B");
-    private static final int LINE = Color.parseColor("#1C1C1C");
+    private static final int RAISED = Color.parseColor("#161616");
+    private static final int LINE = Color.parseColor("#1E1E1E");
     private static final int TEXT = Color.WHITE;
     private static final int SOFT = Color.parseColor("#BDBDBD");
-    private static final int MUTED = Color.parseColor("#6E6E6E");
-    private static final int FAINT = Color.parseColor("#3C3C3C");
+    private static final int MUTED = Color.parseColor("#7A7A7A");
+    private static final int FAINT = Color.parseColor("#3A3A3A");
 
     private static final DayOfWeek[] DAYS = {DayOfWeek.MONDAY, DayOfWeek.TUESDAY,
             DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY};
     private static final String[] DAY_SHORT = {"Пн", "Вт", "Ср", "Чт", "Пт"};
+    private static final String[] DAY_FULL = {"понедельник", "вторник", "среда", "четверг", "пятница",
+            "суббота", "воскресенье"};
     private static final String[] MONTHS = {"января", "февраля", "марта", "апреля", "мая", "июня",
             "июля", "августа", "сентября", "октября", "ноября", "декабря"};
 
-    private TextView heroLabel, heroTitle, heroLine1, heroLine2, dateText, daySummary;
+    private TextView dateText, pill, heroDots, heroTitle, heroRoom, heroBig;
+    private TextView sideHead, sideValue, statHead, statValue, nextHead, nextSubj, nextRoom, heroFoot;
+    private LinearLayout nextBlock, statCol;
     private Chronometer heroChrono;
     private ProgressBar heroProgress;
-    private LinearLayout chipsRow, dayList;
-    private Button exactBtn;
-    private final TextView[] chips = new TextView[DAYS.length];
+    private TextView dayTitle, dayMeta;
+    private LinearLayout dayList, checks;
+    private final LinearLayout[] chips = new LinearLayout[DAYS.length];
+    private final TextView[] chipText = new TextView[DAYS.length];
+    private final TextView[] chipDot = new TextView[DAYS.length];
 
     private DayOfWeek selectedDay;
     private String lastSignature = "";
     private long lastTarget = -1;
+    private boolean askedNotif;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable tick = new Runnable() {
         @Override public void run() {
             refresh(false);
-            handler.postDelayed(this, 20_000);
+            // следующее обновление — ровно на смене минуты (звонки всегда на целой минуте)
+            long ms = System.currentTimeMillis();
+            handler.postDelayed(this, 60_000 - ms % 60_000 + 300);
         }
     };
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().setStatusBarColor(BG);
-        getWindow().setNavigationBarColor(BG);
 
         ScrollView sv = new ScrollView(this);
         sv.setBackgroundColor(BG);
         sv.setFillViewport(true);
         sv.setVerticalScrollBarEnabled(false);
         LinearLayout root = vertical();
-        root.setPadding(dp(22), dp(30), dp(22), dp(36));
+        root.setPadding(dp(18), dp(26), dp(18), dp(34));
         sv.addView(root);
 
-        // шапка
+        // ---- шапка ----
         LinearLayout head = horizontal();
-        TextView app = caps("УРОКИ 7Б", MUTED);
-        app.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        dateText = caps("", MUTED);
-        head.addView(app);
-        head.addView(dateText);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout titles = vertical();
+        titles.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        titles.addView(text("Уроки", 30, TEXT, "sans-serif-medium"));
+        dateText = text("", 13, MUTED, null);
+        titles.addView(dateText);
+        head.addView(titles);
+        TextView badge = text("7Б", 15, BG, "sans-serif-medium");
+        badge.setGravity(Gravity.CENTER);
+        badge.setBackground(round(TEXT, 16, 0));
+        badge.setLayoutParams(new LinearLayout.LayoutParams(dp(46), dp(46)));
+        head.addView(badge);
         root.addView(head);
 
-        // главный блок
-        heroLabel = caps("", MUTED);
-        heroLabel.setPadding(0, dp(34), 0, 0);
-        root.addView(heroLabel);
+        // ---- главная карточка ----
+        LinearLayout hero = vertical();
+        GradientDrawable hg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.parseColor("#171717"), Color.parseColor("#080808")});
+        hg.setCornerRadius(dp(28));
+        hg.setStroke(dp(1), LINE);
+        hero.setBackground(hg);
+        hero.setPadding(dp(20), dp(18), dp(20), dp(20));
+        hero.setLayoutParams(margins(0, 22, 0, 0));
 
-        heroTitle = text("", 30, TEXT, "sans-serif-light");
-        heroTitle.setPadding(0, dp(4), 0, 0);
-        root.addView(heroTitle);
+        LinearLayout top = horizontal();
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        pill = caps("", SOFT);
+        pill.setPadding(dp(10), dp(5), dp(12), dp(5));
+        pill.setBackground(round(Color.parseColor("#202020"), 12, 0));
+        top.addView(pill);
+        top.addView(spacer());
+        heroDots = text("", 8, FAINT, null);
+        heroDots.setLetterSpacing(0.3f);
+        top.addView(heroDots);
+        hero.addView(top);
+
+        LinearLayout titleRow = horizontal();
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        titleRow.setLayoutParams(margins(0, 18, 0, 0));
+        heroTitle = text("", 26, TEXT, "sans-serif-medium");
+        heroTitle.setMaxLines(2);
+        heroTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        titleRow.addView(heroTitle);
+        heroRoom = chip("", true);
+        titleRow.addView(heroRoom);
+        hero.addView(titleRow);
 
         heroChrono = new Chronometer(this);
         heroChrono.setTextColor(TEXT);
-        heroChrono.setTextSize(76);
+        heroChrono.setTextSize(66);
         heroChrono.setTypeface(Typeface.create("sans-serif-thin", Typeface.NORMAL));
+        heroChrono.setFontFeatureSettings("tnum");
         heroChrono.setIncludeFontPadding(false);
         heroChrono.setCountDown(true);
-        root.addView(heroChrono);
+        heroChrono.setLayoutParams(margins(0, 8, 0, 0));
+        hero.addView(heroChrono);
+        heroBig = text("", 66, TEXT, "sans-serif-thin");
+        heroBig.setIncludeFontPadding(false);
+        heroBig.setLayoutParams(margins(0, 8, 0, 0));
+        hero.addView(heroBig);
 
         heroProgress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         heroProgress.setMax(100);
         heroProgress.setProgressDrawable(getDrawable(R.drawable.progress_mono));
-        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2));
-        pp.topMargin = dp(10);
+        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(4));
+        pp.topMargin = dp(12);
         heroProgress.setLayoutParams(pp);
-        root.addView(heroProgress);
+        hero.addView(heroProgress);
 
-        heroLine1 = text("", 16, TEXT, null);
-        heroLine1.setPadding(0, dp(16), 0, 0);
-        root.addView(heroLine1);
-        heroLine2 = text("", 16, MUTED, null);
-        heroLine2.setPadding(0, dp(4), 0, 0);
-        root.addView(heroLine2);
+        LinearLayout stats = horizontal();
+        stats.setLayoutParams(margins(0, 16, 0, 0));
+        LinearLayout sideCol = vertical();
+        sideCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        sideHead = caps("", MUTED);
+        sideValue = text("", 18, TEXT, "sans-serif-medium");
+        sideCol.addView(sideHead);
+        sideCol.addView(sideValue);
+        statCol = vertical();
+        statCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        statHead = caps("", MUTED);
+        statValue = text("", 18, SOFT, null);
+        statCol.addView(statHead);
+        statCol.addView(statValue);
+        stats.addView(sideCol);
+        stats.addView(statCol);
+        hero.addView(stats);
 
-        // выбор дня
-        HorizontalScrollView hs = new HorizontalScrollView(this);
-        hs.setHorizontalScrollBarEnabled(false);
-        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        hp.topMargin = dp(40);
-        hs.setLayoutParams(hp);
-        chipsRow = horizontal();
+        nextBlock = vertical();
+        nextBlock.setLayoutParams(margins(0, 18, 0, 0));
+        View div = new View(this);
+        div.setBackgroundColor(LINE);
+        div.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+        nextBlock.addView(div);
+        nextHead = caps("", MUTED);
+        nextHead.setPadding(0, dp(16), 0, dp(4));
+        nextBlock.addView(nextHead);
+        LinearLayout nextRow = horizontal();
+        nextRow.setGravity(Gravity.CENTER_VERTICAL);
+        nextSubj = text("", 18, TEXT, null);
+        nextSubj.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        nextRow.addView(nextSubj);
+        nextRoom = chip("", false);
+        nextRow.addView(nextRoom);
+        nextBlock.addView(nextRow);
+        hero.addView(nextBlock);
+
+        heroFoot = text("", 12, MUTED, null);
+        heroFoot.setPadding(0, dp(14), 0, 0);
+        hero.addView(heroFoot);
+        root.addView(hero);
+
+        // ---- выбор дня ----
+        LinearLayout seg = horizontal();
+        seg.setBackground(round(CARD, 18, LINE));
+        seg.setPadding(dp(4), dp(4), dp(4), dp(4));
+        seg.setLayoutParams(margins(0, 28, 0, 0));
         for (int i = 0; i < DAYS.length; i++) {
             final DayOfWeek day = DAYS[i];
-            TextView c = text(DAY_SHORT[i], 14, TEXT, "sans-serif-medium");
+            LinearLayout c = vertical();
             c.setGravity(Gravity.CENTER);
-            c.setPadding(dp(16), dp(8), dp(16), dp(8));
-            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            cp.rightMargin = dp(8);
-            c.setLayoutParams(cp);
+            c.setPadding(0, dp(8), 0, dp(4));
+            c.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            TextView t = text(DAY_SHORT[i], 15, TEXT, "sans-serif-medium");
+            t.setGravity(Gravity.CENTER);
+            TextView dot = text("•", 12, TEXT, null);
+            dot.setGravity(Gravity.CENTER);
+            dot.setIncludeFontPadding(false);
+            c.addView(t);
+            c.addView(dot);
             c.setOnClickListener(v -> {
                 selectedDay = day;
                 lastSignature = "";
                 refresh(true);
             });
             chips[i] = c;
-            chipsRow.addView(c);
+            chipText[i] = t;
+            chipDot[i] = dot;
+            seg.addView(c);
         }
-        hs.addView(chipsRow);
-        root.addView(hs);
+        root.addView(seg);
 
-        // список уроков дня
+        LinearLayout dayHead = horizontal();
+        dayHead.setGravity(Gravity.BOTTOM);
+        dayHead.setLayoutParams(margins(4, 22, 4, 10));
+        dayTitle = text("", 20, TEXT, "sans-serif-medium");
+        dayTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        dayMeta = text("", 12, MUTED, null);
+        dayHead.addView(dayTitle);
+        dayHead.addView(dayMeta);
+        root.addView(dayHead);
+
         dayList = vertical();
-        dayList.setPadding(0, dp(18), 0, 0);
+        dayList.setBackground(round(CARD, 24, LINE));
+        dayList.setPadding(dp(6), dp(6), dp(6), dp(6));
         root.addView(dayList);
-        daySummary = text("", 13, MUTED, null);
-        daySummary.setPadding(0, dp(12), 0, 0);
-        root.addView(daySummary);
 
-        // настройки
+        // ---- настройки ----
         TextView setHead = caps("НАСТРОЙКИ", MUTED);
-        setHead.setPadding(0, dp(40), 0, dp(12));
+        setHead.setPadding(dp(4), dp(34), 0, dp(10));
         root.addView(setHead);
-        LinearLayout set = card();
+        LinearLayout set = vertical();
+        set.setBackground(round(CARD, 24, LINE));
+        set.setPadding(dp(18), dp(8), dp(18), dp(8));
+
+        LinearLayout swRow = horizontal();
+        swRow.setGravity(Gravity.CENTER_VERTICAL);
+        swRow.setPadding(0, dp(10), 0, dp(10));
+        LinearLayout swText = twoLines("Уведомление", "Чёрное, на экране блокировки, не смахивается");
+        swText.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        swRow.addView(swText);
         Switch sw = new Switch(this);
-        sw.setText("Уведомление на экране блокировки");
-        sw.setTextColor(TEXT);
-        sw.setTextSize(15);
         sw.setChecked(Updater.notifEnabled(this));
+        sw.setThumbTintList(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
+                new int[]{TEXT, Color.parseColor("#8A8A8A")}));
+        sw.setTrackTintList(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
+                new int[]{Color.parseColor("#6A6A6A"), Color.parseColor("#2A2A2A")}));
         sw.setOnCheckedChangeListener((b, on) -> {
             Updater.prefs(this).edit().putBoolean(Updater.KEY_NOTIF, on).apply();
             Updater.update(this);
             refresh(true);
         });
-        set.addView(sw);
+        swRow.addView(sw);
+        set.addView(swRow);
 
-        exactBtn = button("Разрешить точное время звонков", v -> {
-            if (Build.VERSION.SDK_INT >= 31) {
-                startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                        Uri.parse("package:" + getPackageName())));
-            }
-        });
-        set.addView(exactBtn);
-
-        set.addView(button("Показ на экране блокировки", v -> {
-            Intent i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                    .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
-            startActivity(i);
-        }));
-
-        set.addView(button("Автозапуск и батарея (MIUI)", v ->
-                startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        Uri.parse("package:" + getPackageName())))));
-
-        TextView hint = text("Если уведомления нет на экране блокировки: «Показ на экране блокировки» → "
-                + "включи «Экран блокировки» и выбери показ полностью.\n\n"
-                + "Уведомление нельзя смахнуть, выключить его можно только переключателем выше. "
-                + "Приложение не просыпается, пока экран выключен, и обновляется, когда ты смотришь "
-                + "на телефон. На Xiaomi включи «Автозапуск», а в «Контроль активности» выбери «Нет ограничений».\n\n"
-                + "Виджеты: долгое нажатие на рабочий стол → Виджеты → «Уроки 7Б» (2×2) или «Уроки 7Б · мини» (2×1).",
-                12, MUTED, null);
-        hint.setLineSpacing(0, 1.15f);
-        hint.setPadding(0, dp(14), 0, 0);
-        set.addView(hint);
+        checks = vertical();
+        set.addView(checks);
         root.addView(set);
+
+        TextView hint = text("Виджеты: долгое нажатие на рабочий стол → Виджеты → «Уроки 7Б» (2×2) "
+                        + "или «Уроки 7Б · мини» (2×1).\n\n"
+                        + "Батарея: пока экран выключен, приложение ничего не делает и телефон не будит. "
+                        + "Таймеры тикают сами, без участия приложения.\n\n"
+                        + "Нет уведомления на экране блокировки? Настройки → Уведомления → «Экран блокировки» "
+                        + "→ показывать полностью.",
+                12, MUTED, null);
+        hint.setLineSpacing(0, 1.2f);
+        hint.setPadding(dp(4), dp(16), dp(4), 0);
+        root.addView(hint);
+
+        TextView footer = text("Уроки 7Б · версия " + versionName(), 11, FAINT, null);
+        footer.setGravity(Gravity.CENTER);
+        footer.setPadding(0, dp(28), 0, 0);
+        root.addView(footer);
 
         setContentView(sv);
     }
@@ -212,20 +304,16 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (Build.VERSION.SDK_INT >= 33
+        if (Build.VERSION.SDK_INT >= 33 && !askedNotif
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            askedNotif = true;
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
-        boolean needExact = false;
-        if (Build.VERSION.SDK_INT >= 31) {
-            AlarmManager am = getSystemService(AlarmManager.class);
-            needExact = am != null && !am.canScheduleExactAlarms();
-        }
-        exactBtn.setVisibility(needExact ? View.VISIBLE : View.GONE);
-
         Updater.update(this);
+        buildChecks();
         lastSignature = "";
         lastTarget = -1;
+        handler.removeCallbacks(tick);
         handler.post(tick);
     }
 
@@ -239,6 +327,7 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
         Updater.update(this);
+        buildChecks();
     }
 
     // ---------- обновление экрана ----------
@@ -250,27 +339,34 @@ public class MainActivity extends Activity {
         Updater.Display d = Updater.describe(s, nowMs);
 
         LocalDate date = now.toLocalDate();
-        String[] wd = {"ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"};
-        dateText.setText(wd[date.getDayOfWeek().getValue() - 1] + ", " + date.getDayOfMonth() + " "
-                + MONTHS[date.getMonthValue() - 1].toUpperCase());
+        String wd = DAY_FULL[date.getDayOfWeek().getValue() - 1];
+        dateText.setText(Character.toUpperCase(wd.charAt(0)) + wd.substring(1) + ", "
+                + date.getDayOfMonth() + " " + MONTHS[date.getMonthValue() - 1]);
 
-        heroLabel.setText(d.label);
+        pill.setText((d.live ? "●  " : "") + d.label);
+        pill.setTextColor(d.live ? TEXT : SOFT);
+        if (d.dotTotal > 0) {
+            heroDots.setVisibility(View.VISIBLE);
+            heroDots.setText(Updater.dots(d));
+        } else {
+            heroDots.setVisibility(View.GONE);
+        }
         heroTitle.setText(d.title);
-        heroLine1.setText(d.line1);
-        heroLine1.setVisibility(d.line1.isEmpty() ? View.GONE : View.VISIBLE);
-        heroLine2.setText(d.line2);
-        heroLine2.setVisibility(d.line2.isEmpty() ? View.GONE : View.VISIBLE);
+        setChip(heroRoom, d.room);
 
         if (d.timer) {
             heroChrono.setVisibility(View.VISIBLE);
+            heroBig.setVisibility(View.GONE);
             if (d.target != lastTarget) {
-                heroChrono.setBase(SystemClock.elapsedRealtime() + (d.target - nowMs));
+                heroChrono.setBase(Updater.chronoBase(d.target));
                 heroChrono.start();
                 lastTarget = d.target;
             }
         } else {
             heroChrono.stop();
             heroChrono.setVisibility(View.GONE);
+            heroBig.setVisibility(View.VISIBLE);
+            heroBig.setText(d.big);
             lastTarget = -1;
         }
 
@@ -281,26 +377,37 @@ public class MainActivity extends Activity {
             heroProgress.setVisibility(View.GONE);
         }
 
+        sideHead.setText(d.sideHead);
+        sideValue.setText(d.sideValue);
+        statHead.setText(d.statHead);
+        statValue.setText(d.statValue);
+        statCol.setVisibility(d.statHead.isEmpty() ? View.GONE : View.VISIBLE);
+
+        nextBlock.setVisibility(d.nextSubject.isEmpty() ? View.GONE : View.VISIBLE);
+        nextHead.setText(d.nextHead);
+        nextSubj.setText(d.nextSubject);
+        setChip(nextRoom, d.nextRoom);
+        heroFoot.setText(d.foot);
+        heroFoot.setVisibility(d.foot.isEmpty() ? View.GONE : View.VISIBLE);
 
         if (selectedDay == null) selectedDay = defaultDay(now, s);
-        String sig = selectedDay + "|" + s.kind + "|" + (s.current == null ? 0 : s.current.num)
-                + "|" + (s.next == null ? 0 : s.next.num) + "|" + date;
+        String sig = selectedDay + "|" + d.sig + "|" + date + "|" + (d.progress / 5);
         if (force || !sig.equals(lastSignature)) {
             lastSignature = sig;
             buildChips(now.getDayOfWeek());
-            buildDay(now, s);
+            buildDay(now, s, nowMs);
         }
     }
 
     /** Сегодня, а в выходные и после уроков — следующий учебный день. */
     private DayOfWeek defaultDay(ZonedDateTime now, Schedule.Status s) {
         DayOfWeek today = now.getDayOfWeek();
-        boolean weekday = today.getValue() <= 5;
-        if (weekday && s.kind != Schedule.Kind.AFTER) return today;
+        boolean school = !Schedule.lessons(today).isEmpty();
+        if (school && s.kind != Schedule.Kind.AFTER) return today;
         LocalDate d = now.toLocalDate();
         for (int i = 1; i <= 7; i++) {
             DayOfWeek w = d.plusDays(i).getDayOfWeek();
-            if (w.getValue() <= 5) return w;
+            if (w.getValue() <= 5 && !Schedule.lessons(w).isEmpty()) return w;
         }
         return DayOfWeek.MONDAY;
     }
@@ -308,20 +415,31 @@ public class MainActivity extends Activity {
     private void buildChips(DayOfWeek today) {
         for (int i = 0; i < DAYS.length; i++) {
             boolean sel = DAYS[i] == selectedDay;
-            GradientDrawable g = new GradientDrawable();
-            g.setCornerRadius(dp(18));
-            g.setColor(sel ? TEXT : BG);
-            g.setStroke(dp(1), sel ? TEXT : (DAYS[i] == today ? MUTED : LINE));
-            chips[i].setBackground(g);
-            chips[i].setTextColor(sel ? BG : (DAYS[i] == today ? TEXT : MUTED));
+            boolean isToday = DAYS[i] == today;
+            chips[i].setBackground(sel ? round(TEXT, 14, 0) : null);
+            chipText[i].setTextColor(sel ? BG : (isToday ? TEXT : MUTED));
+            chipDot[i].setTextColor(sel ? BG : TEXT);
+            chipDot[i].setVisibility(isToday ? View.VISIBLE : View.INVISIBLE);
         }
     }
 
-    private void buildDay(ZonedDateTime now, Schedule.Status s) {
+    private void buildDay(ZonedDateTime now, Schedule.Status s, long nowMs) {
         dayList.removeAllViews();
         boolean isToday = selectedDay == now.getDayOfWeek();
         int nowMin = now.getHour() * 60 + now.getMinute();
         List<Schedule.Lesson> list = Schedule.lessons(selectedDay);
+
+        String name = DAY_FULL[selectedDay.getValue() - 1];
+        dayTitle.setText(isToday ? "Сегодня" : Character.toUpperCase(name.charAt(0)) + name.substring(1));
+        if (list.isEmpty()) {
+            dayMeta.setText("");
+            TextView empty = text("Уроков нет", 15, MUTED, null);
+            empty.setPadding(dp(16), dp(18), dp(16), dp(18));
+            dayList.addView(empty);
+            return;
+        }
+        Schedule.Lesson last = list.get(list.size() - 1);
+        dayMeta.setText(Schedule.lessonsWord(list.size()) + " · " + list.get(0).startText() + "–" + last.endText());
 
         for (int i = 0; i < list.size(); i++) {
             Schedule.Lesson l = list.get(i);
@@ -329,72 +447,211 @@ public class MainActivity extends Activity {
                 Schedule.Lesson prev = list.get(i - 1);
                 boolean breakNow = isToday && s.kind == Schedule.Kind.BREAK
                         && s.next != null && s.next.num == l.num;
-                dayList.addView(breakRow(l.start - prev.end, breakNow));
+                dayList.addView(breakRow(l.start - prev.end, breakNow, breakNow ? s.targetMillis - nowMs : 0));
             }
             boolean current = isToday && s.kind == Schedule.Kind.LESSON && s.current.num == l.num;
             boolean next = isToday && (s.kind == Schedule.Kind.BREAK || s.kind == Schedule.Kind.BEFORE)
                     && s.next != null && s.next.num == l.num;
-            boolean past = isToday && !current && l.end <= nowMin
-                    && s.kind != Schedule.Kind.BEFORE;
-            dayList.addView(lessonRow(l, current, next, past));
-        }
-        if (!list.isEmpty()) {
-            Schedule.Lesson last = list.get(list.size() - 1);
-            daySummary.setText(list.size() + " уроков · " + list.get(0).startText() + "–" + last.endText());
-        } else {
-            daySummary.setText("");
+            boolean past = isToday && !current && l.end <= nowMin;
+            int progress = current ? Updater.describe(s, nowMs).progress : -1;
+            dayList.addView(lessonRow(l, current, next, past, progress, current ? s.targetMillis - nowMs : 0));
         }
     }
 
-    private View lessonRow(Schedule.Lesson l, boolean current, boolean next, boolean past) {
+    private View lessonRow(Schedule.Lesson l, boolean current, boolean next, boolean past,
+                           int progress, long leftMs) {
         LinearLayout r = horizontal();
         r.setGravity(Gravity.CENTER_VERTICAL);
-        r.setPadding(dp(14), dp(12), dp(14), dp(12));
-        if (current || next) {
-            GradientDrawable g = new GradientDrawable();
-            g.setCornerRadius(dp(16));
-            g.setColor(current ? Color.parseColor("#161616") : CARD);
-            g.setStroke(dp(1), current ? Color.parseColor("#3A3A3A") : LINE);
-            r.setBackground(g);
-        }
-        int main = past ? FAINT : TEXT;
-        int sub = past ? FAINT : MUTED;
+        r.setPadding(dp(12), dp(12), dp(12), dp(12));
+        if (current) r.setBackground(round(RAISED, 18, Color.parseColor("#2C2C2C")));
+        else if (next) r.setBackground(round(Color.parseColor("#101010"), 18, LINE));
+        if (past) r.setAlpha(0.38f);
 
-        TextView num = text(String.valueOf(l.num), 13, sub, "sans-serif-medium");
-        num.setLayoutParams(new LinearLayout.LayoutParams(dp(22), ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout time = vertical();
+        time.setLayoutParams(new LinearLayout.LayoutParams(dp(46), ViewGroup.LayoutParams.WRAP_CONTENT));
+        time.addView(text(l.startText(), 14, TEXT, "sans-serif-medium"));
+        time.addView(text(l.endText(), 11, MUTED, null));
+
+        View bar = new View(this);
+        bar.setBackground(round(current ? TEXT : (next ? Color.parseColor("#8A8A8A") : Color.parseColor("#2A2A2A")), 1, 0));
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(dp(2), ViewGroup.LayoutParams.MATCH_PARENT);
+        bp.leftMargin = dp(4);
+        bp.rightMargin = dp(14);
+        bar.setLayoutParams(bp);
 
         LinearLayout mid = vertical();
         mid.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView subj = text(l.subject, 16, main, current ? "sans-serif-medium" : null);
-        TextView time = text(l.startText() + " – " + l.endText()
-                + (current ? "   · сейчас" : next ? "   · дальше" : ""), 12, sub, null);
-        time.setPadding(0, dp(2), 0, 0);
+        TextView subj = text(l.subject, 16, TEXT, current ? "sans-serif-medium" : null);
+        String info = "Урок " + l.num + " · " + (l.end - l.start) + " мин";
+        if (current) info = "Сейчас · осталось " + Schedule.fmtLeft(leftMs);
+        else if (next) info = "Следующий · урок " + l.num;
+        TextView sub = text(info, 12, current ? SOFT : MUTED, null);
+        sub.setPadding(0, dp(2), 0, 0);
         mid.addView(subj);
-        mid.addView(time);
+        mid.addView(sub);
+        if (current && progress >= 0) {
+            ProgressBar pb = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+            pb.setMax(100);
+            pb.setProgress(progress);
+            pb.setProgressDrawable(getDrawable(R.drawable.progress_mono));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3));
+            lp.topMargin = dp(8);
+            pb.setLayoutParams(lp);
+            mid.addView(pb);
+        }
 
-        TextView room = text(l.room, 13, current ? TEXT : sub, "sans-serif-medium");
-        room.setGravity(Gravity.CENTER);
-        room.setPadding(dp(10), dp(4), dp(10), dp(4));
-        GradientDrawable rg = new GradientDrawable();
-        rg.setCornerRadius(dp(9));
-        rg.setColor(Color.TRANSPARENT);
-        rg.setStroke(dp(1), past ? Color.parseColor("#161616") : LINE);
-        room.setBackground(rg);
-
-        r.addView(num);
+        r.addView(time);
+        r.addView(bar);
         r.addView(mid);
-        r.addView(room);
+        if (!l.room.isEmpty()) r.addView(chip(l.room, current));
         return r;
     }
 
-    private View breakRow(int minutes, boolean now) {
-        TextView t = text((now ? "● перемена сейчас · " : "перемена ") + minutes + " мин",
-                11, now ? SOFT : FAINT, null);
-        t.setPadding(dp(50), dp(2), 0, dp(2));
+    private View breakRow(int minutes, boolean now, long leftMs) {
+        TextView t = text(now ? "●  перемена сейчас · ещё " + Schedule.fmtLeft(leftMs)
+                : "перемена " + minutes + " мин", 11, now ? SOFT : FAINT, now ? "sans-serif-medium" : null);
+        t.setPadding(dp(76), dp(3), 0, dp(3));
         return t;
     }
 
+    // ---------- проверка настроек ----------
+
+    private void buildChecks() {
+        checks.removeAllViews();
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        boolean notifOk = nm != null && nm.areNotificationsEnabled();
+        if (notifOk) {
+            NotificationChannel ch = nm.getNotificationChannel(Updater.CHANNEL);
+            notifOk = ch == null || ch.getImportance() != NotificationManager.IMPORTANCE_NONE;
+        }
+        checks.addView(checkRow("Показ уведомления", "Разрешение и экран блокировки", notifOk, v -> {
+            Intent i = new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName())
+                    .putExtra(Settings.EXTRA_CHANNEL_ID, Updater.CHANNEL);
+            if (!open(i)) open(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
+        }));
+
+        if (Build.VERSION.SDK_INT >= 31) {
+            AlarmManager am = getSystemService(AlarmManager.class);
+            boolean exactOk = am == null || am.canScheduleExactAlarms();
+            checks.addView(checkRow("Точное время звонков", "Таймер переключается ровно по звонку", exactOk, v ->
+                    open(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                            Uri.parse("package:" + getPackageName())))));
+        }
+
+        PowerManager pm = getSystemService(PowerManager.class);
+        boolean batteryOk = pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
+        checks.addView(checkRow("Без ограничений батареи", "Чтобы MIUI не закрывал уведомление. Расход не растёт",
+                batteryOk, v -> {
+                    Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            Uri.parse("package:" + getPackageName()));
+                    if (!open(i)) open(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                }));
+
+        checks.addView(checkRow("Автозапуск (Xiaomi)", "Чтобы уведомление вернулось после перезагрузки",
+                null, v -> {
+                    Intent i = new Intent().setComponent(new ComponentName("com.miui.securitycenter",
+                            "com.miui.permcenter.autostart.AutoStartManagementActivity"));
+                    if (!open(i)) open(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:" + getPackageName())));
+                }));
+    }
+
+    /** ok: true — готово, false — нужно включить, null — проверить нельзя. */
+    private View checkRow(String title, String sub, Boolean ok, View.OnClickListener l) {
+        LinearLayout r = horizontal();
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setPadding(0, dp(12), 0, dp(12));
+        LinearLayout t = twoLines(title, sub);
+        t.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        r.addView(t);
+        TextView st;
+        if (ok == null) {
+            st = text("Открыть", 12, TEXT, "sans-serif-medium");
+            st.setBackground(round(0, 12, Color.parseColor("#3A3A3A")));
+        } else if (ok) {
+            st = text("✓ Готово", 12, MUTED, "sans-serif-medium");
+        } else {
+            st = text("Включить", 12, BG, "sans-serif-medium");
+            st.setBackground(round(TEXT, 12, 0));
+        }
+        st.setPadding(dp(12), dp(6), dp(12), dp(6));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        sp.leftMargin = dp(10);
+        st.setLayoutParams(sp);
+        r.addView(st);
+        r.setOnClickListener(l);
+        return r;
+    }
+
+    private boolean open(Intent i) {
+        try {
+            startActivity(i);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private String versionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     // ---------- helpers ----------
+
+    private LinearLayout twoLines(String title, String sub) {
+        LinearLayout t = vertical();
+        t.addView(text(title, 15, TEXT, null));
+        TextView s = text(sub, 12, MUTED, null);
+        s.setPadding(0, dp(2), 0, 0);
+        t.addView(s);
+        return t;
+    }
+
+    private TextView chip(String s, boolean now) {
+        TextView t = text(s, 13, now ? BG : TEXT, "sans-serif-medium");
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(dp(10), dp(4), dp(10), dp(4));
+        t.setBackground(now ? round(TEXT, 9, 0) : round(Color.parseColor("#1A1A1A"), 9, Color.parseColor("#2C2C2C")));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.leftMargin = dp(10);
+        t.setLayoutParams(lp);
+        return t;
+    }
+
+    private void setChip(TextView chip, String room) {
+        boolean has = room != null && !room.isEmpty();
+        chip.setVisibility(has ? View.VISIBLE : View.GONE);
+        if (has) chip.setText(room);
+    }
+
+    private GradientDrawable round(int color, int radiusDp, int stroke) {
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(dp(radiusDp));
+        g.setColor(color);
+        if (stroke != 0) g.setStroke(dp(1), stroke);
+        return g;
+    }
+
+    private View spacer() {
+        View v = new View(this);
+        v.setLayoutParams(new LinearLayout.LayoutParams(0, 1, 1f));
+        return v;
+    }
+
+    private LinearLayout.LayoutParams margins(int l, int t, int r, int b) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(dp(l), dp(t), dp(r), dp(b));
+        return lp;
+    }
 
     private LinearLayout vertical() {
         LinearLayout l = new LinearLayout(this);
@@ -408,19 +665,8 @@ public class MainActivity extends Activity {
         return l;
     }
 
-    private LinearLayout card() {
-        LinearLayout c = vertical();
-        GradientDrawable g = new GradientDrawable();
-        g.setCornerRadius(dp(22));
-        g.setColor(CARD);
-        g.setStroke(dp(1), LINE);
-        c.setBackground(g);
-        c.setPadding(dp(18), dp(16), dp(18), dp(18));
-        return c;
-    }
-
     private TextView caps(String s, int color) {
-        TextView t = text(s, 11, color, "sans-serif-medium");
+        TextView t = text(s, 10, color, "sans-serif-medium");
         t.setLetterSpacing(0.16f);
         return t;
     }
@@ -432,26 +678,6 @@ public class MainActivity extends Activity {
         t.setTextColor(color);
         if (family != null) t.setTypeface(Typeface.create(family, Typeface.NORMAL));
         return t;
-    }
-
-    private Button button(String s, View.OnClickListener l) {
-        Button b = new Button(this);
-        b.setText(s);
-        b.setAllCaps(false);
-        b.setTextColor(TEXT);
-        b.setTextSize(14);
-        b.setStateListAnimator(null);
-        GradientDrawable g = new GradientDrawable();
-        g.setCornerRadius(dp(14));
-        g.setColor(Color.parseColor("#141414"));
-        g.setStroke(dp(1), LINE);
-        b.setBackground(g);
-        b.setOnClickListener(l);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
-        lp.topMargin = dp(10);
-        b.setLayoutParams(lp);
-        return b;
     }
 
     private int dp(int v) {

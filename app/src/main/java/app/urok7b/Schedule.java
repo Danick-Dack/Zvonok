@@ -10,7 +10,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-/** Расписание 7Б (2 четверть 2026–2027) и расчёт текущего состояния. */
+/** Расписание 7Б (2 четверть 2026–2027) и расчёт текущего состояния. Менять уроки — в BELLS и WEEK. */
 public final class Schedule {
 
     public static final class Lesson {
@@ -45,6 +45,9 @@ public final class Schedule {
         public Lesson current;       // урок сейчас (LESSON) или предыдущий урок (BREAK)
         public Lesson next;          // следующий урок
         public String nextDayLabel;  // "Завтра", "Понедельник"... (только AFTER / DAY_OFF)
+        public String nextDayShort;  // "Завтра", "Пн"...
+        public String nextDayWhen;   // "завтра", "в понедельник"...
+        public String todayEnd;      // во сколько сегодня последний звонок
         public int todayCount;       // сколько уроков сегодня
         public int nextDayCount;     // сколько уроков в тот день
         public String nextDayEnd;    // во сколько заканчиваются
@@ -146,6 +149,7 @@ public final class Schedule {
             Lesson first = list.get(0);
             Lesson last = list.get(list.size() - 1);
             s.todayCount = list.size();
+            s.todayEnd = last.endText();
             if (sec < first.start * 60) {
                 s.kind = Kind.BEFORE;
                 s.next = first;
@@ -192,6 +196,8 @@ public final class Schedule {
             s.nextDayCount = l.size();
             s.nextDayEnd = l.get(l.size() - 1).endText();
             s.nextDayLabel = d == 1 ? "Завтра" : dayName(date.getDayOfWeek());
+            s.nextDayShort = d == 1 ? "Завтра" : dayShort(date.getDayOfWeek());
+            s.nextDayWhen = d == 1 ? "завтра" : dayWhen(date.getDayOfWeek());
             s.targetMillis = at(date, first.start, zone);
             s.windowStartMillis = at(date, first.start - LEAD_MINUTES, zone);
             break;
@@ -210,6 +216,26 @@ public final class Schedule {
             case SATURDAY: return "Суббота";
             default: return "Воскресенье";
         }
+    }
+
+    public static String dayShort(DayOfWeek d) {
+        String[] n = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
+        return n[d.getValue() - 1];
+    }
+
+    /** "в понедельник", "во вторник", "в среду"... */
+    public static String dayWhen(DayOfWeek d) {
+        String[] n = {"в понедельник", "во вторник", "в среду", "в четверг", "в пятницу",
+                "в субботу", "в воскресенье"};
+        return n[d.getValue() - 1];
+    }
+
+    /** "1 урок", "3 урока", "7 уроков". */
+    public static String lessonsWord(int n) {
+        int a = n % 10, b = n % 100;
+        if (a == 1 && b != 11) return n + " урок";
+        if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return n + " урока";
+        return n + " уроков";
     }
 
     /** "12 мин", "1 ч 05 мин". Округляет вверх до минуты. */
