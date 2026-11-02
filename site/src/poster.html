@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<link rel="icon" href="@FAVICON@">
+<title>Звонок · плакат</title>
+<style>
+@page{size:A4;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;color:#fff;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.page{width:210mm;min-height:297mm;margin:0 auto;padding:22mm 20mm;display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.k{font-size:13pt;letter-spacing:.2em;text-transform:uppercase;color:#8a8a91;font-weight:600}
+h1{font-size:96pt;font-weight:250;letter-spacing:-.05em;line-height:.95;margin-top:10mm}
+h1 b{font-weight:700}
+.lead{font-size:20pt;color:#d0d0d4;margin-top:8mm;max-width:150mm;line-height:1.35}
+.timer{font-size:64pt;font-weight:200;margin-top:14mm;font-variant-numeric:tabular-nums}
+.timer small{display:block;font-size:12pt;letter-spacing:.2em;color:#8a8a91;font-weight:600}
+.row{display:flex;gap:12mm;align-items:center;margin-top:auto}
+.qr{background:#fff;border-radius:8mm;padding:5mm;width:70mm;height:70mm;flex:none}
+ul{list-style:none;font-size:15pt;line-height:1.7;color:#d0d0d4}
+ul li:before{content:"— ";color:#5a5a62}
+.url{font-size:15pt;margin-top:6mm;font-weight:600}
+.f{font-size:10pt;color:#5a5a62;margin-top:12mm}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="k">Лицей №165 · для всех классов</div>
+  <h1>Звонок<b>.</b></h1>
+  <p class="lead">Сколько до звонка, какой следующий урок и в каком кабинете. Прямо на экране блокировки.</p>
+  <div class="timer"><small>До звонка</small>24:16</div>
+  <div class="row">
+    <div class="qr">@QR@</div>
+    <div>
+      <ul>
+        <li>Все классы с 7А по 11Г</li>
+        <li>Android: уведомление и виджеты</li>
+        <li>iPhone: сайт как приложение</li>
+        <li>Без интернета и рекламы</li>
+      </ul>
+      <div class="url">@SITE_URL@</div>
+    </div>
+  </div>
+  <div class="f">Наведи камеру на QR-код. Неофициальный проект ученика лицея.</div>
+</div>
+</body>
+</html>

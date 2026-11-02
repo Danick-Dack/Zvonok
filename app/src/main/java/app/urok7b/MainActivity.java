@@ -53,6 +53,8 @@ public class MainActivity extends Activity {
     private static final String[] DAY_SHORT = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб"};
     /** Адрес сайта (GitHub Pages). Там же — свежий APK и инструкции. */
     static final String SITE = "https://danick-dack.github.io/uroki-7b/";
+    /** Всегда последняя версия APK. Скачивает браузер — самому приложению интернет не нужен. */
+    static final String APK_URL = "https://github.com/Danick-Dack/uroki-7b/releases/latest/download/Zvonok-165.apk";
     private static final String[] DAY_FULL = {"понедельник", "вторник", "среда", "четверг", "пятница",
             "суббота", "воскресенье"};
     private static final String[] MONTHS = {"января", "февраля", "марта", "апреля", "мая", "июня",
@@ -301,6 +303,9 @@ public class MainActivity extends Activity {
         LinearLayout share = vertical();
         share.setBackground(round(CARD, 24, LINE));
         share.setPadding(dp(18), dp(4), dp(18), dp(4));
+        share.addView(Ui.linkRow(this, "Обновить приложение",
+                "Скачать последнюю версию и установить поверх", "v" + versionName(), v -> update()));
+        share.addView(Ui.divider(this));
         share.addView(Ui.linkRow(this, "Отправить приложение другу",
                 "APK по Bluetooth, Quick Share, Telegram — даже без интернета", null, v -> shareApk()));
         share.addView(Ui.divider(this));
@@ -635,6 +640,19 @@ public class MainActivity extends Activity {
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         i.setClipData(ClipData.newRawUri("Звонок", ApkProvider.URI));
         open(Intent.createChooser(i, "Отправить приложение"));
+    }
+
+    /**
+     * Обновление: браузер скачивает свежий APK, Android предлагает установить поверх.
+     * У приложения нет разрешения на интернет, поэтому проверка идёт через браузер — так безопаснее.
+     */
+    private void update() {
+        if (!open(new Intent(Intent.ACTION_VIEW, Uri.parse(APK_URL)))) {
+            android.widget.Toast.makeText(this, "Открой в браузере: " + SITE, android.widget.Toast.LENGTH_LONG).show();
+        } else {
+            android.widget.Toast.makeText(this, "Когда файл скачается — открой его и нажми «Обновить»",
+                    android.widget.Toast.LENGTH_LONG).show();
+        }
     }
 
     private void shareSite() {

@@ -2,6 +2,10 @@ name: Build APK
 
 on:
   push:
+    paths-ignore:
+      - 'site/**'
+      - 'tools/**'
+      - 'README.md'
   workflow_dispatch:
 
 permissions:
@@ -37,19 +41,27 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: gradle assembleRelease --no-daemon
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk Uroki7B.apk
+      - name: Collect files
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk Zvonok-165.apk
+          cp Zvonok-165.apk Uroki7B.apk
+          cp site/index.html Zvonok-165.html
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Uroki7B
-          path: Uroki7B.apk
+          name: Zvonok-165
+          path: |
+            Zvonok-165.apk
+            Zvonok-165.html
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.name }}-build-${{ github.run_number }}
-          name: Уроки 7Б v${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})
+          name: Звонок v${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})
           body_path: .github/release-notes.md
-          files: Uroki7B.apk
+          files: |
+            Zvonok-165.apk
+            Uroki7B.apk
+            Zvonok-165.html
           make_latest: true

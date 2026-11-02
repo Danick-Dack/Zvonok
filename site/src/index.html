@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Звонок — расписание всех классов лицея №165: таймер до звонка, кабинет и следующий урок. Работает без интернета. Приложение для Android и виджеты для iPhone.">
+<meta property="og:title" content="Звонок — расписание лицея №165">
+<meta property="og:description" content="Сколько до звонка, где следующий урок и какой кабинет. Все классы, без интернета, без рекламы.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Звонок">
+<link rel="icon" href="@FAVICON@">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Звонок · Лицей №165</title>
+<style>
+:root{
+  --bg:#000; --s1:#0b0b0c; --s2:#121214; --s3:#19191c; --line:#1f1f23; --line2:#2b2b30;
+  --fg:#f5f5f7; --soft:#c7c7cc; --muted:#8a8a91; --faint:#4b4b52; --accent:#fff;
+  --r:22px; --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--font);-webkit-font-smoothing:antialiased;overflow-x:clip;
+  padding-bottom:env(safe-area-inset-bottom)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+.caps{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+.glow{position:fixed;left:0;right:0;top:0;height:80vh;pointer-events:none;z-index:-1;
+  background:radial-gradient(60% 50% at 50% 0%,rgba(255,255,255,.08),transparent 70%)}
+
+/* шапка */
+header{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:saturate(1.6) blur(18px);
+  -webkit-backdrop-filter:saturate(1.6) blur(18px);border-bottom:1px solid rgba(255,255,255,.06);padding-top:env(safe-area-inset-top)}
+.bar{display:flex;align-items:center;gap:18px;height:58px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em;text-decoration:none;font-size:18px}
+.logo svg{width:26px;height:26px}
+nav{display:flex;gap:4px;margin-left:auto}
+nav a{text-decoration:none;color:var(--soft);font-size:14px;padding:8px 12px;border-radius:12px}
+nav a:hover{background:var(--s2);color:var(--fg)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:14px;
+  font-weight:600;font-size:15px;text-decoration:none;transition:transform .15s,background .15s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn.w{background:#fff;color:#000}
+.btn.d{background:var(--s2);border:1px solid var(--line2);color:var(--fg)}
+.btn.d:hover{background:var(--s3)}
+.btn.sm{padding:9px 14px;font-size:14px;border-radius:12px}
+@media(max-width:760px){nav{display:none}.bar .btn{margin-left:auto}}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;padding:64px 0 30px;align-items:start}
+@media(max-width:900px){.hero{grid-template-columns:1fr;gap:26px;padding-top:34px}}
+h1{font-size:clamp(56px,11vw,112px);font-weight:250;letter-spacing:-.05em;line-height:.95}
+h1 b{font-weight:650}
+.lead{font-size:clamp(17px,2.2vw,20px);color:var(--soft);margin-top:18px;max-width:30em}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tag{font-size:13px;color:var(--soft);border:1px solid var(--line2);border-radius:999px;padding:6px 12px}
+.picker{margin-top:28px}
+.grade{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.grade .g{width:30px;color:var(--faint);font-size:13px;font-weight:600}
+.pill{padding:8px 14px;border-radius:12px;background:var(--s2);border:1px solid var(--line);font-weight:600;font-size:15px;min-width:52px;transition:.15s}
+.pill:hover{border-color:var(--line2)}
+.pill.on{background:#fff;color:#000;border-color:#fff}
+
+/* живая карточка */
+.live{position:relative;border-radius:30px;padding:22px;background:linear-gradient(180deg,#151517,#080809);
+  border:1px solid var(--line);overflow:hidden}
+.live:after{content:"";position:absolute;inset:-1px;border-radius:30px;pointer-events:none;
+  background:radial-gradient(80% 60% at 80% 0%,rgba(255,255,255,.08),transparent 60%)}
+.ltop{display:flex;align-items:center;gap:10px}
+.status{font-size:11px;letter-spacing:.14em;font-weight:650;padding:6px 12px;border-radius:999px;background:#202023;color:var(--soft)}
+.status.on{color:#fff}
+.status.on:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#fff;margin-right:8px;
+  vertical-align:1px;animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.dots{margin-left:auto;display:flex;gap:5px}
+.dots i{width:7px;height:7px;border-radius:50%;background:#262629}
+.dots i.d{background:#5a5a60}.dots i.c{background:#fff}
+.ltitle{display:flex;align-items:center;gap:12px;margin-top:20px}
+.ltitle h2{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.15;flex:1}
+.chip{display:inline-block;font-weight:650;font-size:14px;padding:4px 10px;border-radius:9px;background:#1b1b1e;border:1px solid var(--line2);white-space:nowrap}
+.chip.now{background:#fff;color:#000;border-color:#fff}
+.timer{font-size:clamp(64px,13vw,92px);font-weight:200;letter-spacing:-.04em;line-height:1;margin-top:10px}
+.bar2{height:4px;border-radius:4px;background:#232326;margin-top:14px;overflow:hidden}
+.bar2 i{display:block;height:100%;background:#fff;border-radius:4px;transition:width .6s}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.stats b{display:block;font-size:19px;font-weight:600;margin-top:2px}
+.lnext{border-top:1px solid var(--line);margin-top:18px;padding-top:16px}
+.lnext .row{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:nowrap}
+.lnext .row span:first-child{font-size:18px;flex:1;min-width:0}
+.foot{color:var(--muted);font-size:13px;margin-top:14px}
+
+/* секции */
+section{padding:70px 0 10px}
+.sh{display:flex;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.sh h3{font-size:clamp(30px,5vw,44px);font-weight:300;letter-spacing:-.03em;line-height:1.05}
+.sh h3 b{font-weight:650}
+.sh p{color:var(--muted);max-width:34em}
+.seg{display:flex;background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:4px;gap:2px}
+.seg button{flex:1;padding:9px 12px;border-radius:12px;font-weight:600;font-size:15px;color:var(--muted)}
+.seg button.on{background:#fff;color:#000}
+.seg button.today:not(.on){color:#fff}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.tools .seg{flex:1;min-width:280px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+.lesson{display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:16px}
+.lesson.cur{background:#161618;border:1px solid #2c2c30}
+.lesson.nx{background:#0f0f11}
+.lesson.past{opacity:.38}
+.lesson .t{width:50px;font-variant-numeric:tabular-nums}
+.lesson .t b{display:block;font-size:15px}
+.lesson .t small{color:var(--muted);font-size:12px}
+.lesson .bar{width:2px;align-self:stretch;border-radius:2px;background:#2a2a2e}
+.lesson.cur .bar{background:#fff}.lesson.nx .bar{background:#8a8a91}
+.lesson .m{flex:1;min-width:0}
+.lesson .m b{display:block;font-weight:500;font-size:16px}
+.lesson .m small{color:var(--muted);font-size:13px}
+.brk{padding:3px 0 3px 80px;font-size:12px;color:var(--faint)}
+.brk.on{color:var(--soft);font-weight:600}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.week{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.week table{border-collapse:separate;border-spacing:6px;min-width:760px;width:100%}
+.week th{font-size:12px;letter-spacing:.12em;color:var(--muted);font-weight:600;text-align:left;padding:4px 8px}
+.week th.today{color:#fff}
+.week td{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:8px 10px;vertical-align:top;font-size:13px}
+.week td.n{background:none;border:0;color:var(--faint);font-variant-numeric:tabular-nums;width:56px}
+.week td.x{background:none;border:1px dashed #18181b}
+.week td small{display:block;color:var(--muted);margin-top:2px}
+
+/* кабинеты */
+.search{display:flex;gap:10px;flex-wrap:wrap}
+.search input{flex:1;min-width:200px;background:var(--s1);border:1px solid var(--line2);border-radius:14px;padding:13px 16px;font-size:17px;outline:none}
+.search input:focus{border-color:#fff}
+.search select{background:var(--s1);border:1px solid var(--line2);border-radius:14px;padding:12px 14px}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:16px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.rrow{display:flex;gap:12px;padding:11px 12px;border-radius:12px;align-items:center}
+.rrow.now{background:#161618}
+.rrow .t{width:96px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.rrow b{font-weight:600}
+.free{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
+
+/* конструктор */
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media(max-width:900px){.ed{grid-template-columns:minmax(0,1fr)}}
+.slot{display:grid;grid-template-columns:44px 1fr 86px;gap:8px;align-items:center;padding:4px 0}
+.slot .k{font-weight:600}.slot .k small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+.f{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:15px;outline:none;min-width:0}
+.f:focus{border-color:#8a8a91}
+.bells{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;align-items:center}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+textarea.f{min-height:90px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.note{color:var(--muted);font-size:13px;margin-top:10px}
+.sw{display:flex;align-items:center;gap:12px;padding:10px 4px;cursor:pointer}
+.sw span{flex:1}
+.sw input{appearance:none;width:46px;height:28px;border-radius:999px;background:#2a2a2e;position:relative;transition:.2s;flex:none}
+.sw input:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#8a8a91;transition:.2s}
+.sw input:checked{background:#6a6a70}.sw input:checked:after{left:21px;background:#fff}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatch{width:46px;text-align:center;font-size:11px;color:var(--muted)}
+.swatch i{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;border:1px solid var(--faint);margin-bottom:5px;font-style:normal;font-size:12px}
+.swatch.on i{border:3px solid #fff}.swatch.on{color:#fff}
+.acc{display:flex;gap:8px}
+.acc button{flex:1;min-width:0;height:32px;border-radius:999px;border:1px solid var(--faint)}
+.acc button.on{border:3px solid #fff}
+input[type=range]{width:100%;accent-color:#fff}
+.wall{border-radius:26px;padding:16px;background:linear-gradient(135deg,#3b3b58,#1e3a3a 55%,#4a2e2e)}
+.pv-n{border-radius:20px;padding:14px 16px}
+.pv-w{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:14px;align-items:start}
+.pv-2{aspect-ratio:1;padding:13px 14px;display:flex;flex-direction:column}
+.pv-1{padding:10px 14px}
+.pv .lab{font-size:9px;letter-spacing:.12em;font-weight:650}
+.pv .tt{font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;margin-top:4px}
+.pv .tt span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv .ch{font-size:11px;font-weight:650;padding:1px 6px;border-radius:7px}
+.pv .tm{font-weight:200;line-height:1;font-variant-numeric:tabular-nums}
+.pv .pb{height:3px;border-radius:3px;margin-top:6px;overflow:hidden}.pv .pb i{display:block;height:100%;width:46%}
+.pv .nx{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:auto}
+.pv .nx span:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv .dt{margin-left:auto;font-size:6px;letter-spacing:.2em}
+
+/* установка */
+.osbox{position:relative;border-radius:34px;border:1px solid var(--line);background:radial-gradient(70% 70% at 50% 40%,#111113,#000);
+  min-height:460px;overflow:hidden;display:grid;place-items:center;padding:40px 12px}
+@media(max-width:600px){
+  .osbox{min-height:520px}
+  .os{flex-wrap:nowrap;gap:10px;width:100%}
+  .osb{width:auto;flex:1;padding:16px 14px;border-radius:20px}
+  .osb svg{margin-bottom:14px;width:26px;height:26px}
+  .osb b{font-size:19px}
+  .brand{font-size:13px!important;padding:4px 8px}
+}
+.cloud{position:absolute;inset:0;pointer-events:none}
+.brand{position:absolute;pointer-events:auto;font-weight:650;letter-spacing:-.01em;white-space:nowrap;color:#5a5a62;
+  padding:6px 12px;border-radius:999px;transition:color .2s,background .2s;animation:float var(--d,8s) ease-in-out infinite;animation-delay:var(--dl,0s)}
+.brand:hover,.brand.on{color:#fff;background:rgba(255,255,255,.08)}
+@keyframes float{0%,100%{transform:translate(0,0)}33%{transform:translate(6px,-10px)}66%{transform:translate(-6px,6px)}}
+@media(prefers-reduced-motion:reduce){.brand{animation:none}.status.on:before{animation:none}}
+.os{position:relative;z-index:2;display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.osb{width:190px;padding:22px 18px;border-radius:24px;background:rgba(18,18,20,.85);border:1px solid var(--line2);text-align:left;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:.2s}
+.osb:hover{border-color:#5a5a62}
+.osb.on{background:#fff;color:#000;border-color:#fff}
+.osb svg{width:30px;height:30px;display:block;margin-bottom:22px}
+.osb b{font-size:22px;display:block}
+.osb small{color:var(--muted);font-size:13px}.osb.on small{color:#555}
+.steps{counter-reset:s;display:grid;gap:10px;margin-top:18px}
+.step{display:flex;gap:14px;background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:16px}
+.step:before{counter-increment:s;content:counter(s);flex:none;width:30px;height:30px;border-radius:50%;background:#fff;color:#000;
+  display:grid;place-items:center;font-weight:700;font-size:14px}
+.step b{display:block;margin-bottom:2px}
+.step p{color:var(--soft);font-size:15px}
+.step .row{margin-top:10px}
+.bhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:26px}
+.warn{border:1px solid var(--line2);border-radius:16px;padding:14px 16px;color:var(--soft);font-size:14px;margin-top:12px}
+
+/* факты */
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:900px){.facts{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.facts{grid-template-columns:1fr}}
+.fact{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.fact b{display:block;font-size:34px;font-weight:250;letter-spacing:-.03em;margin-bottom:8px}
+.fact p{color:var(--soft);font-size:14px}
+
+/* поделиться */
+.share{display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:center}
+@media(max-width:700px){.share{grid-template-columns:1fr}}
+.qr{background:#fff;border-radius:24px;padding:14px;width:240px;max-width:100%;aspect-ratio:1}
+.qr svg{display:block}
+.msg{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:14px;color:var(--soft);font-size:14px;margin-top:12px;white-space:pre-line}
+
+footer{padding:70px 0 50px;color:var(--faint);font-size:13px}
+footer p+p{margin-top:6px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,40px);opacity:0;background:#fff;color:#000;
+  padding:11px 18px;border-radius:14px;font-weight:600;font-size:14px;transition:.25s;z-index:50;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{transform:translate(-50%,0);opacity:1}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<header>
+  <div class="wrap bar">
+    <a class="logo" href="#top" aria-label="Звонок">
+      <svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="54" cy="54" r="24" fill="none" stroke="#2a2a2a" stroke-width="6"/><path d="M54 30A24 24 0 1 1 30 54" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M54 42v12l8 5" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Звонок
+    </a>
+    <nav>
+      <a href="#schedule">Расписание</a>
+      <a href="#rooms">Кабинеты</a>
+      <a href="#make">Конструктор</a>
+      <a href="#install">Установить</a>
+    </nav>
+    <a class="btn w sm" href="#install">Скачать</a>
+  </div>
+</header>
+
+<main id="top" class="wrap">
+  <div class="hero">
+    <div>
+      <div class="caps" id="kicker">Лицей №165</div>
+      <h1 style="margin-top:14px">Звонок<b>.</b></h1>
+      <p class="lead">Сколько до звонка, какой урок следующий и в каком он кабинете. Для всех классов лицея, прямо на экране блокировки.</p>
+      <div class="tags"><span class="tag">Без интернета</span><span class="tag">Без рекламы</span><span class="tag">Без регистрации</span><span class="tag">Почти не тратит заряд</span></div>
+      <div class="picker">
+        <div class="caps">Твой класс</div>
+        <div id="classes"></div>
+      </div>
+    </div>
+    <div class="live" aria-live="polite">
+      <div class="ltop"><span class="status" id="lStatus"></span><span class="dots" id="lDots"></span></div>
+      <div class="ltitle"><h2 id="lTitle"></h2><span class="chip now" id="lRoom" hidden></span></div>
+      <div class="timer num" id="lTimer"></div>
+      <div class="bar2" id="lBar" hidden><i id="lBarI"></i></div>
+      <div class="stats">
+        <div><span class="caps" id="lSideH"></span><b class="num" id="lSideV"></b></div>
+        <div><span class="caps" id="lStatH"></span><b class="num" id="lStatV" style="color:var(--soft);font-weight:500"></b></div>
+      </div>
+      <div class="lnext" id="lNext"><span class="caps" id="lNextH"></span><div class="row"><span id="lNextS"></span><span class="chip" id="lNextR"></span></div></div>
+      <div class="foot" id="lFoot"></div>
+    </div>
+  </div>
+
+  <section id="schedule">
+    <div class="sh"><h3>Расписание <b id="sTitle">7Б</b></h3><p id="sMeta"></p></div>
+    <div class="tools">
+      <div class="seg" id="days"></div>
+      <div class="seg" style="flex:none;min-width:0"><button id="vDay" class="on">День</button><button id="vWeek">Неделя</button></div>
+    </div>
+    <div class="card" id="dayList"></div>
+    <div class="week" id="weekView" hidden></div>
+  </section>
+
+  <section id="rooms">
+    <div class="sh"><h3>Где <b>кабинет</b>?</h3><p>Кто сейчас в кабинете, когда он свободен и какие кабинеты пустуют на этом уроке.</p></div>
+    <div class="search">
+      <input id="rq" inputmode="text" placeholder="Номер кабинета, например 46 или 56" autocomplete="off" aria-label="Кабинет">
+      <select id="rday" aria-label="День"></select>
+    </div>
+    <div class="grid2">
+      <div class="card" id="rres"></div>
+      <div class="card"><div class="caps" style="padding:12px 12px 4px" id="freeH">Свободны сейчас</div><div class="free" id="free"></div></div>
+    </div>
+  </section>
+
+  <section id="make">
+    <div class="sh"><h3>Конструктор</h3><p>Своё расписание и своё оформление виджетов и уведомления. Готовый код вставляется в приложение. Экран приложения при этом не меняется.</p></div>
+    <div class="tabs"><button class="pill on" id="tCustom">Своё расписание</button><button class="pill" id="tTheme">Виджеты и уведомление</button></div>
+
+    <div id="pCustom">
+      <div class="ed">
+        <div class="card" style="padding:14px">
+          <div class="seg" id="cDays"></div>
+          <div id="cSlots" style="margin-top:12px"></div>
+          <datalist id="subjList"></datalist>
+          <div class="row">
+            <select class="f" id="cFrom" style="flex:1;min-width:150px" aria-label="Взять за основу класс"></select>
+            <button class="btn d sm" id="cTake">Взять за основу</button>
+            <button class="btn d sm" id="cClear">Очистить день</button>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="padding:14px">
+            <div class="caps" style="margin-bottom:10px">Звонки</div>
+            <div class="bells" id="cBells"></div>
+          </div>
+          <div class="card" style="padding:14px;margin-top:16px">
+            <label class="sw"><span><b style="font-weight:600">Показывать на сайте своё расписание</b><br><small style="color:var(--muted)">Хранится только в этом браузере</small></span><input type="checkbox" id="cUse"></label>
+            <div class="row">
+              <button class="btn w" id="cCopy">Скопировать код для приложения</button>
+              <button class="btn d" id="cShare">Поделиться</button>
+            </div>
+            <textarea class="f" id="cCode" style="margin-top:12px" placeholder="Вставь сюда код ZVS1:… от друга или из приложения" aria-label="Код расписания"></textarea>
+            <div class="row"><button class="btn d sm" id="cLoad">Загрузить код</button></div>
+            <p class="note">В приложении: Настройки → Своё расписание → «Вставить код». В коде только предметы, кабинеты и звонки.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pTheme" hidden>
+      <div class="ed">
+        <div>
+          <div class="wall pv" id="pv"></div>
+          <p class="note">Предпросмотр: уведомление, виджет 2×2 и виджет 2×1.</p>
+        </div>
+        <div class="card" style="padding:16px">
+          <div class="caps" style="margin-bottom:12px">Тема</div>
+          <div class="swatches" id="thPresets"></div>
+          <div class="caps" style="margin:22px 0 10px">Акцент — таймер, прогресс, кабинет</div>
+          <div class="acc" id="thAcc"></div>
+          <div class="caps" style="margin:22px 0 6px">Непрозрачность фона виджетов: <span id="thOpV"></span></div>
+          <input type="range" min="30" max="100" id="thOp" aria-label="Непрозрачность">
+          <div class="caps" style="margin:18px 0 10px">Углы</div>
+          <div class="row" style="margin:0" id="thR"></div>
+          <div style="margin-top:14px">
+            <label class="sw"><span>Секунды в таймере <small style="color:var(--muted)">(без них ещё экономнее)</small></span><input type="checkbox" id="thS"></label>
+            <label class="sw"><span>Полоска прогресса</span><input type="checkbox" id="thP"></label>
+            <label class="sw"><span>Следующий урок</span><input type="checkbox" id="thN"></label>
+            <label class="sw"><span>Точки уроков дня</span><input type="checkbox" id="thD"></label>
+          </div>
+          <div class="row"><button class="btn w" id="thCopy">Скопировать код темы</button><button class="btn d" id="thReset">Сбросить</button></div>
+          <p class="note">В приложении: Настройки → Оформление → «Вставить код темы».</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="sh"><h3>Установить</h3><p>Выбери систему, потом марку телефона: подскажем, что включить именно у тебя.</p></div>
+    <div class="osbox">
+      <div class="cloud" id="cloud"></div>
+      <div class="os">
+        <button class="osb" id="osA"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.6 9.48l1.84-3.18a.39.39 0 00-.68-.39l-1.87 3.23a11.43 11.43 0 00-9.78 0L5.24 5.91a.39.39 0 10-.68.39L6.4 9.48A10.78 10.78 0 001 18h22a10.78 10.78 0 00-5.4-8.52zM7 15.25A1.25 1.25 0 118.25 14 1.25 1.25 0 017 15.25zm10 0A1.25 1.25 0 1118.25 14 1.25 1.25 0 0117 15.25z"/></svg><b>Android</b><small>Приложение, уведомление и виджеты</small></button>
+        <button class="osb" id="osI"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.97-3.46a4.24 4.24 0 00-3.33-1.8c-1.42-.15-2.77.83-3.49.83s-1.83-.81-3-.79a4.45 4.45 0 00-3.77 2.28c-1.6 2.79-.41 6.92 1.15 9.18.76 1.11 1.67 2.35 2.86 2.31 1.15-.05 1.58-.74 2.97-.74s1.78.74 2.99.72c1.24-.02 2.02-1.13 2.77-2.24a9.94 9.94 0 001.26-2.58 3.98 3.98 0 01-2.38-3.71zM14.08 5.84A3.92 3.92 0 0015 3a4 4 0 00-2.6 1.34 3.74 3.74 0 00-.94 2.74 3.3 3.3 0 002.62-1.24z"/></svg><b>iPhone</b><small>Сайт как приложение и виджеты</small></button>
+      </div>
+    </div>
+    <div id="guide"></div>
+  </section>
+
+  <section id="safe">
+    <div class="sh"><h3>Тихо. <b>Безопасно.</b> Офлайн.</h3></div>
+    <div class="facts">
+      <div class="fact"><b>0</b><p>пробуждений телефона. Пока экран выключен, приложение не делает ничего, таймеры тикают силами системы.</p></div>
+      <div class="fact"><b>0 КБ</b><p>данных уходит в сеть. У приложения нет даже разрешения на интернет, а у сайта нет счётчиков и внешних запросов.</p></div>
+      <div class="fact"><b>~60 КБ</b><p>весит приложение. Всё расписание внутри: работает в метро, в подвале и без мобильного интернета.</p></div>
+      <div class="fact"><b>19</b><p>классов: от 7А до 11Г. Выбираешь свой, или собираешь своё расписание в конструкторе.</p></div>
+    </div>
+  </section>
+
+  <section id="share">
+    <div class="sh"><h3>Расскажи <b>классу</b></h3><p>Чем больше людей знают, сколько до звонка, тем меньше опозданий.</p></div>
+    <div class="share">
+      <div class="qr" aria-label="QR-код сайта">@QR@</div>
+      <div>
+        <div class="row" style="margin-top:0">
+          <button class="btn w" id="shNative">Поделиться</button>
+          <a class="btn d" id="shTg" target="_blank" rel="noopener noreferrer">Telegram</a>
+          <a class="btn d" id="shWa" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          <button class="btn d" id="shCopy">Скопировать ссылку</button>
+        </div>
+        <div class="row">
+          <a class="btn d" href="index.html" download="Zvonok-165.html">Скачать сайт одним файлом</a>
+          <a class="btn d" href="poster.html" target="_blank" rel="noopener">Плакат для класса (A4)</a>
+        </div>
+        <div class="msg" id="shMsg"></div>
+        <div class="row"><button class="btn d sm" id="shMsgCopy">Скопировать сообщение для чата класса</button></div>
+        <p class="note">Сайт одним файлом можно отправить в чат: он откроется у любого, даже без интернета.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p>Звонок — неофициальный проект ученика лицея №165. Сделано для своих.</p>
+  <p id="fTerm"></p>
+  <p>Без аккаунтов, рекламы и слежки. Всё, что ты выбираешь, хранится только в этом браузере.</p>
+</footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+"use strict";
+const DATA = /*@DATA@*/null;
+const SCRIPTABLE = /*@SCRIPTABLE@*/null;
+const SITE = "@SITE_URL@";
+const APK = "@APK_URL@";
+
+/* ---------- утилиты ---------- */
+const $ = id => document.getElementById(id);
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    if (k === "class") e.className = attrs[k];
+    else if (k === "text") e.textContent = attrs[k];
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] !== false && attrs[k] != null) e.setAttribute(k, attrs[k]);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+}
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("zv." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("zv." + k, JSON.stringify(v)); } catch (e) {} }
+};
+let toastT;
+function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove("on"), 2200); }
+async function copy(text, msg) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const t = h("textarea", {style: "position:fixed;opacity:0"}); t.value = text; document.body.append(t); t.select(); try { document.execCommand("copy"); } catch (x) {} t.remove(); }
+  toast(msg || "Скопировано");
+}
+const toMin = t => { const m = /^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(t || ""); if (!m) return -1; const H = +m[1], M = +m[2]; return H < 24 && M < 60 ? H * 60 + M : -1; };
+const hm = m => Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0");
+const clean = s => String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40);
+const roomName = r => r === "с/з" ? "спортзал" : r;
+const roomText = r => !r ? "" : /^\d/.test(r) ? "каб. " + r : r;
+function plural(n) { const a = n % 10, b = n % 100; return n + (a === 1 && b !== 11 ? " урок" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? " урока" : " уроков"); }
+const DAYN = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+const DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const WHEN = ["в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу", "в воскресенье"];
+const dow = d => (d.getDay() + 6) % 7; // 0 = понедельник
+const BELLS = DATA.bells.map(b => [toMin(b[0]), toMin(b[1])]);
+const CLASSES = Object.keys(DATA.classes).sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b, "ru"));
+
+/* ---------- расписание ---------- */
+function classWeek(cls) {
+  const days = DATA.classes[cls] || [];
+  return Array.from({length: 7}, (_, d) => (days[d] || []).map((raw, i) => {
+    if (!raw || !BELLS[i]) return null;
+    const sp = raw.indexOf(" "), code = sp < 0 ? raw : raw.slice(0, sp), room = sp < 0 ? "" : raw.slice(sp + 1);
+    return {num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: DATA.subjects[code] || code, room: roomName(room)};
+  }).filter(Boolean));
+}
+function customWeek(c) {
+  const bells = (c.bells || DATA.bells).map(b => [toMin(b[0]), toMin(b[1])]);
+  return Array.from({length: 7}, (_, d) => ((c.days || [])[d] || []).map((l, i) => {
+    if (!l || !clean(l[0]) || !bells[i] || bells[i][0] < 0 || bells[i][1] <= bells[i][0]) return null;
+    return {num: i + 1, start: bells[i][0], end: bells[i][1], subject: clean(l[0]), room: roomName(clean(l[1]))};
+  }).filter(Boolean));
+}
+let cls = store.get("class", null);
+if (!DATA.classes[cls]) cls = "7Б";
+let custom = store.get("custom", null);
+let useCustom = !!store.get("useCustom", false) && !!custom;
+let WEEK = [];
+function rebuild() { WEEK = useCustom ? customWeek(custom) : classWeek(cls); }
+rebuild();
+const title = () => useCustom ? "своё" : cls;
+
+function at(date, min) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d.getTime() + min * 60000; }
+function compute(now) {
+  const s = {}, list = WEEK[dow(now)], sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  if (list.length) {
+    const first = list[0], last = list[list.length - 1];
+    s.count = list.length; s.end = hm(last.end); s.list = list;
+    if (sec < first.start * 60) {
+      Object.assign(s, {kind: "BEFORE", next: first, start: at(now, first.start - 60), target: at(now, first.start), soon: sec >= (first.start - 60) * 60});
+      return s;
+    }
+    for (let i = 0; i < list.length; i++) {
+      const l = list[i];
+      if (sec < l.end * 60) {
+        if (sec >= l.start * 60) Object.assign(s, {kind: "LESSON", cur: l, idx: i, next: list[i + 1] || null, start: at(now, l.start), target: at(now, l.end)});
+        else Object.assign(s, {kind: "BREAK", cur: list[i - 1], idx: i - 1, next: l, start: at(now, list[i - 1].end), target: at(now, l.start)});
+        return s;
+      }
+    }
+    s.kind = "AFTER";
+  } else s.kind = "OFF";
+  for (let d = 1; d <= 7; d++) {
+    const date = new Date(now); date.setDate(date.getDate() + d);
+    const l = WEEK[dow(date)];
+    if (!l.length) continue;
+    Object.assign(s, {next: l[0], nCount: l.length, nEnd: hm(l[l.length - 1].end), nLabel: d === 1 ? "Завтра" : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : WHEN[dow(date)], target: at(date, l[0].start)});
+    break;
+  }
+  return s;
+}
+function fmtTimer(ms) {
+  const t = Math.max(0, Math.ceil(ms / 1000)), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), S = t % 60;
+  return (H ? H + ":" + String(M).padStart(2, "0") : M) + ":" + String(S).padStart(2, "0");
+}
+
+/* ---------- живая карточка ---------- */
+let state = null, lastKey = "";
+function renderLive() {
+  const now = new Date(), s = compute(now), n = s.next;
+  state = s;
+  let st = "", t = "", room = "", sideH = "", sideV = "", statH = "", statV = "", nH = "", nS = "", nR = "", foot = "", timer = null, big = "", prog = -1, live = false;
+  if (s.kind === "LESSON") {
+    const c = s.cur; live = true; timer = s.target; prog = (now - s.start) / (s.target - s.start);
+    st = "Урок " + (s.idx + 1) + " / " + s.count; t = c.subject; room = c.room;
+    sideH = "Звонок"; sideV = hm(c.end); statH = "Домой в"; statV = s.end;
+    if (n) { nH = "Далее · " + hm(n.start); nS = n.subject; nR = n.room; } else { nH = "Последний урок"; nS = "Домой в " + hm(c.end); }
+    const rest = s.count - s.idx - 1; foot = rest ? "Потом ещё " + plural(rest) + " · до " + s.end : "Последний урок, дальше домой";
+  } else if (s.kind === "BREAK") {
+    live = true; timer = s.target; prog = (now - s.start) / (s.target - s.start);
+    const len = n.start - s.cur.end;
+    st = "Перемена · " + len + " мин"; t = len > 25 ? "Окно" : "Перемена"; sideH = "На урок"; sideV = hm(n.start); statH = "Домой в"; statV = s.end;
+    nH = "Урок " + n.num + " · " + hm(n.start); nS = n.subject; nR = n.room; foot = "Осталось " + plural(s.count - s.idx - 1) + " · до " + s.end;
+  } else if (s.kind === "BEFORE") {
+    live = s.soon; st = s.soon ? "До уроков" : "Сегодня"; t = s.soon ? "Скоро уроки" : "Сегодня " + plural(s.count);
+    if (s.soon) timer = s.target; else big = hm(n.start);
+    sideH = s.soon ? "Звонок" : "День"; sideV = s.soon ? hm(n.start) : "Сегодня"; statH = "Уроков"; statV = s.count + " · до " + s.end;
+    nH = "Первый урок · " + hm(n.start); nS = n.subject; nR = n.room; foot = "Сегодня " + plural(s.count) + " · " + hm(n.start) + "–" + s.end;
+  } else {
+    st = s.kind === "AFTER" ? "Уроки закончились" : "Выходной"; t = s.kind === "AFTER" ? "Свободен" : "Отдыхай";
+    if (n) {
+      big = hm(n.start); sideH = "День"; sideV = s.nLabel; statH = "Уроков"; statV = s.nCount + " · до " + s.nEnd;
+      nH = s.nLabel + " · " + hm(n.start); nS = n.subject; nR = n.room; foot = s.nLabel + ": " + plural(s.nCount) + ", " + hm(n.start) + "–" + s.nEnd;
+    } else big = "—";
+  }
+  $("lStatus").textContent = st; $("lStatus").classList.toggle("on", live);
+  $("lTitle").textContent = t;
+  $("lRoom").textContent = room; $("lRoom").hidden = !room;
+  $("lSideH").textContent = sideH; $("lSideV").textContent = sideV;
+  $("lStatH").textContent = statH; $("lStatV").textContent = statV;
+  $("lNext").hidden = !nS; $("lNextH").textContent = nH; $("lNextS").textContent = nS; $("lNextR").textContent = nR; $("lNextR").hidden = !nR;
+  $("lFoot").textContent = foot;
+  $("lBar").hidden = prog < 0; if (prog >= 0) $("lBarI").style.width = Math.round(Math.min(1, Math.max(0, prog)) * 100) + "%";
+  $("lTimer").textContent = timer ? fmtTimer(timer - now) : big;
+  const dots = $("lDots"); dots.textContent = "";
+  if (s.list && s.kind !== "AFTER") s.list.forEach((l, i) => dots.append(h("i", {class: s.kind === "LESSON" && i === s.idx ? "c" : (s.idx != null && (i < s.idx || (s.kind === "BREAK" && i === s.idx))) ? "d" : ""})));
+  const key = s.kind + (s.cur ? s.cur.num : 0) + (s.next ? s.next.num : 0) + title() + now.toDateString();
+  if (key !== lastKey) { lastKey = key; renderDay(); renderRooms(); }
+  document.title = (timer ? fmtTimer(timer - now) + " · " : "") + "Звонок · " + title();
+}
+let tickT;
+function tick() { clearTimeout(tickT); if (document.hidden) return; renderLive(); tickT = setTimeout(tick, 1000 - Date.now() % 1000 + 20); }
+document.addEventListener("visibilitychange", tick);
+
+/* ---------- выбор класса ---------- */
+function renderClasses() {
+  const box = $("classes"); box.textContent = "";
+  const grades = {};
+  CLASSES.forEach(c => (grades[parseInt(c)] = grades[parseInt(c)] || []).push(c));
+  for (const g in grades) box.append(h("div", {class: "grade"}, h("span", {class: "g", text: g}),
+    grades[g].map(c => h("button", {class: "pill" + (!useCustom && c === cls ? " on" : ""), text: c, onclick: () => {
+      cls = c; useCustom = false; store.set("class", c); store.set("useCustom", false); $("cUse").checked = false;
+      rebuild(); selDay = null; renderClasses(); lastKey = ""; renderLive();
+    }}))));
+  if (custom) box.append(h("div", {class: "grade"}, h("span", {class: "g", text: "★"}),
+    h("button", {class: "pill" + (useCustom ? " on" : ""), text: "Своё", onclick: () => setUseCustom(true)})));
+  $("kicker").textContent = DATA.school + " · " + DATA.term;
+}
+
+/* ---------- день / неделя ---------- */
+let selDay = null, view = "day";
+function defaultDay() {
+  const now = new Date(), d = dow(now), s = state || compute(now);
+  if (WEEK[d].length && s.kind !== "AFTER") return d;
+  for (let i = 1; i <= 7; i++) { const x = (d + i) % 7; if (WEEK[x].length) return x; }
+  return 0;
+}
+function renderDay() {
+  if (selDay == null) selDay = defaultDay();
+  const now = new Date(), today = dow(now), s = state || compute(now), nowMin = now.getHours() * 60 + now.getMinutes();
+  const sat = WEEK[5].length > 0, days = $("days"); days.textContent = "";
+  for (let d = 0; d < (sat ? 6 : 5); d++) days.append(h("button", {class: (d === selDay ? "on " : "") + (d === today ? "today" : ""), text: DAYS[d], onclick: () => { selDay = d; renderDay(); }}));
+  $("sTitle").textContent = useCustom ? "своё" : cls;
+  const list = WEEK[selDay];
+  $("sMeta").textContent = (selDay === today ? "Сегодня, " : DAYN[selDay] + ", ") + (list.length ? plural(list.length) + " · " + hm(list[0].start) + "–" + hm(list[list.length - 1].end) : "уроков нет");
+  const box = $("dayList"); box.textContent = "";
+  if (!list.length) box.append(h("div", {class: "empty", text: "Уроков нет. Отдыхай."}));
+  list.forEach((l, i) => {
+    const isT = selDay === today;
+    if (i) {
+      const len = l.start - list[i - 1].end, on = isT && s.kind === "BREAK" && s.next === l;
+      box.append(h("div", {class: "brk" + (on ? " on" : ""), text: on ? "● перемена сейчас · до " + hm(l.start) : (len > 25 ? "окно " : "перемена ") + len + " мин"}));
+    }
+    const cur = isT && s.kind === "LESSON" && s.cur === l, nx = isT && (s.kind === "BREAK" || s.kind === "BEFORE") && s.next === l, past = isT && !cur && l.end <= nowMin;
+    box.append(h("div", {class: "lesson" + (cur ? " cur" : nx ? " nx" : past ? " past" : "")},
+      h("div", {class: "t"}, h("b", {text: hm(l.start)}), h("small", {text: hm(l.end)})),
+      h("div", {class: "bar"}),
+      h("div", {class: "m"}, h("b", {text: l.subject}), h("small", {text: cur ? "Сейчас · урок " + l.num : nx ? "Следующий · урок " + l.num : "Урок " + l.num + " · " + (l.end - l.start) + " мин"})),
+      l.room ? h("span", {class: "chip" + (cur ? " now" : ""), text: l.room}) : null));
+  });
+  renderWeek();
+}
+function renderWeek() {
+  const box = $("weekView"); box.textContent = "";
+  const n = Math.max(5, WEEK[5].length ? 6 : 5), today = dow(new Date());
+  let slots = 0; for (let d = 0; d < n; d++) WEEK[d].forEach(l => slots = Math.max(slots, l.num));
+  const t = h("table", null, h("tr", null, h("th"), Array.from({length: n}, (_, d) => h("th", {class: d === today ? "today" : "", text: DAYN[d]}))));
+  for (let i = 1; i <= slots; i++) {
+    const b = BELLS[i - 1];
+    t.append(h("tr", null, h("td", {class: "n"}, h("b", {text: i}), h("small", {text: b ? hm(b[0]) : ""})),
+      Array.from({length: n}, (_, d) => { const l = WEEK[d].find(x => x.num === i); return l ? h("td", null, l.subject, h("small", {text: l.room})) : h("td", {class: "x"}); })));
+  }
+  box.append(t);
+}
+$("vDay").onclick = () => { view = "day"; $("vDay").classList.add("on"); $("vWeek").classList.remove("on"); $("dayList").hidden = false; $("days").parentElement.querySelector("#days").hidden = false; $("weekView").hidden = true; };
+$("vWeek").onclick = () => { view = "week"; $("vWeek").classList.add("on"); $("vDay").classList.remove("on"); $("dayList").hidden = true; $("days").hidden = true; $("weekView").hidden = false; };
+
+/* ---------- кабинеты ---------- */
+const ROOM_USE = {}; // "46" -> [{day, num, cls, subject}]
+CLASSES.forEach(c => classWeek(c).forEach((list, d) => list.forEach(l => {
+  (l.room || "").split("/").map(x => x.trim()).filter(Boolean).forEach(r => (ROOM_USE[r] = ROOM_USE[r] || []).push({day: d, num: l.num, cls: c, subject: l.subject}));
+})));
+const ROOMS = Object.keys(ROOM_USE).sort((a, b) => (parseInt(a) || 999) - (parseInt(b) || 999) || a.localeCompare(b));
+(function initRooms() {
+  const sel = $("rday"), today = dow(new Date());
+  for (let d = 0; d < 5; d++) sel.append(h("option", {value: d, text: d === today ? "Сегодня" : DAYN[d]}));
+  sel.value = today < 5 ? today : 0;
+  sel.onchange = renderRooms; $("rq").oninput = renderRooms;
+})();
+function renderRooms() {
+  const q = $("rq").value.trim().toLowerCase().replace(/^каб\.?\s*/, ""), d = +$("rday").value, now = new Date(), today = dow(now) === d;
+  const nowMin = now.getHours() * 60 + now.getMinutes(), slotNow = today ? BELLS.findIndex(b => b && nowMin >= b[0] && nowMin < b[1]) + 1 : 0;
+  const res = $("rres"); res.textContent = "";
+  const room = ROOMS.find(r => r.toLowerCase() === q) || (q ? ROOMS.find(r => r.toLowerCase().startsWith(q)) : null);
+  if (!room) {
+    res.append(h("div", {class: "empty", text: q ? "Такого кабинета в расписании нет" : "Введи номер — покажем, кто там на каждом уроке"}));
+  } else {
+    res.append(h("div", {class: "caps", style: "padding:12px 12px 6px", text: "Кабинет " + room + " · " + (today ? "сегодня" : DAYN[d].toLowerCase())}));
+    BELLS.forEach((b, i) => {
+      if (!b) return;
+      const use = ROOM_USE[room].filter(u => u.day === d && u.num === i + 1);
+      if (!use.length && i >= 8) return;
+      res.append(h("div", {class: "rrow" + (slotNow === i + 1 ? " now" : "")}, h("span", {class: "t", text: (i + 1) + " · " + hm(b[0]) + "–" + hm(b[1])}),
+        use.length ? h("span", null, use.map((u, k) => [k ? ", " : "", h("b", {text: u.cls}), " " + u.subject])) : h("span", {style: "color:var(--faint)", text: "свободен"})));
+    });
+  }
+  const free = $("free"); free.textContent = "";
+  if (slotNow) {
+    $("freeH").textContent = "Свободны сейчас · " + slotNow + " урок";
+    ROOMS.filter(r => r !== "спортзал" && !ROOM_USE[r].some(u => u.day === d && u.num === slotNow)).forEach(r => free.append(h("button", {class: "chip", text: r, onclick: () => { $("rq").value = r; renderRooms(); }})));
+  } else {
+    $("freeH").textContent = "Свободные кабинеты";
+    free.append(h("div", {class: "note", style: "padding:4px 6px", text: "Покажем во время уроков. Нажми на кабинет ниже, чтобы увидеть его день."}));
+    ROOMS.slice(0, 40).forEach(r => free.append(h("button", {class: "chip", text: r, onclick: () => { $("rq").value = r; renderRooms(); }})));
+  }
+}
+
+/* ---------- конструктор: своё расписание ---------- */
+const SLOTS = 9;
+let ed = makeEditor(custom);
+function makeEditor(c) {
+  const e = {bells: Array.from({length: SLOTS}, (_, i) => (c && c.bells && c.bells[i]) ? [clean(c.bells[i][0]), clean(c.bells[i][1])] : (DATA.bells[i] ? DATA.bells[i].slice() : ["", ""])),
+    days: Array.from({length: 6}, (_, d) => Array.from({length: SLOTS}, (_, i) => { const l = c && c.days && c.days[d] && c.days[d][i]; return l ? [clean(l[0]), clean(l[1])] : ["", ""]; }))};
+  if (!c) fillFromClass(e, cls);
+  return e;
+}
+function fillFromClass(e, c) {
+  const w = classWeek(c);
+  e.days = Array.from({length: 6}, (_, d) => Array.from({length: SLOTS}, (_, i) => { const l = w[d].find(x => x.num === i + 1); return l ? [l.subject, l.room] : ["", ""]; }));
+  e.bells = Array.from({length: SLOTS}, (_, i) => DATA.bells[i] ? DATA.bells[i].slice() : ["", ""]);
+}
+function edJson() {
+  return {v: 1, bells: ed.bells.map(b => [b[0].trim(), b[1].trim()]),
+    days: ed.days.map(day => { let last = -1; day.forEach((l, i) => { if (l[0].trim()) last = i; }); return day.slice(0, last + 1).map(l => [clean(l[0]), clean(l[1])]); })};
+}
+const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)));
+const edCode = () => "ZVS1:" + b64e(JSON.stringify(edJson()));
+let cDay = Math.min(dow(new Date()), 5);
+function renderEditor() {
+  const days = $("cDays"); days.textContent = "";
+  for (let d = 0; d < 6; d++) days.append(h("button", {class: d === cDay ? "on" : "", text: DAYS[d], onclick: () => { cDay = d; renderEditor(); }}));
+  const box = $("cSlots"); box.textContent = "";
+  for (let i = 0; i < SLOTS; i++) {
+    const l = ed.days[cDay][i];
+    const s = h("input", {class: "f", list: "subjList", placeholder: "Предмет", "aria-label": "Предмет " + (i + 1)}); s.value = l[0];
+    s.oninput = () => { l[0] = s.value; saveEd(); };
+    const r = h("input", {class: "f", placeholder: "Каб.", "aria-label": "Кабинет " + (i + 1)}); r.value = l[1];
+    r.oninput = () => { l[1] = r.value; saveEd(); };
+    box.append(h("div", {class: "slot"}, h("div", {class: "k"}, String(i + 1), h("small", {text: ed.bells[i][0]})), s, r));
+  }
+  const bells = $("cBells"); bells.textContent = "";
+  ed.bells.forEach((b, i) => {
+    const a = h("input", {class: "f num", inputmode: "numeric", placeholder: "8:00"}); a.value = b[0]; a.oninput = () => { b[0] = a.value; saveEd(); };
+    const z = h("input", {class: "f num", inputmode: "numeric", placeholder: "8:45"}); z.value = b[1]; z.oninput = () => { b[1] = z.value; saveEd(); };
+    bells.append(h("span", {style: "color:var(--muted);font-size:14px", text: (i + 1) + " урок"}), a, z);
+  });
+}
+function saveEd() {
+  custom = edJson(); store.set("custom", custom);
+  if (useCustom) { rebuild(); lastKey = ""; renderLive(); }
+}
+function setUseCustom(on) {
+  if (on) { custom = edJson(); store.set("custom", custom); }
+  useCustom = on && !!custom; store.set("useCustom", useCustom); $("cUse").checked = useCustom;
+  rebuild(); selDay = null; renderClasses(); lastKey = ""; renderLive();
+  if (on) toast("На сайте теперь своё расписание");
+}
+(function initEditor() {
+  const dl = $("subjList"); Object.values(DATA.subjects).sort().forEach(s => dl.append(h("option", {value: s})));
+  const from = $("cFrom"); CLASSES.forEach(c => from.append(h("option", {value: c, text: "Класс " + c}))); from.value = cls;
+  $("cTake").onclick = () => { fillFromClass(ed, from.value); saveEd(); renderEditor(); toast("Взято расписание " + from.value); };
+  $("cClear").onclick = () => { ed.days[cDay] = Array.from({length: SLOTS}, () => ["", ""]); saveEd(); renderEditor(); };
+  $("cUse").checked = useCustom; $("cUse").onchange = e => setUseCustom(e.target.checked);
+  $("cCopy").onclick = () => copy(edCode(), "Код скопирован. Вставь его в приложении");
+  $("cShare").onclick = () => shareText("Моё расписание для «Звонка». В приложении: Своё расписание → Вставить код.\n\n" + edCode());
+  $("cLoad").onclick = () => {
+    const t = $("cCode").value, p = t.indexOf("ZVS1:");
+    try {
+      if (p < 0 || t.length > 40000) throw 0;
+      const c = JSON.parse(b64d(t.slice(p + 5).split(/\s/)[0]));
+      if (!c || !Array.isArray(c.days)) throw 0;
+      ed = makeEditor(c); custom = edJson(); store.set("custom", custom); renderEditor(); setUseCustom(true); $("cCode").value = "";
+    } catch (e) { toast("Не похоже на код расписания"); }
+  };
+  renderEditor();
+})();
+
+/* ---------- конструктор: оформление ---------- */
+const PRESETS = [["Чёрный", "000000", "FFFFFF"], ["Графит", "1C1C1E", "FFFFFF"], ["Полночь", "0B1220", "60A5FA"], ["Мята", "04140F", "5EEAD4"],
+  ["Лаванда", "120D1F", "A78BFA"], ["Бордо", "1A0A0E", "FB7185"], ["Песок", "F4EFE6", "1F1F1F"], ["Белый", "FFFFFF", "000000"]];
+const ACCENTS = ["FFFFFF", "5EEAD4", "60A5FA", "A78BFA", "F472B6", "FBBF24", "A3E635", "FB7185", "000000"];
+const TH0 = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1};
+let th = Object.assign({}, TH0, store.get("theme", {}));
+const lum = hex => { const n = parseInt(hex, 16); return (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255; };
+const thCode = () => `ZV1;bg=${th.bg};ac=${th.ac};op=${th.op};r=${th.r};s=${th.s};p=${th.p};n=${th.n};d=${th.d}`;
+function renderTheme() {
+  store.set("theme", th);
+  const light = lum(th.bg) > .5, text = light ? "#111" : "#fff", soft = light ? "#3a3a3a" : "#d0d0d0", muted = light ? "#6b6b6b" : "#7e7e7e",
+    faint = light ? "rgba(0,0,0,.2)" : "#2a2a2a", chip = light ? "rgba(0,0,0,.08)" : "#1e1e1e", track = light ? "rgba(0,0,0,.13)" : "#262626";
+  const accV = Math.abs(lum(th.ac) - lum(th.bg)) < .25 ? (light ? "111111" : "FFFFFF") : th.ac, onAcc = lum(accV) > .5 ? "#000" : "#fff";
+  const bgA = "#" + th.bg + Math.round(th.op * 2.55).toString(16).padStart(2, "0"), rad = th.r <= 16 ? 12 : th.r >= 32 ? 36 : 26;
+  const ch = (t, now) => h("span", {class: "ch", style: `background:${now ? "#" + accV : chip};color:${now ? onAcc : text}`, text: t});
+  const dots = () => th.d ? h("span", {class: "dt"}, [0, 1, 2, 3, 4, 5, 6].map(i => h("span", {style: "color:" + (i === 2 ? "#" + accV : i < 2 ? muted : faint), text: "●"}))) : null;
+  const tm = (size) => h("div", {class: "tm", style: `font-size:${size}px;color:${text}`, text: th.s ? "24:16" : "24 мин"});
+  const pb = () => th.p ? h("div", {class: "pb", style: "background:" + track}, h("i", {style: "background:#" + accV})) : null;
+  const pv = $("pv"); pv.textContent = "";
+  pv.append(h("div", {class: "pv-n", style: "background:#" + th.bg},
+    h("div", {style: "display:flex;align-items:center"}, h("span", {class: "lab", style: "color:" + muted, text: "УРОК 3 / 7"}), dots()),
+    h("div", {class: "tt", style: "color:" + text + ";font-size:19px"}, h("span", {text: "Физика"}), ch("48/49", true)),
+    h("div", {style: "display:flex;align-items:end;gap:14px;margin-top:4px"}, tm(42), h("div", {style: "margin-left:auto;text-align:right;padding-bottom:4px"},
+      h("div", {class: "lab", style: "color:" + muted, text: "ЗВОНОК"}), h("div", {style: "color:" + text + ";font-weight:600", text: "10:30"}))),
+    pb(),
+    th.n ? h("div", {style: "display:flex;align-items:center;margin-top:12px"}, h("div", {style: "flex:1"}, h("div", {class: "lab", style: "color:" + muted, text: "ДАЛЕЕ · 10:50"}),
+      h("div", {style: "color:" + soft + ";font-size:14px", text: "Программирование"})), ch("56/57", false)) : null));
+  const w = h("div", {class: "pv-w"});
+  w.append(h("div", {class: "pv-2", style: `background:${bgA};border-radius:${rad}px`},
+    h("div", {style: "display:flex;align-items:center"}, h("span", {class: "lab", style: "color:" + muted, text: "УРОК 3 / 7"}), dots()),
+    h("div", {class: "tt", style: "color:" + text}, h("span", {text: "Физика"}), ch("48/49", true)),
+    h("div", {style: "display:flex;align-items:end"}, tm(32), h("div", {style: "margin-left:auto;text-align:right"}, h("div", {class: "lab", style: "color:" + muted + ";font-size:7px", text: "ЗВОНОК"}), h("div", {style: "color:" + text + ";font-size:12px;font-weight:600", text: "10:30"}))),
+    pb(),
+    th.n ? h("div", {class: "nx", style: "color:" + soft}, h("span", {style: "flex:none;color:" + muted, text: "→"}), h("span", {text: "Программирование"}), ch("56/57", false)) : null));
+  w.append(h("div", {class: "pv-1", style: `background:${bgA};border-radius:${rad}px`},
+    h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {style: "flex:1"}, h("div", {class: "lab", style: "color:" + muted, text: "УРОК 3/7"}), tm(26)),
+      th.n ? h("div", {style: "text-align:right"}, ch("56/57", false), h("div", {style: "font-size:10px;color:" + muted + ";margin-top:3px", text: "Программ…"})) : null),
+    pb()));
+  pv.append(w);
+
+  const pr = $("thPresets"); pr.textContent = "";
+  PRESETS.forEach(([n, bg, ac]) => pr.append(h("button", {class: "swatch" + (th.bg === bg && th.ac === ac ? " on" : ""), onclick: () => { th.bg = bg; th.ac = ac; renderTheme(); }},
+    h("i", {style: `background:#${bg};color:#${ac}`, text: "●"}), n)));
+  const acc = $("thAcc"); acc.textContent = "";
+  ACCENTS.forEach(a => acc.append(h("button", {class: th.ac === a ? "on" : "", style: "background:#" + a, "aria-label": "Акцент #" + a, onclick: () => { th.ac = a; renderTheme(); }})));
+  $("thOp").value = th.op; $("thOpV").textContent = th.op + "%";
+  const rr = $("thR"); rr.textContent = "";
+  [[12, "Острые"], [26, "Обычные"], [36, "Круглые"]].forEach(([r, n]) => rr.append(h("button", {class: "pill" + (Math.abs(th.r - r) < 6 ? " on" : ""), text: n, onclick: () => { th.r = r; renderTheme(); }})));
+  ["s", "p", "n", "d"].forEach(k => $("th" + k.toUpperCase()).checked = !!th[k]);
+}
+$("thOp").oninput = e => { th.op = +e.target.value; renderTheme(); };
+["s", "p", "n", "d"].forEach(k => $("th" + k.toUpperCase()).onchange = e => { th[k] = e.target.checked ? 1 : 0; renderTheme(); });
+$("thCopy").onclick = () => copy(thCode(), "Код темы скопирован");
+$("thReset").onclick = () => { th = Object.assign({}, TH0); renderTheme(); };
+$("tCustom").onclick = () => { $("tCustom").classList.add("on"); $("tTheme").classList.remove("on"); $("pCustom").hidden = false; $("pTheme").hidden = true; };
+$("tTheme").onclick = () => { $("tTheme").classList.add("on"); $("tCustom").classList.remove("on"); $("pTheme").hidden = false; $("pCustom").hidden = true; renderTheme(); };
+
+/* ---------- установка ---------- */
+const ANDROID = {
+  xiaomi: {names: ["Xiaomi", "Redmi", "POCO"], os: "HyperOS / MIUI", steps: [
+    ["Автозапуск", "Настройки → Приложения → Звонок → включи «Автозапуск»."],
+    ["Батарея", "Там же: «Контроль активности» (или «Батарея») → «Нет ограничений»."],
+    ["Экран блокировки", "Настройки → Уведомления → «Экран блокировки» → показывать уведомления полностью."],
+    ["Закрепить", "Открой «Недавние», зажми карточку «Звонка» и нажми на замок — MIUI его не закроет."]]},
+  samsung: {names: ["Samsung"], os: "One UI", steps: [
+    ["Батарея", "Настройки → Приложения → Звонок → Батарея → «Не ограничено»."],
+    ["Спящие приложения", "Настройки → Батарея → «Ограничения фонового использования» → убедись, что «Звонка» нет в спящих."],
+    ["Экран блокировки", "Настройки → Экран блокировки → Уведомления → показывать содержимое."]]},
+  transsion: {names: ["Tecno", "Infinix", "itel"], os: "HiOS / XOS", steps: [
+    ["Автозапуск", "Phone Master (или «Менеджер телефона») → «Автозапуск» → включи «Звонок»."],
+    ["Фоновая работа", "Настройки → Батарея → Звонок → разрешить работу в фоне, без «умной» оптимизации."],
+    ["Закрепить", "В «Недавних» потяни карточку «Звонка» вниз, чтобы закрепить её."]]},
+  oppo: {names: ["realme", "OPPO", "OnePlus"], os: "ColorOS / realme UI / OxygenOS", steps: [
+    ["Фоновая активность", "Настройки → Приложения → Звонок → Батарея → «Разрешить фоновую активность»."],
+    ["Автозапуск", "Там же: «Автозапуск» / «Разрешить автоматический запуск» → включить."],
+    ["Экран блокировки", "Настройки → Уведомления → Звонок → показывать на экране блокировки."]]},
+  vivo: {names: ["vivo", "iQOO"], os: "Funtouch / OriginOS", steps: [
+    ["Высокое потребление в фоне", "Настройки → Батарея → «Фоновое энергопотребление» → Звонок → разрешить."],
+    ["Автозапуск", "i Manager → Приложения → «Автозапуск» → включить «Звонок»."]]},
+  huawei: {names: ["Huawei", "Honor"], os: "EMUI / MagicOS", steps: [
+    ["Запуск приложений", "Настройки → Батарея → «Запуск приложений» → Звонок → «Управлять вручную» и включить все три пункта."],
+    ["Экран блокировки", "Настройки → Уведомления → Звонок → «Экран блокировки» → показывать."]]},
+  stock: {names: ["Google Pixel", "Motorola", "Nothing", "Nokia"], os: "Android", steps: [
+    ["Батарея", "Настройки → Приложения → Звонок → Батарея → «Без ограничений»."],
+    ["Экран блокировки", "Настройки → Уведомления → показывать на экране блокировки."]]}
+};
+const IPHONES = ["iPhone 16", "iPhone 15 Pro", "iPhone 15", "iPhone 14", "iPhone 13", "iPhone 12", "iPhone SE", "iPhone 11", "iPhone XR", "iPhone 16 Pro Max"];
+let os = null, brand = null;
+// бренды плавают двумя полосами — сверху и снизу, не заслоняя кнопки в центре
+const POS = [[4, 4], [30, 6], [56, 3], [78, 7], [14, 14], [42, 15], [68, 13], [2, 23], [86, 20],
+  [6, 74], [32, 77], [58, 73], [80, 78], [18, 85], [46, 86], [72, 88], [4, 93], [88, 94]];
+function renderCloud() {
+  const c = $("cloud"); c.textContent = "";
+  const names = os === "ios" ? IPHONES : [].concat(...Object.values(ANDROID).map(g => g.names));
+  names.forEach((n, i) => {
+    const [x, y] = POS[i % POS.length], key = os === "ios" ? "ios" : Object.keys(ANDROID).find(k => ANDROID[k].names.includes(n));
+    c.append(h("button", {class: "brand" + (brand === n ? " on" : ""), text: n,
+      style: `left:${x}%;top:${y}%;font-size:${14 + (i * 7) % 9}px;--d:${7 + (i * 13) % 6}s;--dl:-${(i * 17) % 7}s;transform-origin:center`,
+      onclick: () => { if (os !== "ios") os = "android"; brand = n; renderOs(); renderGuide(key); $("guide").scrollIntoView({behavior: "smooth", block: "start"}); }}));
+  });
+}
+function renderOs() { $("osA").classList.toggle("on", os === "android"); $("osI").classList.toggle("on", os === "ios"); renderCloud(); }
+$("osA").onclick = () => { os = "android"; brand = null; renderOs(); renderGuide(null); };
+$("osI").onclick = () => { os = "ios"; brand = null; renderOs(); renderGuide("ios"); };
+function step(t, p, ...extra) { return h("div", {class: "step"}, h("div", null, h("b", {text: t}), h("p", {text: p}), extra.length ? h("div", {class: "row"}, extra) : null)); }
+function renderGuide(key) {
+  const g = $("guide"); g.textContent = "";
+  if (!os) return;
+  if (os === "android") {
+    const grp = key && ANDROID[key];
+    g.append(h("div", {class: "bhead"}, h("span", {class: "caps", text: "Android" + (grp ? " · " + grp.names.join(", ") + " · " + grp.os : "")}),
+      grp ? null : h("span", {class: "note", style: "margin:0", text: "Нажми на марку своего телефона в облаке выше, чтобы получить точные шаги."})));
+    const steps = h("div", {class: "steps"},
+      step("Скачай приложение", "Файл Zvonok-165.apk, около 60 КБ. Без интернета? Попроси друга: в приложении есть «Отправить приложение другу».",
+        h("a", {class: "btn w", href: APK, rel: "noopener noreferrer", text: "Скачать APK"})),
+      step("Установи", "Открой скачанный файл. Если телефон спросит — разреши установку из этого источника. Play Защита может показать «Неизвестное приложение»: нажми «Подробнее» → «Всё равно установить». В приложении нет интернета и рекламы."),
+      step("Выбери класс", "Открой «Звонок», выбери свой класс и разреши уведомления. Чёрное уведомление с таймером появится сразу."),
+      ...(grp ? grp.steps.map(s => step(s[0], s[1])) : []),
+      step("Добавь виджет", "Зажми пустое место на рабочем столе → Виджеты → «Звонок» (2×2) или «Звонок · мини» (2×1). Цвета меняются в «Оформлении»."));
+    g.append(steps, h("div", {class: "warn", text: "Обновление: просто скачай новый APK и установи поверх. Если Android пишет «Приложение не установлено» — удали старую версию и поставь заново."}));
+  } else {
+    g.append(h("div", {class: "bhead"}, h("span", {class: "caps", text: "iPhone · iOS 16 и новее"})));
+    const sel = h("select", {class: "f", style: "flex:1;min-width:140px", "aria-label": "Класс для скрипта"}, CLASSES.map(c => h("option", {value: c, text: "Класс " + c})));
+    sel.value = cls;
+    g.append(h("div", {class: "steps"},
+      step("Открой сайт в Safari", "Именно в Safari — так его можно поставить как приложение."),
+      step("Добавь на экран «Домой»", "Нажми «Поделиться» (квадрат со стрелкой) → «На экран „Домой“» → «Добавить». Иконка «Звонок» откроется на весь экран и будет работать без интернета."),
+      step("Виджеты на экран блокировки", "Поставь бесплатное приложение Scriptable из App Store. Потом скопируй скрипт для своего класса, в Scriptable нажми «+», вставь и назови «Звонок».",
+        sel, h("button", {class: "btn w", text: "Скопировать скрипт", onclick: () => copy(scriptFor(sel.value), "Скрипт для " + sel.value + " скопирован")}),
+        h("button", {class: "btn d", text: "Скачать .js", onclick: () => download("Zvonok-" + sel.value + ".js", scriptFor(sel.value))})),
+      step("Добавь виджет", "Экран блокировки: зажми его → «Настроить» → поле виджетов → Scriptable. Рабочий стол: зажми пустое место → «+» → Scriptable. Нажми на виджет и выбери скрипт «Звонок».")),
+      h("div", {class: "warn", text: "На iPhone нет постоянного уведомления как на Android: Apple не даёт его делать сайтам и скриптам. Зато виджеты на экране блокировки показывают таймер до звонка и кабинет."}));
+  }
+}
+function scriptFor(c) {
+  const w = classWeek(c), week = {};
+  for (let d = 0; d < 6; d++) {
+    const arr = []; w[d].forEach(l => arr[l.num - 1] = [l.subject, l.room]);
+    for (let i = 0; i < arr.length; i++) if (!arr[i]) arr[i] = ["", ""];
+    if (arr.length) week[d + 1] = arr;
+  }
+  return SCRIPTABLE.replace("__BELLS__", JSON.stringify(BELLS)).replace("__WEEK__", JSON.stringify(week))
+    .split("__TITLE__").join("Звонок " + c).split("__CLASS__").join(c);
+}
+function download(name, text) {
+  const a = h("a", {href: URL.createObjectURL(new Blob([text], {type: "text/javascript"})), download: name});
+  document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+/* ---------- поделиться ---------- */
+const MSG = "Нашёл «Звонок» — расписание всех классов нашего лицея: сколько до звонка, какой следующий урок и кабинет. Работает без интернета, есть приложение для Android и виджеты для iPhone.\n" + SITE;
+function shareText(t) { if (navigator.share) navigator.share({text: t}).catch(() => {}); else copy(t); }
+$("shMsg").textContent = MSG;
+$("shMsgCopy").onclick = () => copy(MSG, "Сообщение скопировано");
+$("shNative").onclick = () => navigator.share ? navigator.share({title: "Звонок", text: MSG.split("\n")[0], url: SITE}).catch(() => {}) : copy(SITE, "Ссылка скопирована");
+$("shCopy").onclick = () => copy(SITE, "Ссылка скопирована");
+$("shTg").href = "https://t.me/share/url?url=" + encodeURIComponent(SITE) + "&text=" + encodeURIComponent(MSG.split("\n")[0]);
+$("shWa").href = "https://wa.me/?text=" + encodeURIComponent(MSG);
+$("fTerm").textContent = "Расписание: " + DATA.term + ", утверждено " + DATA.updated.split("-").reverse().join(".") + ". Если в лицее что-то поменяли — собери своё расписание в конструкторе.";
+
+/* ---------- старт ---------- */
+renderClasses();
+renderCloud();
+tick();
+if (/^https?:$/.test(location.protocol) && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

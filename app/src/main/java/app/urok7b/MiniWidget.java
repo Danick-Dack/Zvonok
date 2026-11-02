@@ -28,9 +28,19 @@ public class MiniWidget extends AppWidgetProvider {
     static boolean updateAll(Context ctx, Updater.Display d, Theme t) {
         int[] ids = Updater.widgetIds(ctx, MiniWidget.class);
         if (ids.length == 0) return false;
-        RemoteViews rv = build(ctx, d, t);
-        rv.setOnClickPendingIntent(R.id.m_root, Updater.openApp(ctx));
-        AppWidgetManager.getInstance(ctx).updateAppWidget(ids, rv);
+        AppWidgetManager m = AppWidgetManager.getInstance(ctx);
+        for (int id : ids) {
+            RemoteViews rv = build(ctx, d, t);
+            int h = LessonWidget.heightDp(m, id);
+            if (h > 0 && h < 72) {
+                // низкая ячейка: таймер меньше, полоску прогресса прячем
+                rv.setTextViewTextSize(R.id.m_chrono, android.util.TypedValue.COMPLEX_UNIT_SP, 22);
+                rv.setTextViewTextSize(R.id.m_big, android.util.TypedValue.COMPLEX_UNIT_SP, 22);
+                rv.setViewVisibility(R.id.m_progress, View.GONE);
+            }
+            rv.setOnClickPendingIntent(R.id.m_root, Updater.openApp(ctx));
+            m.updateAppWidget(id, rv);
+        }
         return true;
     }
 
