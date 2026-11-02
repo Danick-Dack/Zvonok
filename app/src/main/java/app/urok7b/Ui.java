@@ -209,6 +209,38 @@ final class Ui {
         return v;
     }
 
+    /** Выбор класса: таблетки по параллелям. После выбора вызывает done. */
+    static void pickClass(Activity a, Runnable done) {
+        String cur = Updater.prefs(a).getString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS);
+        LinearLayout box = vertical(a);
+        box.setPadding(dp(a, 20), dp(a, 8), dp(a, 20), dp(a, 8));
+        android.app.AlertDialog[] dlg = new android.app.AlertDialog[1];
+        String grade = null;
+        LinearLayout row = null;
+        for (String c : Schedule.classes(a)) {
+            String g = c.replaceAll("\\D", "");
+            if (!g.equals(grade)) {
+                grade = g;
+                TextView h = caps(a, g + " КЛАССЫ");
+                h.setPadding(0, dp(a, 12), 0, dp(a, 6));
+                box.addView(h);
+                row = horizontal(a);
+                box.addView(row);
+            }
+            row.addView(pill(a, c, c.equals(cur) && !Schedule.isCustom(), v -> {
+                Updater.prefs(a).edit().putString(Schedule.KEY_CLASS, c).putBoolean(Schedule.KEY_USE_CUSTOM, false).apply();
+                Schedule.invalidate();
+                Updater.update(a);
+                if (dlg[0] != null) dlg[0].dismiss();
+                done.run();
+            }));
+        }
+        ScrollView sv = new ScrollView(a);
+        sv.addView(box);
+        dlg[0] = new android.app.AlertDialog.Builder(a, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Твой класс").setView(sv).setNegativeButton("Закрыть", null).show();
+    }
+
     /** Ряд таблеток с переносом строк (простая «сетка»). */
     static LinearLayout wrapRows(Context c, View[] items, int perRow) {
         LinearLayout col = vertical(c);

@@ -20,8 +20,8 @@ import qrcode.image.svg
 from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SITE_URL = "https://danick-dack.github.io/uroki-7b/"
-APK_URL = "https://github.com/Danick-Dack/uroki-7b/releases/latest/download/Zvonok-165.apk"
+SITE_URL = "https://danick-dack.github.io/Zvonok/"
+APK_URL = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk"
 OUT = os.path.join(ROOT, "site")
 
 
