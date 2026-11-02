@@ -3,8 +3,10 @@ package app.urok7b;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.ClipData;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -34,7 +36,7 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.List;
 
-/** Главный экран: живой таймер, расписание по дням и проверка настроек. Чёрный минимализм. */
+/** Главный экран «Звонка»: живой таймер, расписание по дням, настройки. Чёрный минимализм. */
 public class MainActivity extends Activity {
 
     private static final int BG = Color.BLACK;
@@ -47,8 +49,10 @@ public class MainActivity extends Activity {
     private static final int FAINT = Color.parseColor("#3A3A3A");
 
     private static final DayOfWeek[] DAYS = {DayOfWeek.MONDAY, DayOfWeek.TUESDAY,
-            DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY};
-    private static final String[] DAY_SHORT = {"Пн", "Вт", "Ср", "Чт", "Пт"};
+            DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY};
+    private static final String[] DAY_SHORT = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб"};
+    /** Адрес сайта (GitHub Pages). Там же — свежий APK и инструкции. */
+    static final String SITE = "https://danick-dack.github.io/uroki-7b/";
     private static final String[] DAY_FULL = {"понедельник", "вторник", "среда", "четверг", "пятница",
             "суббота", "воскресенье"};
     private static final String[] MONTHS = {"января", "февраля", "марта", "апреля", "мая", "июня",
@@ -59,7 +63,8 @@ public class MainActivity extends Activity {
     private LinearLayout nextBlock, statCol;
     private Chronometer heroChrono;
     private ProgressBar heroProgress;
-    private TextView dayTitle, dayMeta;
+    private TextView dayTitle, dayMeta, badge;
+    private LinearLayout settingsRows;
     private LinearLayout dayList, checks;
     private final LinearLayout[] chips = new LinearLayout[DAYS.length];
     private final TextView[] chipText = new TextView[DAYS.length];
@@ -68,7 +73,7 @@ public class MainActivity extends Activity {
     private DayOfWeek selectedDay;
     private String lastSignature = "";
     private long lastTarget = -1;
-    private boolean askedNotif;
+    private boolean askedNotif, askedClass;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable tick = new Runnable() {
@@ -97,14 +102,18 @@ public class MainActivity extends Activity {
         head.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout titles = vertical();
         titles.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        titles.addView(text("Уроки", 30, TEXT, "sans-serif-medium"));
+        titles.addView(text("Звонок", 30, TEXT, "sans-serif-medium"));
         dateText = text("", 13, MUTED, null);
         titles.addView(dateText);
         head.addView(titles);
-        TextView badge = text("7Б", 15, BG, "sans-serif-medium");
+        badge = text("7Б", 15, BG, "sans-serif-medium");
         badge.setGravity(Gravity.CENTER);
         badge.setBackground(round(TEXT, 16, 0));
-        badge.setLayoutParams(new LinearLayout.LayoutParams(dp(46), dp(46)));
+        badge.setPadding(dp(10), 0, dp(10), 0);
+        badge.setMinWidth(dp(46));
+        badge.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)));
+        badge.setContentDescription("Выбрать класс");
+        badge.setOnClickListener(v -> pickClass());
         head.addView(badge);
         root.addView(head);
 
@@ -278,22 +287,39 @@ public class MainActivity extends Activity {
         swRow.addView(sw);
         set.addView(swRow);
 
+        settingsRows = vertical();
+        set.addView(settingsRows);
+
         checks = vertical();
         set.addView(checks);
         root.addView(set);
 
-        TextView hint = text("Виджеты: долгое нажатие на рабочий стол → Виджеты → «Уроки 7Б» (2×2) "
-                        + "или «Уроки 7Б · мини» (2×1).\n\n"
+        // ---- поделиться ----
+        TextView shareHead = caps("ПОДЕЛИТЬСЯ", MUTED);
+        shareHead.setPadding(dp(4), dp(34), 0, dp(10));
+        root.addView(shareHead);
+        LinearLayout share = vertical();
+        share.setBackground(round(CARD, 24, LINE));
+        share.setPadding(dp(18), dp(4), dp(18), dp(4));
+        share.addView(Ui.linkRow(this, "Отправить приложение другу",
+                "APK по Bluetooth, Quick Share, Telegram — даже без интернета", null, v -> shareApk()));
+        share.addView(Ui.divider(this));
+        share.addView(Ui.linkRow(this, "Поделиться ссылкой на сайт",
+                "Расписание всех классов, установка для Android и iPhone", null, v -> shareSite()));
+        root.addView(share);
+
+        TextView hint = text("Виджеты: долгое нажатие на рабочий стол → Виджеты → «Звонок» (2×2) "
+                        + "или «Звонок · мини» (2×1).\n\n"
                         + "Батарея: пока экран выключен, приложение ничего не делает и телефон не будит. "
                         + "Таймеры тикают сами, без участия приложения.\n\n"
-                        + "Нет уведомления на экране блокировки? Настройки → Уведомления → «Экран блокировки» "
-                        + "→ показывать полностью.",
+                        + "Приватность: у приложения нет доступа в интернет — оно физически не может ничего "
+                        + "отправить. Нет рекламы, аккаунтов и трекеров. Всё хранится только на телефоне.",
                 12, MUTED, null);
         hint.setLineSpacing(0, 1.2f);
         hint.setPadding(dp(4), dp(16), dp(4), 0);
         root.addView(hint);
 
-        TextView footer = text("Уроки 7Б · версия " + versionName(), 11, FAINT, null);
+        TextView footer = text("Звонок · " + Schedule.school() + " · версия " + versionName(), 11, FAINT, null);
         footer.setGravity(Gravity.CENTER);
         footer.setPadding(0, dp(28), 0, 0);
         root.addView(footer);
@@ -310,7 +336,12 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
         Updater.update(this);
+        buildSettings();
         buildChecks();
+        if (!Updater.prefs(this).contains(Schedule.KEY_CLASS) && !askedClass) {
+            askedClass = true;
+            pickClass();
+        }
         lastSignature = "";
         lastTarget = -1;
         handler.removeCallbacks(tick);
@@ -333,6 +364,8 @@ public class MainActivity extends Activity {
     // ---------- обновление экрана ----------
 
     private void refresh(boolean force) {
+        Schedule.load(this);
+        badge.setText(Schedule.title());
         ZonedDateTime now = ZonedDateTime.now();
         long nowMs = System.currentTimeMillis();
         Schedule.Status s = Schedule.compute(now);
@@ -341,7 +374,7 @@ public class MainActivity extends Activity {
         LocalDate date = now.toLocalDate();
         String wd = DAY_FULL[date.getDayOfWeek().getValue() - 1];
         dateText.setText(Character.toUpperCase(wd.charAt(0)) + wd.substring(1) + ", "
-                + date.getDayOfMonth() + " " + MONTHS[date.getMonthValue() - 1]);
+                + date.getDayOfMonth() + " " + MONTHS[date.getMonthValue() - 1] + " · " + Schedule.school());
 
         pill.setText((d.live ? "●  " : "") + d.label);
         pill.setTextColor(d.live ? TEXT : SOFT);
@@ -391,7 +424,7 @@ public class MainActivity extends Activity {
         heroFoot.setVisibility(d.foot.isEmpty() ? View.GONE : View.VISIBLE);
 
         if (selectedDay == null) selectedDay = defaultDay(now, s);
-        String sig = selectedDay + "|" + d.sig + "|" + date + "|" + (d.progress / 5);
+        String sig = selectedDay + "|" + d.sig + "|" + date + "|" + (d.progress / 5) + "|" + Schedule.title();
         if (force || !sig.equals(lastSignature)) {
             lastSignature = sig;
             buildChips(now.getDayOfWeek());
@@ -407,7 +440,7 @@ public class MainActivity extends Activity {
         LocalDate d = now.toLocalDate();
         for (int i = 1; i <= 7; i++) {
             DayOfWeek w = d.plusDays(i).getDayOfWeek();
-            if (w.getValue() <= 5 && !Schedule.lessons(w).isEmpty()) return w;
+            if (w.getValue() <= 6 && !Schedule.lessons(w).isEmpty()) return w;
         }
         return DayOfWeek.MONDAY;
     }
@@ -421,6 +454,8 @@ public class MainActivity extends Activity {
             chipDot[i].setTextColor(sel ? BG : TEXT);
             chipDot[i].setVisibility(isToday ? View.VISIBLE : View.INVISIBLE);
         }
+        boolean sat = !Schedule.lessons(DayOfWeek.SATURDAY).isEmpty();
+        chips[5].setVisibility(sat ? View.VISIBLE : View.GONE);
     }
 
     private void buildDay(ZonedDateTime now, Schedule.Status s, long nowMs) {
@@ -512,6 +547,101 @@ public class MainActivity extends Activity {
                 : "перемена " + minutes + " мин", 11, now ? SOFT : FAINT, now ? "sans-serif-medium" : null);
         t.setPadding(dp(76), dp(3), 0, dp(3));
         return t;
+    }
+
+    // ---------- настройки ----------
+
+    private void buildSettings() {
+        settingsRows.removeAllViews();
+        settingsRows.addView(Ui.divider(this));
+        settingsRows.addView(Ui.linkRow(this, "Класс", Schedule.isCustom() ? "Сейчас включено своё расписание" : null,
+                Updater.prefs(this).getString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS), v -> pickClass()));
+        settingsRows.addView(Ui.linkRow(this, "Своё расписание", "Любые предметы, кабинеты и звонки",
+                Schedule.isCustom() ? "вкл" : null, v -> startActivity(new Intent(this, EditorActivity.class))));
+        settingsRows.addView(Ui.linkRow(this, "Оформление", "Цвета виджетов и уведомления",
+                null, v -> startActivity(new Intent(this, StyleActivity.class))));
+        settingsRows.addView(Ui.divider(this));
+        settingsRows.addView(Ui.switchRow(this, "Только в учебное время",
+                "После уроков и в выходные уведомления нет",
+                Updater.prefs(this).getBoolean(Updater.KEY_SCHOOL_ONLY, false),
+                (b, on) -> setFlag(Updater.KEY_SCHOOL_ONLY, on)));
+        Theme t = Theme.load(this);
+        settingsRows.addView(Ui.switchRow(this, "Экономный таймер",
+                "Без секунд: «24 мин» вместо 24:16 — ещё меньше расход", !t.seconds, (b, on) -> {
+                    Theme th = Theme.load(this);
+                    th.seconds = !on;
+                    th.save(this);
+                    Updater.update(this);
+                }));
+        settingsRows.addView(Ui.switchRow(this, "Каникулы",
+                "Всё на паузе: ни уведомления, ни будильников",
+                Updater.prefs(this).getBoolean(Updater.KEY_VACATION, false),
+                (b, on) -> setFlag(Updater.KEY_VACATION, on)));
+        settingsRows.addView(Ui.divider(this));
+    }
+
+    private void setFlag(String key, boolean on) {
+        Updater.prefs(this).edit().putBoolean(key, on).apply();
+        Updater.update(this);
+        refresh(true);
+    }
+
+    /** Выбор класса: сетка по параллелям. */
+    private void pickClass() {
+        List<String> all = Schedule.classes(this);
+        String cur = Updater.prefs(this).getString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS);
+        LinearLayout box = vertical();
+        box.setPadding(dp(20), dp(8), dp(20), dp(8));
+        final AlertDialog[] dlg = new AlertDialog[1];
+        String grade = null;
+        LinearLayout row = null;
+        for (String c : all) {
+            String g = c.replaceAll("\\D", "");
+            if (!g.equals(grade)) {
+                grade = g;
+                TextView h = caps(g + " КЛАССЫ", MUTED);
+                h.setPadding(0, dp(12), 0, dp(6));
+                box.addView(h);
+                row = horizontal();
+                box.addView(row);
+            }
+            row.addView(Ui.pill(this, c, c.equals(cur) && !Schedule.isCustom(), v -> {
+                Updater.prefs(this).edit().putString(Schedule.KEY_CLASS, c)
+                        .putBoolean(Schedule.KEY_USE_CUSTOM, false).apply();
+                Schedule.invalidate();
+                Updater.update(this);
+                selectedDay = null;
+                buildSettings();
+                refresh(true);
+                if (dlg[0] != null) dlg[0].dismiss();
+            }));
+        }
+        ScrollView sv = new ScrollView(this);
+        sv.addView(box);
+        dlg[0] = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Твой класс")
+                .setView(sv)
+                .setNegativeButton("Закрыть", null)
+                .show();
+    }
+
+    /** Отправить APK этого приложения — работает без интернета. */
+    private void shareApk() {
+        Intent i = new Intent(Intent.ACTION_SEND)
+                .setType(ApkProvider.MIME)
+                .putExtra(Intent.EXTRA_STREAM, ApkProvider.URI)
+                .putExtra(Intent.EXTRA_TEXT, "«Звонок» — расписание лицея №165: таймер до звонка, кабинет, "
+                        + "виджеты. Без интернета и рекламы. Сайт: " + SITE)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        i.setClipData(ClipData.newRawUri("Звонок", ApkProvider.URI));
+        open(Intent.createChooser(i, "Отправить приложение"));
+    }
+
+    private void shareSite() {
+        Intent i = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_TEXT, "«Звонок» — расписание всех классов лицея №165 с таймером до звонка. "
+                        + "Работает без интернета, есть для Android и iPhone: " + SITE);
+        open(Intent.createChooser(i, "Поделиться сайтом"));
     }
 
     // ---------- проверка настроек ----------

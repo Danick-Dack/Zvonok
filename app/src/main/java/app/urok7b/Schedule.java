@@ -1,16 +1,30 @@
 package app.urok7b;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-/** Расписание 7Б (2 четверть 2026–2027) и расчёт текущего состояния. Менять уроки — в BELLS и WEEK. */
+/**
+ * Расписание лицея №165 и расчёт текущего состояния.
+ * Данные всех классов — в data/schedule.json (тот же файл использует сайт).
+ * Своё расписание хранится только на телефоне, в настройках приложения.
+ */
 public final class Schedule {
 
     public static final class Lesson {
@@ -25,7 +39,7 @@ public final class Schedule {
             this.start = start;
             this.end = end;
             this.subject = subject;
-            this.room = room;
+            this.room = room == null ? "" : room;
         }
 
         public String startText() { return hm(start); }
@@ -33,7 +47,7 @@ public final class Schedule {
 
         /** "каб. 24/35" или "спортзал". */
         public String roomText() {
-            if (room == null || room.isEmpty()) return "";
+            if (room.isEmpty()) return "";
             return Character.isDigit(room.charAt(0)) ? "каб. " + room : room;
         }
     }
@@ -53,90 +67,246 @@ public final class Schedule {
         public String nextDayEnd;    // во сколько заканчиваются
         public long startMillis;     // начало текущего отрезка (для прогресса)
         public long targetMillis;    // когда звонок / начало уроков
-        public boolean notify;       // показывать уведомление
-        public long windowStartMillis; // когда начнётся окно уведомления (BEFORE / AFTER / DAY_OFF)
+        public boolean notify;       // последний час перед уроками (BEFORE)
+        public long windowStartMillis; // когда начнётся этот час (BEFORE / AFTER / DAY_OFF)
     }
 
-    /** За сколько минут до первого урока показывать уведомление. */
+    /** За сколько минут до первого урока включать отсчёт. */
     public static final int LEAD_MINUTES = 60;
+    public static final int MAX_DAYS = 6;      // Пн–Сб
+    public static final int MAX_SLOTS = 10;
+    public static final String DEFAULT_CLASS = "7Б";
+    public static final String SPORT = "спортзал";
 
-    private static final int[][] BELLS = {
-            {8 * 60, 8 * 60 + 45},
-            {8 * 60 + 50, 9 * 60 + 35},
-            {9 * 60 + 45, 10 * 60 + 30},
-            {10 * 60 + 50, 11 * 60 + 35},
-            {11 * 60 + 55, 12 * 60 + 40},
-            {12 * 60 + 50, 13 * 60 + 35},
-            {13 * 60 + 45, 14 * 60 + 30},
-            {14 * 60 + 40, 15 * 60 + 25},
-    };
+    static final String KEY_CLASS = "class";
+    static final String KEY_CUSTOM = "custom_json";
+    static final String KEY_USE_CUSTOM = "use_custom";
 
-    private static final String SPORT = "спортзал";
+    // ---- исходные данные (читаются один раз) ----
+    private static String school = "Лицей №165";
+    private static String term = "";
+    private static int[][] baseBells;
+    private static final Map<String, String> SUBJECTS = new HashMap<>();
+    private static final Map<String, String[][]> CLASSES = new HashMap<>();
+    private static final List<String> CLASS_ORDER = new ArrayList<>();
 
-    /** "Предмет|кабинет" по номеру урока; null — урока нет. */
-    private static final Map<DayOfWeek, String[]> WEEK = new EnumMap<>(DayOfWeek.class);
-
-    static {
-        WEEK.put(DayOfWeek.MONDAY, new String[]{
-                "Классный час|40",
-                "Казахский яз. и лит.|42/21",
-                "История Казахстана|46",
-                "Алгебра|24/35",
-                "Математика|24/35",
-                "Физкультура|" + SPORT,
-                "Физкультура|" + SPORT,
-                "Пр. физика|48/73",
-        });
-        WEEK.put(DayOfWeek.TUESDAY, new String[]{
-                "Геометрия|24/35",
-                "Английский язык|44/47",
-                "Физика|48/49",
-                "Физика|48/49",
-                "Программирование|56/57",
-                "Биология|25",
-                "Худ. труд|11/1",
-        });
-        WEEK.put(DayOfWeek.WEDNESDAY, new String[]{
-                "Алгебра|24/35",
-                "Алгебра|24/35",
-                "Английский язык|45/47",
-                "География|54",
-                "Физкультура|" + SPORT,
-                "Русский язык|46",
-        });
-        WEEK.put(DayOfWeek.THURSDAY, new String[]{
-                "Казахский яз. и лит.|42/21",
-                "Алгебра|24/35",
-                "Русский язык|46",
-                "Русская литература|46",
-                "Физика|48/49",
-                "Физика|48/49",
-                "Всемирная история|54",
-        });
-        WEEK.put(DayOfWeek.FRIDAY, new String[]{
-                "Геометрия|24/35",
-                "Геометрия|24/35",
-                "Казахский яз. и лит.|42/21",
-                "Английский язык|25/47",
-                "Химия|40",
-                "Информатика|56/57",
-                "Русская литература|46",
-        });
-    }
+    // ---- текущая неделя (выбранный класс или своё расписание) ----
+    @SuppressWarnings("unchecked")
+    private static List<Lesson>[] week = new List[7];
+    private static String loadedKey;
+    private static String title = DEFAULT_CLASS;
+    private static boolean custom;
 
     private Schedule() {}
 
-    public static List<Lesson> lessons(DayOfWeek day) {
-        String[] raw = WEEK.get(day);
-        if (raw == null) return Collections.emptyList();
-        List<Lesson> out = new ArrayList<>();
-        for (int i = 0; i < raw.length && i < BELLS.length; i++) {
-            if (raw[i] == null) continue;
-            String[] p = raw[i].split("\\|", 2);
-            out.add(new Lesson(i + 1, BELLS[i][0], BELLS[i][1], p[0], p.length > 1 ? p[1] : ""));
+    // ================= загрузка =================
+
+    /** Подготовить расписание. Дёшево: повторный вызов без изменений ничего не делает. */
+    public static synchronized void load(Context ctx) {
+        ensureBase(ctx);
+        SharedPreferences p = Updater.prefs(ctx);
+        String cls = p.getString(KEY_CLASS, DEFAULT_CLASS);
+        if (!CLASSES.containsKey(cls)) cls = DEFAULT_CLASS;
+        boolean useCustom = p.getBoolean(KEY_USE_CUSTOM, false);
+        String json = useCustom ? p.getString(KEY_CUSTOM, null) : null;
+        String key = cls + "|" + useCustom + "|" + (json == null ? 0 : json.hashCode());
+        if (key.equals(loadedKey)) return;
+
+        List<Lesson>[] w = null;
+        if (json != null) {
+            try {
+                w = fromCustom(new JSONObject(json));
+            } catch (Exception ignored) {
+                w = null;
+            }
         }
-        return out;
+        custom = w != null;
+        if (w == null) w = fromClass(cls);
+        week = w;
+        title = custom ? "Своё" : cls;
+        loadedKey = key;
     }
+
+    public static synchronized void invalidate() {
+        loadedKey = null;
+    }
+
+    private static void ensureBase(Context ctx) {
+        if (baseBells != null) return;
+        try (InputStream in = ctx.getAssets().open("schedule.json")) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            JSONObject root = new JSONObject(new String(out.toByteArray(), StandardCharsets.UTF_8));
+            school = root.optString("school", school);
+            term = root.optString("term", "");
+            baseBells = parseBells(root.getJSONArray("bells"));
+            JSONObject subj = root.getJSONObject("subjects");
+            for (Iterator<String> it = subj.keys(); it.hasNext(); ) {
+                String k = it.next();
+                SUBJECTS.put(k, subj.getString(k));
+            }
+            JSONObject cls = root.getJSONObject("classes");
+            for (Iterator<String> it = cls.keys(); it.hasNext(); ) {
+                String k = it.next();
+                JSONArray days = cls.getJSONArray(k);
+                String[][] d = new String[days.length()][];
+                for (int i = 0; i < days.length(); i++) {
+                    JSONArray day = days.getJSONArray(i);
+                    d[i] = new String[day.length()];
+                    for (int j = 0; j < day.length(); j++) d[i][j] = day.optString(j, "");
+                }
+                CLASSES.put(k, d);
+                CLASS_ORDER.add(k);
+            }
+            Collections.sort(CLASS_ORDER, (a, b) -> {
+                int ga = grade(a), gb = grade(b);
+                return ga != gb ? Integer.compare(ga, gb) : a.compareTo(b);
+            });
+        } catch (Exception e) {
+            // файл расписания встроен в APK; если он повреждён — показываем пустую неделю
+            baseBells = new int[0][];
+        }
+    }
+
+    private static int grade(String cls) {
+        int g = 0;
+        for (int i = 0; i < cls.length() && Character.isDigit(cls.charAt(i)); i++) {
+            g = g * 10 + (cls.charAt(i) - '0');
+        }
+        return g;
+    }
+
+    static int[][] parseBells(JSONArray arr) throws Exception {
+        int n = Math.min(arr.length(), MAX_SLOTS);
+        int[][] b = new int[n][];
+        for (int i = 0; i < n; i++) {
+            JSONArray p = arr.getJSONArray(i);
+            int s = parseTime(p.getString(0)), e = parseTime(p.getString(1));
+            b[i] = s >= 0 && e > s ? new int[]{s, e} : null;
+        }
+        return b;
+    }
+
+    /** "8:05" → 485, ошибка → -1. */
+    public static int parseTime(String t) {
+        if (t == null) return -1;
+        t = t.trim().replace('.', ':');
+        int c = t.indexOf(':');
+        if (c <= 0 || c >= t.length() - 1) return -1;
+        try {
+            int h = Integer.parseInt(t.substring(0, c));
+            int m = Integer.parseInt(t.substring(c + 1));
+            if (h < 0 || h > 23 || m < 0 || m > 59) return -1;
+            return h * 60 + m;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Lesson>[] fromClass(String cls) {
+        List<Lesson>[] w = new List[7];
+        String[][] days = CLASSES.get(cls);
+        for (int d = 0; d < 7; d++) {
+            List<Lesson> out = new ArrayList<>();
+            if (days != null && d < days.length) {
+                String[] raw = days[d];
+                for (int i = 0; i < raw.length && i < baseBells.length; i++) {
+                    String r = raw[i];
+                    if (r == null || r.isEmpty() || baseBells[i] == null) continue;
+                    int sp = r.indexOf(' ');
+                    String code = sp < 0 ? r : r.substring(0, sp);
+                    String room = sp < 0 ? "" : r.substring(sp + 1).trim();
+                    out.add(new Lesson(i + 1, baseBells[i][0], baseBells[i][1],
+                            subjectName(code), roomName(room)));
+                }
+            }
+            w[d] = out;
+        }
+        return w;
+    }
+
+    /**
+     * Своё расписание: {"v":1,"bells":[["8:00","8:45"],...],"days":[[["Алгебра","24/35"],...],...]}
+     * Пустой предмет — урока нет.
+     */
+    @SuppressWarnings("unchecked")
+    static List<Lesson>[] fromCustom(JSONObject o) throws Exception {
+        int[][] bells = o.has("bells") ? parseBells(o.getJSONArray("bells")) : baseBells;
+        JSONArray days = o.getJSONArray("days");
+        List<Lesson>[] w = new List[7];
+        for (int d = 0; d < 7; d++) {
+            List<Lesson> out = new ArrayList<>();
+            if (d < days.length() && d < MAX_DAYS) {
+                JSONArray day = days.getJSONArray(d);
+                for (int i = 0; i < day.length() && i < bells.length; i++) {
+                    JSONArray l = day.optJSONArray(i);
+                    if (l == null || bells[i] == null) continue;
+                    String subj = clean(l.optString(0, ""));
+                    if (subj.isEmpty()) continue;
+                    out.add(new Lesson(i + 1, bells[i][0], bells[i][1], subj, roomName(clean(l.optString(1, "")))));
+                }
+            }
+            w[d] = out;
+        }
+        return w;
+    }
+
+    /** Убрать переводы строк и ограничить длину (данные из чужого кода импорта). */
+    static String clean(String s) {
+        if (s == null) return "";
+        s = s.replaceAll("[\\p{Cntrl}]", " ").trim();
+        return s.length() > 40 ? s.substring(0, 40) : s;
+    }
+
+    private static String subjectName(String code) {
+        String s = SUBJECTS.get(code);
+        return s == null ? code : s;
+    }
+
+    private static String roomName(String room) {
+        return "с/з".equals(room) ? SPORT : room;
+    }
+
+    // ================= доступ =================
+
+    public static synchronized List<Lesson> lessons(DayOfWeek day) {
+        List<Lesson> l = week[day.getValue() - 1];
+        return l == null ? Collections.emptyList() : l;
+    }
+
+    /** Уроки класса из встроенного расписания (для редактора: «взять за основу»). */
+    public static synchronized List<Lesson> classLessons(Context ctx, String cls, DayOfWeek day) {
+        ensureBase(ctx);
+        return fromClass(cls)[day.getValue() - 1];
+    }
+
+    public static synchronized List<String> classes(Context ctx) {
+        ensureBase(ctx);
+        return new ArrayList<>(CLASS_ORDER);
+    }
+
+    public static synchronized int[][] bells(Context ctx) {
+        ensureBase(ctx);
+        return baseBells;
+    }
+
+    public static synchronized List<String> subjectNames(Context ctx) {
+        ensureBase(ctx);
+        List<String> l = new ArrayList<>(SUBJECTS.values());
+        Collections.sort(l);
+        return l;
+    }
+
+    /** "7Б" или "Своё". */
+    public static synchronized String title() { return title; }
+    public static synchronized boolean isCustom() { return custom; }
+    public static String school() { return school; }
+    public static String term() { return term; }
+
+    // ================= расчёт состояния =================
 
     public static Status compute(ZonedDateTime now) {
         Status s = new Status();
@@ -178,7 +348,6 @@ public final class Schedule {
                         s.startMillis = at(today, prev.end, zone);
                         s.targetMillis = at(today, l.start, zone);
                     }
-                    s.notify = true;
                     return s;
                 }
             }
@@ -202,20 +371,14 @@ public final class Schedule {
             s.windowStartMillis = at(date, first.start - LEAD_MINUTES, zone);
             break;
         }
-        s.notify = false;
         return s;
     }
 
+    // ================= текст =================
+
     public static String dayName(DayOfWeek d) {
-        switch (d) {
-            case MONDAY: return "Понедельник";
-            case TUESDAY: return "Вторник";
-            case WEDNESDAY: return "Среда";
-            case THURSDAY: return "Четверг";
-            case FRIDAY: return "Пятница";
-            case SATURDAY: return "Суббота";
-            default: return "Воскресенье";
-        }
+        String[] n = {"Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"};
+        return n[d.getValue() - 1];
     }
 
     public static String dayShort(DayOfWeek d) {
@@ -244,6 +407,14 @@ public final class Schedule {
         if (min < 60) return min + " мин";
         long h = min / 60, m = min % 60;
         return m == 0 ? h + " ч" : h + " ч " + (m < 10 ? "0" : "") + m + " мин";
+    }
+
+    /** Коротко для таймера без секунд: "24 мин", "1:05". */
+    public static String fmtTimer(long ms) {
+        long min = ms <= 0 ? 0 : (ms + 59_999) / 60_000;
+        if (min < 60) return min + " мин";
+        long m = min % 60;
+        return (min / 60) + ":" + (m < 10 ? "0" : "") + m;
     }
 
     public static String hm(int minutes) {

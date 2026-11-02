@@ -1,109 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Маленький чёрный виджет 2×1: таймер слева, кабинет и предмет справа, тонкий прогресс снизу -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Маленький виджет 2×1: таймер слева, кабинет и предмет справа, тонкий прогресс снизу -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/m_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_bg"
-    android:gravity="center_vertical"
-    android:orientation="vertical"
-    android:paddingStart="14dp"
-    android:paddingTop="8dp"
-    android:paddingEnd="14dp"
-    android:paddingBottom="8dp">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/m_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/shape_r26" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="8dp">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/m_label"
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/m_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.12"
+                    android:maxLines="1"
+                    android:text="УРОК 3/7"
+                    android:textColor="#8A8A8A"
+                    android:textSize="8sp" />
+
+                <Chronometer
+                    android:id="@+id/m_chrono"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-thin"
+                    android:fontFeatureSettings="tnum"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="24:16"
+                    android:textColor="#FFFFFF"
+                    android:textSize="26sp" />
+
+                <TextView
+                    android:id="@+id/m_big"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-thin"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#FFFFFF"
+                    android:textSize="26sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/m_right"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.12"
-                android:maxLines="1"
-                android:text="УРОК 3/7"
-                android:textColor="#8A8A8A"
-                android:textSize="8sp" />
+                android:layout_marginStart="6dp"
+                android:gravity="end"
+                android:orientation="vertical">
 
-            <Chronometer
-                android:id="@+id/m_chrono"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-thin"
-                android:fontFeatureSettings="tnum"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:text="24:16"
-                android:textColor="#FFFFFF"
-                android:textSize="26sp" />
+                <TextView
+                    android:id="@+id/m_room"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/room_chip"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:paddingStart="6dp"
+                    android:paddingTop="1dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="1dp"
+                    android:text="56/57"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
 
-            <TextView
-                android:id="@+id/m_big"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-thin"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:textColor="#FFFFFF"
-                android:textSize="26sp"
-                android:visibility="gone" />
+                <TextView
+                    android:id="@+id/m_sub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:ellipsize="end"
+                    android:maxWidth="78dp"
+                    android:maxLines="1"
+                    android:text="Программирование"
+                    android:textColor="#9A9A9A"
+                    android:textSize="10sp" />
+            </LinearLayout>
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/m_right"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:gravity="end"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/m_room"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/room_chip"
-                android:fontFamily="sans-serif-medium"
-                android:maxLines="1"
-                android:paddingStart="6dp"
-                android:paddingTop="1dp"
-                android:paddingEnd="6dp"
-                android:paddingBottom="1dp"
-                android:text="56/57"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/m_sub"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:ellipsize="end"
-                android:maxWidth="78dp"
-                android:maxLines="1"
-                android:text="Программирование"
-                android:textColor="#9A9A9A"
-                android:textSize="10sp" />
-        </LinearLayout>
+        <ProgressBar
+            android:id="@+id/m_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:layout_marginTop="5dp"
+            android:max="100"
+            android:progress="46"
+            android:progressDrawable="@drawable/progress_mono" />
     </LinearLayout>
-
-    <ProgressBar
-        android:id="@+id/m_progress"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:layout_marginTop="5dp"
-        android:max="100"
-        android:progress="46"
-        android:progressDrawable="@drawable/progress_mono" />
-</LinearLayout>
+</FrameLayout>

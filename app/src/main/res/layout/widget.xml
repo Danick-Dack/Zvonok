@@ -1,207 +1,219 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Чёрный виджет 2×2: статус и точки дня, урок с кабинетом, таймер со звонком, прогресс, следующий урок -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Виджет 2×2: статус и точки дня, урок с кабинетом, таймер со звонком, прогресс, следующий урок -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/w_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_bg"
-    android:orientation="vertical"
-    android:paddingStart="14dp"
-    android:paddingTop="12dp"
-    android:paddingEnd="14dp"
-    android:paddingBottom="12dp">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/w_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/shape_r26" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/w_label"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.12"
-            android:maxLines="1"
-            android:text="УРОК 3 / 7"
-            android:textColor="#8A8A8A"
-            android:textSize="9sp" />
-
-        <TextView
-            android:id="@+id/w_dots"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:letterSpacing="0.2"
-            android:maxLines="1"
-            android:text="●●●●●●●"
-            android:textColor="#333333"
-            android:textSize="6sp" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/w_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:fontFamily="sans-serif-medium"
-            android:maxLines="1"
-            android:text="Физика"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp" />
-
-        <TextView
-            android:id="@+id/w_room"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/room_chip_now"
-            android:fontFamily="sans-serif-medium"
-            android:maxLines="1"
-            android:paddingStart="6dp"
-            android:paddingTop="1dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="1dp"
-            android:text="48/49"
-            android:textColor="#000000"
-            android:textSize="11sp" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:gravity="bottom"
-        android:orientation="horizontal">
-
-        <Chronometer
-            android:id="@+id/w_chrono"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-thin"
-            android:fontFeatureSettings="tnum"
-            android:includeFontPadding="false"
-            android:maxLines="1"
-            android:text="24:16"
-            android:textColor="#FFFFFF"
-            android:textSize="34sp" />
-
-        <TextView
-            android:id="@+id/w_big"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-thin"
-            android:includeFontPadding="false"
-            android:maxLines="1"
-            android:textColor="#FFFFFF"
-            android:textSize="34sp"
-            android:visibility="gone" />
-
-        <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="12dp">
 
         <LinearLayout
-            android:id="@+id/w_side"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:gravity="end"
-            android:orientation="vertical"
-            android:paddingBottom="3dp">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/w_side_head"
-                android:layout_width="wrap_content"
+                android:id="@+id/w_label"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
                 android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.1"
+                android:letterSpacing="0.12"
                 android:maxLines="1"
-                android:text="ЗВОНОК"
-                android:textColor="#6E6E6E"
-                android:textSize="7sp" />
+                android:text="УРОК 3 / 7"
+                android:textColor="#8A8A8A"
+                android:textSize="9sp" />
 
             <TextView
-                android:id="@+id/w_side_value"
+                android:id="@+id/w_dots"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:letterSpacing="0.2"
+                android:maxLines="1"
+                android:text="●●●●●●●"
+                android:textColor="#333333"
+                android:textSize="6sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/w_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
                 android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
-                android:text="10:30"
+                android:text="Физика"
                 android:textColor="#FFFFFF"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/w_room"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/room_chip_now"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:paddingStart="6dp"
+                android:paddingTop="1dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="1dp"
+                android:text="48/49"
+                android:textColor="#000000"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="bottom"
+            android:orientation="horizontal">
+
+            <Chronometer
+                android:id="@+id/w_chrono"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-thin"
+                android:fontFeatureSettings="tnum"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="24:16"
+                android:textColor="#FFFFFF"
+                android:textSize="34sp" />
+
+            <TextView
+                android:id="@+id/w_big"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-thin"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="#FFFFFF"
+                android:textSize="34sp"
+                android:visibility="gone" />
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <LinearLayout
+                android:id="@+id/w_side"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:gravity="end"
+                android:orientation="vertical"
+                android:paddingBottom="3dp">
+
+                <TextView
+                    android:id="@+id/w_side_head"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.1"
+                    android:maxLines="1"
+                    android:text="ЗВОНОК"
+                    android:textColor="#6E6E6E"
+                    android:textSize="7sp" />
+
+                <TextView
+                    android:id="@+id/w_side_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:text="10:30"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/w_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_marginTop="6dp"
+            android:max="100"
+            android:progress="46"
+            android:progressDrawable="@drawable/progress_mono" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="6dp" />
+
+        <LinearLayout
+            android:id="@+id/w_next"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/w_arrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                android:maxLines="1"
+                android:text="→"
+                android:textColor="#6E6E6E"
                 android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/w_next_subj"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Программирование"
+                android:textColor="#D6D6D6"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/w_next_room"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/room_chip"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:paddingStart="6dp"
+                android:paddingTop="1dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="1dp"
+                android:text="56/57"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp" />
         </LinearLayout>
     </LinearLayout>
-
-    <ProgressBar
-        android:id="@+id/w_progress"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="3dp"
-        android:layout_marginTop="6dp"
-        android:max="100"
-        android:progress="46"
-        android:progressDrawable="@drawable/progress_mono" />
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:minHeight="6dp" />
-
-    <LinearLayout
-        android:id="@+id/w_next"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="5dp"
-            android:maxLines="1"
-            android:text="→"
-            android:textColor="#6E6E6E"
-            android:textSize="12sp" />
-
-        <TextView
-            android:id="@+id/w_next_subj"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="Программирование"
-            android:textColor="#D6D6D6"
-            android:textSize="12sp" />
-
-        <TextView
-            android:id="@+id/w_next_room"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/room_chip"
-            android:fontFamily="sans-serif-medium"
-            android:maxLines="1"
-            android:paddingStart="6dp"
-            android:paddingTop="1dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="1dp"
-            android:text="56/57"
-            android:textColor="#FFFFFF"
-            android:textSize="11sp" />
-    </LinearLayout>
-</LinearLayout>
+</FrameLayout>

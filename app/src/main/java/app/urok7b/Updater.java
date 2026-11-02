@@ -10,7 +10,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.PowerManager;
 import android.os.SystemClock;
@@ -30,7 +29,8 @@ import java.time.ZonedDateTime;
  *  • все будильники «не будящие» (RTC): спящий телефон приложение не будит никогда;
  *  • пока экран выключен, поминутных обновлений нет совсем — только на звонках;
  *  • при включении экрана служба сразу обновляет всё одним вызовом;
- *  • таймеры в уведомлении и виджетах тикают сами (Chronometer), приложение для этого не нужно.
+ *  • таймеры тикают сами (Chronometer), а в экономном режиме их нет вовсе;
+ *  • на каникулах не работает ничего: ни службы, ни будильников.
  */
 public final class Updater {
 
@@ -40,12 +40,8 @@ public final class Updater {
     public static final String ACTION_REPOST = "app.urok7b.REPOST";
     public static final String PREFS = "settings";
     public static final String KEY_NOTIF = "notif_enabled";
-
-    // Палитра: чистый чёрный и оттенки белого.
-    static final int WHITE = Color.WHITE;
-    static final int DOT_DONE = Color.parseColor("#5A5A5A");
-    static final int DOT_NOW = Color.WHITE;
-    static final int DOT_LEFT = Color.parseColor("#262626");
+    public static final String KEY_SCHOOL_ONLY = "school_only";
+    public static final String KEY_VACATION = "vacation";
 
     /** Готовые тексты для уведомления, виджетов и главного экрана. */
     public static final class Display {
@@ -94,23 +90,37 @@ public final class Updater {
      *              ничего не перерисовываем, только заводим следующий будильник.
      */
     public static void update(Context ctx, boolean force) {
+        Schedule.load(ctx);
         ZonedDateTime now = ZonedDateTime.now();
         long nowMs = now.toInstant().toEpochMilli();
         Schedule.Status s = Schedule.compute(now);
-        Display d = describe(s, nowMs);
+        boolean vacation = prefs(ctx).getBoolean(KEY_VACATION, false);
+        Display d = vacation ? vacation() : describe(s, nowMs);
         boolean screenOn = isScreenOn(ctx);
+        Theme t = Theme.load(ctx);
 
-        boolean notif = notifEnabled(ctx);
-        boolean widgets = Updater.widgetIds(ctx, LessonWidget.class).length > 0
-                || Updater.widgetIds(ctx, MiniWidget.class).length > 0;
+        boolean notif = !vacation && notifWanted(ctx, d);
+        boolean widgets = widgetIds(ctx, LessonWidget.class).length > 0
+                || widgetIds(ctx, MiniWidget.class).length > 0;
 
         if (force || screenOn || !d.sig.equals(lastSig)) {
             lastSig = d.sig;
-            notif = updateNotification(ctx, d);
-            LessonWidget.updateAll(ctx, d);
-            MiniWidget.updateAll(ctx, d);
+            notif = updateNotification(ctx, d, t, notif);
+            LessonWidget.updateAll(ctx, d, t);
+            MiniWidget.updateAll(ctx, d, t);
         }
+        if (vacation) {
+            cancelAlarm(ctx);
+            return;
+        }
+        // без секунд таймер — это текст, и его надо обновлять раз в минуту, пока экран включён
         scheduleNext(ctx, s, d, nowMs, screenOn, notif || widgets);
+    }
+
+    /** Уведомление включено и (если выбрано «только в учебное время») сейчас учебное время. */
+    static boolean notifWanted(Context ctx, Display d) {
+        if (!notifEnabled(ctx)) return false;
+        return !prefs(ctx).getBoolean(KEY_SCHOOL_ONLY, false) || d.live;
     }
 
     static boolean isScreenOn(Context ctx) {
@@ -119,6 +129,18 @@ public final class Updater {
     }
 
     // ---------- тексты ----------
+
+    static Display vacation() {
+        Display d = new Display();
+        d.kind = Schedule.Kind.DAY_OFF;
+        d.label = "КАНИКУЛЫ";
+        d.title = "Отдыхай";
+        d.big = "☼";
+        d.notifTitle = d.compactTitle = "Каникулы";
+        d.miniLabel = "КАНИКУЛЫ";
+        d.sig = "vacation";
+        return d;
+    }
 
     public static Display describe(Schedule.Status s, long now) {
         Display d = new Display();
@@ -143,16 +165,18 @@ public final class Updater {
                 d.sideValue = d.sideShort = c.endText();
                 d.statHead = "ДОМОЙ В";
                 d.statValue = s.todayEnd;
-                int rest = s.todayCount - c.num;
-                d.foot = rest == 0 ? "Последний урок, дальше домой"
+                int rest = s.todayCount - indexOf(s, c) - 1;
+                d.foot = rest <= 0 ? "Последний урок, дальше домой"
                         : "Потом ещё " + Schedule.lessonsWord(rest) + " · до " + s.todayEnd;
                 d.notifTitle = c.subject + " · осталось " + left;
                 if (n != null) {
                     d.nextHead = "ДАЛЕЕ · " + n.startText();
                     d.nextSubject = n.subject;
                     d.nextRoom = n.room;
-                    d.notifText = "Звонок в " + c.endText() + " → " + n.subject + ", " + n.roomText();
-                    d.compactText = "Звонок " + c.endText() + " → " + n.subject + " · " + n.room;
+                    d.notifText = "Звонок в " + c.endText() + " → " + n.subject
+                            + (n.room.isEmpty() ? "" : ", " + n.roomText());
+                    d.compactText = "Звонок " + c.endText() + " → " + n.subject
+                            + (n.room.isEmpty() ? "" : " · " + n.room);
                     d.miniRoom = n.room;
                     d.miniSub = n.subject;
                 } else {
@@ -173,9 +197,9 @@ public final class Updater {
                 d.timer = true;
                 d.progress = pct(s, now);
                 d.dotTotal = s.todayCount;
-                d.dotDone = p.num;
+                d.dotDone = indexOf(s, p) + 1;
                 d.label = "ПЕРЕМЕНА · " + (n.start - p.end) + " МИН";
-                d.title = "Перемена";
+                d.title = n.start - p.end > 25 ? "Окно" : "Перемена";
                 d.sideHead = "НА УРОК";
                 d.sideValue = d.sideShort = n.startText();
                 d.statHead = "ДОМОЙ В";
@@ -183,10 +207,11 @@ public final class Updater {
                 d.nextHead = "УРОК " + n.num + " · " + n.startText();
                 d.nextSubject = n.subject;
                 d.nextRoom = n.room;
-                d.foot = "Осталось " + Schedule.lessonsWord(s.todayCount - p.num) + " · до " + s.todayEnd;
-                d.notifTitle = "Перемена · осталось " + left;
-                d.notifText = "Звонок в " + n.startText() + " → " + n.subject + ", " + n.roomText();
-                d.compactTitle = "Перемена → " + n.subject;
+                d.foot = "Осталось " + Schedule.lessonsWord(s.todayCount - d.dotDone) + " · до " + s.todayEnd;
+                d.notifTitle = d.title + " · осталось " + left;
+                d.notifText = "Звонок в " + n.startText() + " → " + n.subject
+                        + (n.room.isEmpty() ? "" : ", " + n.roomText());
+                d.compactTitle = d.title + " → " + n.subject;
                 d.compactText = (n.room.isEmpty() ? "" : n.roomText() + " · ") + "звонок " + n.startText();
                 d.miniLabel = "ПЕРЕМЕНА";
                 d.miniRoom = n.room;
@@ -211,7 +236,7 @@ public final class Updater {
                 d.foot = "Сегодня " + Schedule.lessonsWord(s.todayCount) + " · "
                         + n.startText() + "–" + s.todayEnd;
                 d.notifTitle = s.notify ? "До уроков " + left : "Сегодня уроки с " + n.startText();
-                d.notifText = "Первый: " + n.subject + ", " + n.roomText();
+                d.notifText = "Первый: " + n.subject + (n.room.isEmpty() ? "" : ", " + n.roomText());
                 d.compactTitle = s.notify ? "Скоро уроки → " + n.subject
                         : "Сегодня " + Schedule.lessonsWord(s.todayCount) + " с " + n.startText();
                 d.compactText = (n.room.isEmpty() ? "" : n.roomText() + " · ")
@@ -238,7 +263,7 @@ public final class Updater {
                     d.foot = s.nextDayLabel + ": " + Schedule.lessonsWord(s.nextDayCount) + ", "
                             + n.startText() + "–" + s.nextDayEnd;
                     d.notifTitle = d.title + " · " + s.nextDayWhen + " с " + n.startText();
-                    d.notifText = "Первый урок: " + n.subject + ", " + n.roomText();
+                    d.notifText = "Первый урок: " + n.subject + (n.room.isEmpty() ? "" : ", " + n.roomText());
                     d.compactText = (n.room.isEmpty() ? "" : n.roomText() + " · ") + n.subject;
                     d.miniLabel = s.nextDayShort.toUpperCase() + " С";
                     d.miniRoom = n.room;
@@ -253,8 +278,16 @@ public final class Updater {
         }
         // минуты в подпись не входят, иначе при выключенном экране экономии не будет
         d.sig = s.kind + "|" + (s.current == null ? 0 : s.current.num) + "|"
-                + (s.next == null ? 0 : s.next.num) + "|" + d.timer + "|" + s.targetMillis;
+                + (s.next == null ? 0 : s.next.num) + "|" + d.timer + "|" + s.targetMillis
+                + "|" + Schedule.title();
         return d;
+    }
+
+    /** Порядковый номер урока в дне (номер урока может не совпадать, если первые уроки пустые). */
+    private static int indexOf(Schedule.Status s, Schedule.Lesson l) {
+        java.util.List<Schedule.Lesson> list = Schedule.lessons(java.time.LocalDate.now().getDayOfWeek());
+        int i = list.indexOf(l);
+        return i < 0 ? l.num - 1 : i;
     }
 
     private static int pct(Schedule.Status s, long now) {
@@ -264,16 +297,20 @@ public final class Updater {
         return (int) Math.max(0, Math.min(100, p));
     }
 
-    /** Точки уроков дня: прошедшие серые, текущий белый, остальные тёмные. */
-    static CharSequence dots(Display d) {
+    /** Точки уроков дня: прошедшие приглушены, текущий — акцент, остальные тёмные. */
+    static CharSequence dots(Display d, int now, int done, int left) {
         SpannableStringBuilder sb = new SpannableStringBuilder();
         for (int i = 1; i <= d.dotTotal; i++) {
-            int color = i == d.dotCurrent ? DOT_NOW : (i <= d.dotDone ? DOT_DONE : DOT_LEFT);
+            int color = i == d.dotCurrent ? now : (i <= d.dotDone ? done : left);
             int start = sb.length();
             sb.append('●');
             sb.setSpan(new ForegroundColorSpan(color), start, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         return sb;
+    }
+
+    static CharSequence dots(Display d, Theme t) {
+        return dots(d, t.accentVisible(), t.muted(), t.faint());
     }
 
     /** База для Chronometer: момент target в шкале elapsedRealtime. */
@@ -292,7 +329,6 @@ public final class Updater {
     }
 
     static void ensureChannel(NotificationManager nm) {
-        // старый «беззвучный» канал MIUI прятал на экране блокировки
         if (nm.getNotificationChannel("lesson_now") != null) nm.deleteNotificationChannel("lesson_now");
         if (nm.getNotificationChannel(CHANNEL) != null) return;
         // DEFAULT, а не LOW: такие уведомления видны на экране блокировки. Звук и вибрация выключены.
@@ -309,25 +345,26 @@ public final class Updater {
 
     /** Собрать уведомление для текущего момента (для службы). */
     public static Notification buildNow(Context ctx) {
+        Schedule.load(ctx);
         ZonedDateTime now = ZonedDateTime.now();
         Display d = describe(Schedule.compute(now), now.toInstant().toEpochMilli());
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm != null) ensureChannel(nm);
-        return build(ctx, d);
+        return build(ctx, d, Theme.load(ctx));
     }
 
     /** @return true, если уведомление показано. */
-    private static boolean updateNotification(Context ctx, Display d) {
+    private static boolean updateNotification(Context ctx, Display d, Theme t, boolean wanted) {
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null) return false;
-        if (!notifEnabled(ctx)) {
+        if (!wanted) {
             LessonService.stop(ctx);
             nm.cancel(NOTIF_ID);
             return false;
         }
         ensureChannel(nm);
         try {
-            nm.notify(NOTIF_ID, build(ctx, d));
+            nm.notify(NOTIF_ID, build(ctx, d, t));
         } catch (RuntimeException e) {
             return false; // нет разрешения на уведомления
         }
@@ -335,49 +372,63 @@ public final class Updater {
         return true;
     }
 
-    private static Notification build(Context ctx, Display d) {
-        String pkg = ctx.getPackageName();
-
-        // свёрнутый вид: две строки слева, большой таймер справа
-        RemoteViews small = new RemoteViews(pkg, R.layout.notif_small);
+    /** Свёрнутый вид уведомления (используется и для предпросмотра). */
+    static RemoteViews notifSmall(Context ctx, Display d, Theme t) {
+        RemoteViews small = new RemoteViews(ctx.getPackageName(), R.layout.notif_small);
+        small.setInt(R.id.n_root, "setBackgroundColor", t.bg);
         small.setTextViewText(R.id.n_title, d.compactTitle);
         small.setTextViewText(R.id.n_text, d.compactText);
         small.setViewVisibility(R.id.n_text, d.compactText.isEmpty() ? View.GONE : View.VISIBLE);
-        bindTimer(small, R.id.n_chrono, R.id.n_big, d);
+        t.textColor(small, t.text(), R.id.n_title, R.id.n_chrono, R.id.n_big);
+        t.textColor(small, t.muted(), R.id.n_text);
+        bindTimer(small, R.id.n_chrono, R.id.n_big, d, t);
+        return small;
+    }
 
-        // развёрнутый вид: всё сразу
-        RemoteViews big = new RemoteViews(pkg, R.layout.notif_big);
+    /** Развёрнутый вид уведомления (используется и для предпросмотра). */
+    static RemoteViews notifBig(Context ctx, Display d, Theme t) {
+        RemoteViews big = new RemoteViews(ctx.getPackageName(), R.layout.notif_big);
+        big.setInt(R.id.n_root, "setBackgroundColor", t.bg);
         big.setTextViewText(R.id.n_label, d.label);
         big.setTextViewText(R.id.n_title, d.title);
         bindRoom(big, R.id.n_room, d.room);
-        if (d.dotTotal > 0) {
+        t.chip(big, R.id.n_room, true);
+        if (d.dotTotal > 0 && t.dots) {
             big.setViewVisibility(R.id.n_dots, View.VISIBLE);
-            big.setTextViewText(R.id.n_dots, dots(d));
+            big.setTextViewText(R.id.n_dots, dots(d, t));
         } else {
             big.setViewVisibility(R.id.n_dots, View.GONE);
         }
-        bindTimer(big, R.id.n_chrono, R.id.n_big, d);
+        bindTimer(big, R.id.n_chrono, R.id.n_big, d, t);
         big.setTextViewText(R.id.n_side_head, d.sideHead);
         big.setTextViewText(R.id.n_side_value, d.sideValue);
         big.setTextViewText(R.id.n_stat_head, d.statHead);
         big.setTextViewText(R.id.n_stat_value, d.statValue);
         big.setViewVisibility(R.id.n_stat, d.statHead.isEmpty() ? View.GONE : View.VISIBLE);
-        bindProgress(big, R.id.n_progress, d.progress);
-        boolean hasNext = !d.nextSubject.isEmpty();
+        bindProgress(big, R.id.n_progress, t.progress ? d.progress : -1);
+        t.progressColors(big, R.id.n_progress);
+        boolean hasNext = t.next && !d.nextSubject.isEmpty();
         big.setViewVisibility(R.id.n_next, hasNext ? View.VISIBLE : View.GONE);
         big.setTextViewText(R.id.n_next_head, d.nextHead);
         big.setTextViewText(R.id.n_next_subj, d.nextSubject);
         bindRoom(big, R.id.n_next_room, d.nextRoom);
+        t.chip(big, R.id.n_next_room, false);
+        t.textColor(big, t.text(), R.id.n_title, R.id.n_chrono, R.id.n_big, R.id.n_side_value);
+        t.textColor(big, t.soft(), R.id.n_stat_value, R.id.n_next_subj);
+        t.textColor(big, t.muted(), R.id.n_label, R.id.n_side_head, R.id.n_stat_head, R.id.n_next_head);
+        return big;
+    }
 
+    private static Notification build(Context ctx, Display d, Theme t) {
         Notification.Builder b = new Notification.Builder(ctx, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notif)
                 .setContentTitle(d.notifTitle)
                 .setContentText(d.notifText)
                 .setStyle(new Notification.DecoratedCustomViewStyle())
-                .setCustomContentView(small)
-                .setCustomBigContentView(big)
-                // чёрный фон всего уведомления (работает для уведомлений службы)
-                .setColor(Color.BLACK)
+                .setCustomContentView(notifSmall(ctx, d, t))
+                .setCustomBigContentView(notifBig(ctx, d, t))
+                // фон всего уведомления в цвет темы (работает для уведомлений службы)
+                .setColor(t.bg)
                 .setColorized(true)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
@@ -388,7 +439,6 @@ public final class Updater {
                 .setDeleteIntent(repost(ctx))
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setCategory(Notification.CATEGORY_STATUS)
-                .setPriority(Notification.PRIORITY_DEFAULT)
                 .setContentIntent(openApp(ctx));
         if (Build.VERSION.SDK_INT >= 31) {
             b.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
@@ -399,9 +449,9 @@ public final class Updater {
         return n;
     }
 
-    /** Таймер (если идёт отсчёт) или крупный текст на его месте. */
-    static void bindTimer(RemoteViews rv, int chronoId, int bigId, Display d) {
-        if (d.timer) {
+    /** Таймер (если идёт отсчёт и включены секунды) или крупный текст на его месте. */
+    static void bindTimer(RemoteViews rv, int chronoId, int bigId, Display d, Theme t) {
+        if (d.timer && t.seconds) {
             rv.setChronometer(chronoId, chronoBase(d.target), null, true);
             rv.setChronometerCountDown(chronoId, true);
             rv.setViewVisibility(chronoId, View.VISIBLE);
@@ -409,7 +459,8 @@ public final class Updater {
         } else {
             rv.setChronometer(chronoId, SystemClock.elapsedRealtime(), null, false);
             rv.setViewVisibility(chronoId, View.GONE);
-            rv.setTextViewText(bigId, d.big);
+            rv.setTextViewText(bigId, d.timer
+                    ? Schedule.fmtTimer(d.target - System.currentTimeMillis()) : d.big);
             rv.setViewVisibility(bigId, View.VISIBLE);
         }
     }
@@ -444,6 +495,17 @@ public final class Updater {
 
     // ---------- будильник ----------
 
+    private static PendingIntent tickIntent(Context ctx) {
+        Intent i = new Intent(ctx, TickReceiver.class).setAction(ACTION_TICK);
+        return PendingIntent.getBroadcast(ctx, 0, i,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    private static void cancelAlarm(Context ctx) {
+        AlarmManager am = ctx.getSystemService(AlarmManager.class);
+        if (am != null) am.cancel(tickIntent(ctx));
+    }
+
     private static void scheduleNext(Context ctx, Schedule.Status s, Display d, long nowMs,
                                      boolean screenOn, boolean active) {
         AlarmManager am = ctx.getSystemService(AlarmManager.class);
@@ -452,7 +514,7 @@ public final class Updater {
         long nextMidnight = LocalDate.from(now).plusDays(1).atStartOfDay(now.getZone())
                 .toInstant().toEpochMilli();
 
-        // ближайшая «граница»: звонок, начало окна перед уроками или полночь
+        // ближайшая «граница»: звонок, начало часа перед уроками или полночь
         long boundary;
         if (d.live) {
             boundary = s.targetMillis;
@@ -465,15 +527,13 @@ public final class Updater {
         long when = boundary;
         if (d.live && active) {
             // Каждую минуту — только когда на экран смотрят. Если экран выключен, а служба жива,
-            // она сама разбудит обновление при включении экрана, и поминутные тики не нужны.
+            // она сама обновит всё при включении экрана, и поминутные тики не нужны.
             boolean minuteTicks = screenOn || !LessonService.isRunning();
             if (minuteTicks) when = Math.min(boundary, (nowMs / 60_000 + 1) * 60_000);
         }
         when += 500; // чуть после звонка, чтобы точно попасть в новое состояние
 
-        Intent i = new Intent(ctx, TickReceiver.class).setAction(ACTION_TICK);
-        PendingIntent pi = PendingIntent.getBroadcast(ctx, 0, i,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pi = tickIntent(ctx);
         boolean exact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
         try {
             if (exact) am.setExact(AlarmManager.RTC, when, pi);

@@ -5,13 +5,13 @@ import android.content.Context;
 import android.content.Intent;
 
 /**
- * Плановые тики в школьное время, возврат смахнутого уведомления,
- * а также перезагрузка, обновление приложения и смена времени.
+ * Внутренний приёмник (не экспортирован): плановые тики будильника и возврат смахнутого уведомления.
+ * Другие приложения отправить сюда ничего не могут.
  */
 public class TickReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context ctx, Intent intent) {
-        // плановый тик может ничего не перерисовывать, если экран выключен; всё остальное — полное обновление
+        // плановый тик может ничего не перерисовывать, если экран выключен; возврат — всегда полное обновление
         boolean force = intent == null || !Updater.ACTION_TICK.equals(intent.getAction());
         Updater.update(ctx, force);
     }

@@ -10,8 +10,8 @@ android {
         applicationId "app.urok7b"
         minSdk 26
         targetSdk 34
-        versionCode 3
-        versionName "2.0"
+        versionCode 4
+        versionName "3.0"
     }
 
     // Постоянный ключ (из секретов GitHub): каждая новая сборка ставится поверх старой.
@@ -40,6 +40,11 @@ android {
 
     lint {
         checkReleaseBuilds false
+    }
+
+    // Общий файл расписания всех классов (его же использует сайт)
+    sourceSets {
+        main.assets.srcDirs += ['../data']
     }
 
     compileOptions {

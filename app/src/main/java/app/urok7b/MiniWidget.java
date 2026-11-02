@@ -25,24 +25,29 @@ public class MiniWidget extends AppWidgetProvider {
         Updater.update(ctx);
     }
 
-    static boolean updateAll(Context ctx, Updater.Display d) {
+    static boolean updateAll(Context ctx, Updater.Display d, Theme t) {
         int[] ids = Updater.widgetIds(ctx, MiniWidget.class);
         if (ids.length == 0) return false;
-
-        RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_mini);
-        rv.setTextViewText(R.id.m_label, d.miniLabel);
-        Updater.bindTimer(rv, R.id.m_chrono, R.id.m_big, d);
-        if (d.miniRoom.isEmpty() && d.miniSub.isEmpty()) {
-            rv.setViewVisibility(R.id.m_right, View.GONE);
-        } else {
-            rv.setViewVisibility(R.id.m_right, View.VISIBLE);
-            Updater.bindRoom(rv, R.id.m_room, d.miniRoom);
-            rv.setTextViewText(R.id.m_sub, d.miniSub);
-        }
-        Updater.bindProgress(rv, R.id.m_progress, d.progress);
-
+        RemoteViews rv = build(ctx, d, t);
         rv.setOnClickPendingIntent(R.id.m_root, Updater.openApp(ctx));
         AppWidgetManager.getInstance(ctx).updateAppWidget(ids, rv);
         return true;
+    }
+
+    static RemoteViews build(Context ctx, Updater.Display d, Theme t) {
+        RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_mini);
+        LessonWidget.background(rv, R.id.m_bg, t);
+        rv.setTextViewText(R.id.m_label, d.miniLabel);
+        Updater.bindTimer(rv, R.id.m_chrono, R.id.m_big, d, t);
+        boolean right = t.next && !(d.miniRoom.isEmpty() && d.miniSub.isEmpty());
+        rv.setViewVisibility(R.id.m_right, right ? View.VISIBLE : View.GONE);
+        Updater.bindRoom(rv, R.id.m_room, d.miniRoom);
+        t.chip(rv, R.id.m_room, false);
+        rv.setTextViewText(R.id.m_sub, d.miniSub);
+        Updater.bindProgress(rv, R.id.m_progress, t.progress ? d.progress : -1);
+        t.progressColors(rv, R.id.m_progress);
+        t.textColor(rv, t.text(), R.id.m_chrono, R.id.m_big);
+        t.textColor(rv, t.muted(), R.id.m_label, R.id.m_sub);
+        return rv;
     }
 }
