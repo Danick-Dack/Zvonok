@@ -67,7 +67,7 @@ public class EditorActivity extends Activity {
 
         boolean on = Updater.prefs(this).getBoolean(Schedule.KEY_USE_CUSTOM, false);
         LinearLayout sw = Ui.switchRow(this, "Использовать своё расписание",
-                "Иначе — расписание выбранного класса", on, (b, v) -> {
+                "Если выключить, будет расписание твоего класса", on, (b, v) -> {
                     if (v) save(false);
                     else Updater.prefs(this).edit().putBoolean(Schedule.KEY_USE_CUSTOM, false).apply();
                     applyNow();
@@ -115,7 +115,7 @@ public class EditorActivity extends Activity {
         }));
         root.addView(Ui.button(this, "Поделиться кодом расписания", false, v -> shareCode()));
         root.addView(Ui.button(this, "Вставить код от друга или с сайта", false, v -> importCode()));
-        TextView hint = Ui.text(this, "Код — это просто текст. В нём нет ничего, кроме предметов, кабинетов и звонков.",
+        TextView hint = Ui.text(this, "Код это обычный текст. В нём только предметы, кабинеты и звонки, больше ничего.",
                 12, Ui.MUTED, null);
         hint.setPadding(Ui.dp(this, 4), Ui.dp(this, 12), Ui.dp(this, 4), 0);
         root.addView(hint);

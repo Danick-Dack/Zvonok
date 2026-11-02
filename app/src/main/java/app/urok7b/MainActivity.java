@@ -275,7 +275,7 @@ public class MainActivity extends Activity {
     private void showUpdate() {
         boolean a = Updates.available(this);
         update.setVisibility(a ? View.VISIBLE : View.GONE);
-        if (a) update.setText("Вышла версия " + Updates.latestText(this) + " — нажми, чтобы обновить");
+        if (a) update.setText("Вышла версия " + Updates.latestText(this) + ". Нажми, чтобы обновить");
     }
 
     // ---------- обновление экрана ----------

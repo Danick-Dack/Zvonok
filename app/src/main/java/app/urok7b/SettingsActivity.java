@@ -104,22 +104,22 @@ public class SettingsActivity extends Activity {
         }));
 
         LinearLayout share = section("ПОДЕЛИТЬСЯ");
-        share.addView(Ui.linkRow(this, "Отправить приложение другу", "APK по Bluetooth, Quick Share, Telegram — без интернета",
+        share.addView(Ui.linkRow(this, "Отправить приложение другу", "Скинуть APK по Bluetooth, Quick Share или в Telegram, можно без интернета",
                 null, v -> {
                     Intent i = new Intent(Intent.ACTION_SEND).setType(ApkProvider.MIME)
                             .putExtra(Intent.EXTRA_STREAM, ApkProvider.URI)
-                            .putExtra(Intent.EXTRA_TEXT, "«Звонок» — расписание лицея №165. Сайт: " + SITE)
+                            .putExtra(Intent.EXTRA_TEXT, "Это «Звонок», расписание лицея №165. Сайт: " + SITE)
                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     i.setClipData(ClipData.newRawUri("Звонок", ApkProvider.URI));
                     open(Intent.createChooser(i, "Отправить приложение"));
                 }));
         share.addView(Ui.linkRow(this, "Ссылка на сайт", "Все классы, установка для Android и iPhone", null,
                 v -> open(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,
-                        "«Звонок» — расписание всех классов лицея №165 с таймером до звонка: " + SITE), "Поделиться"))));
+                        "Смотри, это «Звонок». Там расписание всех классов лицея №165 и таймер до звонка: " + SITE), "Поделиться"))));
 
-        TextView foot = Ui.text(this, "Приватность: в интернет приложение выходит только с твоего разрешения — чтобы узнать, "
-                + "вышла ли новая версия. Нет рекламы, аккаунтов и аналитики, данные не покидают телефон.\n\n"
-                + "Батарея: пока экран выключен, приложение ничего не делает и телефон не будит.", 12, Ui.MUTED, null);
+        TextView foot = Ui.text(this, "Про приватность: в интернет приложение выходит, только если ты разрешил, и только чтобы узнать "
+                + "про новую версию. Рекламы, аккаунтов и аналитики нет, твои данные остаются на телефоне.\n\n"
+                + "Про батарею: пока экран выключен, приложение ничего не делает и телефон не будит.", 12, Ui.MUTED, null);
         foot.setLineSpacing(0, 1.2f);
         foot.setPadding(Ui.dp(this, 4), Ui.dp(this, 22), Ui.dp(this, 4), 0);
         root.addView(foot);
@@ -158,7 +158,7 @@ public class SettingsActivity extends Activity {
 
     private void download() {
         if (open(new Intent(Intent.ACTION_VIEW, Uri.parse(APK_URL))))
-            Toast.makeText(this, "Когда файл скачается — открой его и нажми «Обновить»", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Когда файл скачается, открой его и нажми «Обновить»", Toast.LENGTH_LONG).show();
     }
 
     private Uri pkg() {

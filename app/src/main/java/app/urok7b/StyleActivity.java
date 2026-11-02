@@ -48,7 +48,7 @@ public class StyleActivity extends Activity {
         hs.addView(presets);
         root.addView(hs);
 
-        root.addView(Ui.caps(this, "АКЦЕНТ — ТАЙМЕР, ПРОГРЕСС, КАБИНЕТ"));
+        root.addView(Ui.caps(this, "АКЦЕНТ: ТАЙМЕР, ПРОГРЕСС, КАБИНЕТ"));
         accents = Ui.horizontal(this);
         root.addView(accents);
 
@@ -82,7 +82,7 @@ public class StyleActivity extends Activity {
         root.addView(Ui.caps(this, "ЧТО ПОКАЗЫВАТЬ"));
         LinearLayout show = Ui.card(this);
         show.addView(Ui.switchRow(this, "Секунды в таймере",
-                "Выключи — таймер станет «24 мин», батарея тратится ещё меньше", t.seconds,
+                "Если выключить, таймер будет «24 мин», а батарея будет тратиться ещё меньше", t.seconds,
                 (b, v) -> { t.seconds = v; changed(); }));
         show.addView(Ui.switchRow(this, "Полоска прогресса", null, t.progress,
                 (b, v) -> { t.progress = v; changed(); }));

@@ -4,9 +4,9 @@
   python tools/build_site.py
 
 Берёт data/schedule.json, site/src/index.html, ios/Uroki7B.js и собирает:
-  site/index.html          — весь сайт одним файлом (работает офлайн, даже как файл из Telegram)
-  site/poster.html         — плакат A4 с QR-кодом для класса
-  site/manifest.webmanifest, site/sw.js, иконки — чтобы сайт ставился «как приложение»
+  site/index.html          : весь сайт одним файлом (работает офлайн, даже как файл из Telegram)
+  site/poster.html         : плакат A4 с QR-кодом для класса
+  site/manifest.webmanifest, site/sw.js, иконки: чтобы сайт ставился «как приложение»
 Нужны пакеты: qrcode, pillow (pip install qrcode pillow).
 """
 import base64
@@ -117,7 +117,7 @@ def main():
     icon(512, pad_ratio=0.35).save(os.path.join(OUT, "icon-maskable.png"))
 
     write("manifest.webmanifest", json.dumps({
-        "name": "Звонок — расписание лицея №165",
+        "name": "Звонок. Расписание лицея №165",
         "short_name": "Звонок",
         "description": "Расписание всех классов лицея №165: таймер до звонка, кабинет, следующий урок. Работает офлайн.",
         "lang": "ru",

@@ -269,7 +269,7 @@ public final class Updater {
                     d.miniRoom = n.room;
                     d.miniSub = n.subject;
                 } else {
-                    d.big = "—";
+                    d.big = "нет";
                     d.notifTitle = d.title;
                     d.miniLabel = d.label;
                 }
