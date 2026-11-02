@@ -243,7 +243,9 @@ public class MainActivity extends Activity {
         Updater.update(this);
         if (!Updater.prefs(this).contains(Schedule.KEY_CLASS) && !askedClass) {
             askedClass = true;
-            Ui.pickClass(this, this::rebuild);
+            Ui.pickClass(this, () -> { rebuild(); Updates.askOnce(this, () -> Updates.check(this, ok -> showUpdate())); });
+        } else {
+            Updates.askOnce(this, () -> Updates.check(this, ok -> showUpdate()));
         }
         if (Updates.due(this)) Updates.check(this, ok -> showUpdate());
         showUpdate();

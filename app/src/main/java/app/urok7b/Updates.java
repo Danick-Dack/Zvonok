@@ -15,11 +15,12 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Проверка обновлений: один HTTPS-запрос к GitHub (последний релиз), только когда приложение открыто,
- * не чаще раза в сутки. Ничего о пользователе не отправляется. Можно выключить в настройках.
+ * не чаще раза в сутки и только если пользователь сам разрешил. Ничего о пользователе не отправляется.
  */
 final class Updates {
 
     static final String KEY_AUTO = "update_auto";
+    static final String KEY_ASKED = "update_asked";
     private static final String KEY_LAST = "update_last_check";
     private static final String KEY_BUILD = "update_latest_build";
     private static final String KEY_NAME = "update_latest_name";
@@ -60,8 +61,25 @@ final class Updates {
 
     static boolean due(Context ctx) {
         SharedPreferences p = Updater.prefs(ctx);
-        return p.getBoolean(KEY_AUTO, true)
+        return p.getBoolean(KEY_AUTO, false)
                 && System.currentTimeMillis() - p.getLong(KEY_LAST, 0) > 24 * 3600_000L;
+    }
+
+    /** Один раз спросить разрешение на автоматическую проверку (по умолчанию выключена). */
+    static void askOnce(android.app.Activity a, Runnable allowed) {
+        SharedPreferences p = Updater.prefs(a);
+        if (p.getBoolean(KEY_ASKED, false)) return;
+        p.edit().putBoolean(KEY_ASKED, true).apply();
+        new android.app.AlertDialog.Builder(a, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Проверять обновления?")
+                .setMessage("Раз в сутки, когда приложение открыто, оно будет спрашивать GitHub, вышла ли новая версия. "
+                        + "О тебе ничего не отправляется. Это можно изменить в настройках.")
+                .setPositiveButton("Разрешить", (d, w) -> {
+                    p.edit().putBoolean(KEY_AUTO, true).apply();
+                    allowed.run();
+                })
+                .setNegativeButton("Не надо", null)
+                .show();
     }
 
     /** Проверить в фоне; результат — в главном потоке. */

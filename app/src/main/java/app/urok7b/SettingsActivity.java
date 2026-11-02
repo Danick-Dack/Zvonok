@@ -71,7 +71,7 @@ public class SettingsActivity extends Activity {
                         });
                     }
                 }));
-        upd.addView(flag("Проверять автоматически", "Раз в сутки, только когда приложение открыто", Updates.KEY_AUTO, true));
+        upd.addView(flag("Проверять автоматически", "Раз в сутки, когда приложение открыто. Нужен интернет", Updates.KEY_AUTO, false));
 
         LinearLayout checks = section("ПРОВЕРКА ТЕЛЕФОНА");
         NotificationManager nm = getSystemService(NotificationManager.class);
@@ -117,8 +117,8 @@ public class SettingsActivity extends Activity {
                 v -> open(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,
                         "«Звонок» — расписание всех классов лицея №165 с таймером до звонка: " + SITE), "Поделиться"))));
 
-        TextView foot = Ui.text(this, "Приватность: в сети приложение делает только одно — раз в сутки спрашивает GitHub, "
-                + "вышла ли новая версия (можно выключить выше). Нет рекламы, аккаунтов и аналитики, данные не покидают телефон.\n\n"
+        TextView foot = Ui.text(this, "Приватность: в интернет приложение выходит только с твоего разрешения — чтобы узнать, "
+                + "вышла ли новая версия. Нет рекламы, аккаунтов и аналитики, данные не покидают телефон.\n\n"
                 + "Батарея: пока экран выключен, приложение ничего не делает и телефон не будит.", 12, Ui.MUTED, null);
         foot.setLineSpacing(0, 1.2f);
         foot.setPadding(Ui.dp(this, 4), Ui.dp(this, 22), Ui.dp(this, 4), 0);
