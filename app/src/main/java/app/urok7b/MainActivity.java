@@ -380,7 +380,7 @@ public class MainActivity extends Activity {
         pill.setTextColor(d.live ? TEXT : SOFT);
         if (d.dotTotal > 0) {
             heroDots.setVisibility(View.VISIBLE);
-            heroDots.setText(Updater.dots(d));
+            heroDots.setText(Updater.dots(d, TEXT, Color.parseColor("#5A5A5A"), Color.parseColor("#262626")));
         } else {
             heroDots.setVisibility(View.GONE);
         }
