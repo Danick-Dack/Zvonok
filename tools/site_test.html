@@ -53,6 +53,12 @@ document.getElementById("f").onload = () => setTimeout(() => {
     ok(d.querySelector(".pv-n").style.background !== "", "предпросмотр уведомления");
   });
 
+  run("iPhone", () => {
+    ev('os="ios";renderOs();renderGuide("ios")');
+    const t = d.getElementById("guide").textContent;
+    ok(t.includes("Способ 1") && t.includes("На экран „Домой“") && t.includes("Скопировать скрипт"), "инструкция для iPhone");
+  });
+
   run("код своего расписания", () => {
     ev('fillFromClass(ed,"9А")');
     const code = ev("edCode()"), back = JSON.parse(ev("b64d")(code.slice(5)));
