@@ -46,3 +46,7 @@
 - **Сайт:** `python tools/build_site.py` (нужны `qrcode` и `pillow`) собирает `site/` из `site/src/`,
   `data/schedule.json` и `ios/Uroki7B.js`. Публикация — `.github/workflows/pages.yml` на GitHub Pages
   (работает, когда репозиторий публичный).
+
+## Лицензия
+
+Открытый исходный код под лицензией MIT (`LICENSE`). Можно смотреть, проверять и улучшать.
