@@ -169,7 +169,7 @@ function describe(s, now) {
     d.line1 = "Звонок на перемену в " + hm(c.end);
     d.line2 = n ? "Дальше: " + n.subject + " · " + roomText(n.room) : "Последний урок";
     if (!n) { d.nextSubject = "Домой"; d.nextRoom = hm(c.end); }
-    d.lockTop = c.num + "/" + s.todayCount + " · " + c.subject;
+    d.lockTop = c.subject + " · до " + hm(c.end);
     d.lockBottom = n ? "→ " + n.room + " · " + n.subject : "→ домой в " + hm(c.end);
     d.inline = c.subject + " до " + hm(c.end) + (n ? " → " + n.room : " → домой");
     d.circleTop = "урок " + c.num;
@@ -182,7 +182,7 @@ function describe(s, now) {
     d.subtitle = "звонок на урок " + hm(n.start);
     d.line1 = "Звонок на урок в " + hm(n.start);
     d.line2 = "Дальше: " + n.subject + " · " + roomText(n.room);
-    d.lockTop = "Перемена · урок " + n.num + "/" + s.todayCount;
+    d.lockTop = "Перемена · до " + hm(n.start);
     d.lockBottom = "→ " + n.room + " · " + n.subject;
     d.inline = "Перемена до " + hm(n.start) + " → " + n.room;
     d.circleTop = "пер.";
@@ -195,7 +195,7 @@ function describe(s, now) {
     d.nextHead = "ПЕРВЫЙ";
     d.line1 = "Первый звонок в " + hm(n.start);
     d.line2 = "Первый урок: " + n.subject + " · " + roomText(n.room);
-    d.lockTop = "До уроков · " + s.todayCount + " ур.";
+    d.lockTop = "Уроки с " + hm(n.start);
     d.lockBottom = "→ " + n.room + " · " + n.subject;
     d.inline = "Уроки с " + hm(n.start) + " → " + n.room;
     d.circleTop = "старт";

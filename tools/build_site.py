@@ -6,6 +6,7 @@
 Берёт data/schedule.json, site/src/index.html, ios/Uroki7B.js и собирает:
   site/index.html          : весь сайт одним файлом (работает офлайн, даже как файл из Telegram)
   site/poster.html         : плакат A4 с QR-кодом для класса
+  site/cal/*.ics           : календарь каждого класса для виджета на экране блокировки iPhone
   site/manifest.webmanifest, site/sw.js, иконки: чтобы сайт ставился «как приложение»
 Нужны пакеты: qrcode, pillow (pip install qrcode pillow).
 """
@@ -86,6 +87,58 @@ def js_literal(obj):
             .replace(chr(0x2029), chr(92) + "u2029"))
 
 
+LAT = {"А": "A", "Б": "B", "В": "V", "Г": "G"}
+FIRST_MONDAY = (2026, 11, 2)
+
+
+def slug(cls):
+    return "".join(LAT.get(ch, ch) for ch in cls)
+
+
+def ics_text(t):
+    return t.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
+
+
+def ics_fold(line):
+    out, cur = [], ""
+    for ch in line:
+        if len((cur + ch).encode()) > (75 if not out else 74):
+            out.append(cur)
+            cur = ""
+        cur += ch
+    out.append(cur)
+    return "\r\n ".join(out)
+
+
+def calendar(data, cls):
+    """Календарь класса: каждый урок повторяется раз в неделю. iPhone показывает ближайший урок
+    в виджете «Календарь» на экране блокировки, без сторонних приложений."""
+    import datetime
+    base = datetime.date(*FIRST_MONDAY)
+    stamp = datetime.datetime.strptime(data["updated"], "%Y-%m-%d").strftime("%Y%m%dT000000Z")
+    days = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Zvonok//165//RU", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+             "X-WR-CALNAME:Звонок " + cls, "X-WR-CALDESC:Расписание " + cls + ", " + data["school"],
+             "X-PUBLISHED-TTL:PT12H", "REFRESH-INTERVAL;VALUE=DURATION:PT12H"]
+    for d, lessons in enumerate(data["classes"][cls]):
+        date = base + datetime.timedelta(days=d)
+        for i, raw in enumerate(lessons):
+            if not raw or i >= len(data["bells"]):
+                continue
+            code, _, room = raw.partition(" ")
+            room = "спортзал" if room == "с/з" else room
+            subj = data["subjects"].get(code, code)
+            t = lambda hm: date.strftime("%Y%m%d") + "T%02d%02d00" % tuple(int(x) for x in hm.split(":"))
+            lines += ["BEGIN:VEVENT", "UID:%s-%d-%d@zvonok165" % (slug(cls), d + 1, i + 1), "DTSTAMP:" + stamp,
+                      "DTSTART:" + t(data["bells"][i][0]), "DTEND:" + t(data["bells"][i][1]),
+                      "RRULE:FREQ=WEEKLY;BYDAY=" + days[d],
+                      "SUMMARY:" + ics_text(subj + (", " + (room if room == "спортзал" else "каб. " + room) if room else "")),
+                      "LOCATION:" + ics_text(room), "DESCRIPTION:" + ics_text("%d урок" % (i + 1)),
+                      "TRANSP:OPAQUE", "END:VEVENT"]
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(ics_fold(l) for l in lines) + "\r\n"
+
+
 def main():
     data = json.loads(read("data", "schedule.json"))
     tpl = read("site", "src", "index.html")
@@ -134,6 +187,10 @@ def main():
     }, ensure_ascii=False, indent=2))
     write("sw.js", read("site", "src", "sw.js"))
     write(".nojekyll", "")
+    os.makedirs(os.path.join(OUT, "cal"), exist_ok=True)
+    for c in data["classes"]:
+        with open(os.path.join(OUT, "cal", slug(c) + ".ics"), "w", encoding="utf-8", newline="") as f:
+            f.write(calendar(data, c))
     print("site/index.html", len(page) // 1024, "KB")
 
 
