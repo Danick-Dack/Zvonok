@@ -20,7 +20,7 @@
 <style>
 :root{
   --bg:#000; --s1:#0b0b0c; --s2:#121214; --s3:#19191c; --line:#1f1f23; --line2:#2b2b30;
-  --fg:#f5f5f7; --soft:#c7c7cc; --muted:#8a8a91; --faint:#4b4b52; --accent:#fff;
+  --fg:#f5f5f7; --soft:#c7c7cc; --muted:#8a8a91; --faint:#4b4b52; --dim:#8a8a91; --accent:#fff;
   --r:22px; --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   color-scheme:dark;
 }
@@ -66,7 +66,7 @@ h1 b{font-weight:650}
 .tag{font-size:13px;color:var(--soft);border:1px solid var(--line2);border-radius:999px;padding:6px 12px}
 .picker{margin-top:28px}
 .grade{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
-.grade .g{width:30px;color:var(--faint);font-size:13px;font-weight:600}
+.grade .g{width:30px;color:var(--dim);font-size:13px;font-weight:600}
 .pill{padding:8px 14px;border-radius:12px;background:var(--s2);border:1px solid var(--line);font-weight:600;font-size:15px;min-width:52px;transition:.15s}
 .pill:hover{border-color:var(--line2)}
 .pill.on{background:#fff;color:#000;border-color:#fff}
@@ -116,7 +116,7 @@ section{padding:70px 0 10px}
 .lesson.cur{background:#161618;border:1px solid #2c2c30;position:relative;overflow:hidden}
 .lesson .pg{position:absolute;left:0;bottom:0;height:2px;background:#fff;transition:width .6s}
 .lesson.nx{background:#0f0f11}
-.lesson.past{opacity:.38}
+.lesson.past{opacity:.62}
 .lesson .t{width:50px;font-variant-numeric:tabular-nums}
 .lesson .t b{display:block;font-size:15px}
 .lesson .t small{color:var(--muted);font-size:12px}
@@ -125,7 +125,7 @@ section{padding:70px 0 10px}
 .lesson .m{flex:1;min-width:0}
 .lesson .m b{display:block;font-weight:500;font-size:16px}
 .lesson .m small{color:var(--muted);font-size:13px}
-.brk{padding:3px 0 3px 80px;font-size:12px;color:var(--faint)}
+.brk{padding:3px 0 3px 80px;font-size:12px;color:var(--dim)}
 .brk.on{color:var(--soft);font-weight:600}
 .empty{padding:28px;text-align:center;color:var(--muted)}
 .week{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -133,7 +133,7 @@ section{padding:70px 0 10px}
 .week th{font-size:12px;letter-spacing:.12em;color:var(--muted);font-weight:600;text-align:left;padding:4px 8px}
 .week th.today{color:#fff}
 .week td{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:8px 10px;vertical-align:top;font-size:13px}
-.week td.n{background:none;border:0;color:var(--faint);font-variant-numeric:tabular-nums;width:56px}
+.week td.n{background:none;border:0;color:var(--dim);font-variant-numeric:tabular-nums;width:56px}
 .week td.x{background:none;border:1px dashed #18181b}
 .week td small{display:block;color:var(--muted);margin-top:2px}
 
@@ -154,7 +154,7 @@ section{padding:70px 0 10px}
 .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
 .ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
 @media(max-width:900px){.ed{grid-template-columns:minmax(0,1fr)}}
-.slot{display:grid;grid-template-columns:44px 1fr 86px;gap:8px;align-items:center;padding:4px 0}
+.slot{display:grid;grid-template-columns:34px minmax(0,1fr) 92px;gap:6px;align-items:center;padding:4px 0}
 .slot .k{font-weight:600}.slot .k small{display:block;color:var(--muted);font-weight:400;font-size:11px}
 .f{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:15px;outline:none;min-width:0}
 .f:focus{border-color:#8a8a91}
@@ -194,18 +194,23 @@ input[type=range]{width:100%;accent-color:#fff}
 .osbox{position:relative;border-radius:34px;border:1px solid var(--line);background:radial-gradient(70% 70% at 50% 40%,#111113,#000);
   min-height:460px;overflow:hidden;display:grid;place-items:center;padding:40px 12px}
 @media(max-width:600px){
-  .osbox{min-height:520px}
   .os{flex-wrap:nowrap;gap:10px;width:100%}
   .osb{width:auto;flex:1;padding:16px 14px;border-radius:20px}
   .osb svg{margin-bottom:14px;width:26px;height:26px}
   .osb b{font-size:19px}
-  .brand{font-size:13px!important;padding:4px 8px}
 }
 .cloud{position:absolute;inset:0;pointer-events:none}
 .brand{position:absolute;pointer-events:auto;font-weight:650;letter-spacing:-.01em;white-space:nowrap;color:#5a5a62;
   padding:6px 12px;border-radius:999px;transition:color .2s,background .2s;animation:float var(--d,8s) ease-in-out infinite;animation-delay:var(--dl,0s)}
 .brand:hover,.brand.on{color:#fff;background:rgba(255,255,255,.08)}
 @keyframes float{0%,100%{transform:translate(0,0)}33%{transform:translate(6px,-10px)}66%{transform:translate(-6px,6px)}}
+@media(max-width:600px){
+  /* на телефоне марки строками над кнопками: ничего не налезает и нет пустоты */
+  .osbox{min-height:0;display:flex;flex-direction:column;gap:20px;padding:22px 12px}
+  .cloud{position:static;display:flex;flex-wrap:wrap;justify-content:center;gap:2px 4px}
+  .brand{position:static;translate:none!important;font-size:13px!important;padding:4px 8px}
+  .brand:nth-child(n+11){display:none}
+}
 @media(prefers-reduced-motion:reduce){.brand{animation:none}.status.on:before{animation:none}}
 .os{position:relative;z-index:2;display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
 .osb{width:190px;padding:22px 18px;border-radius:24px;background:rgba(18,18,20,.85);border:1px solid var(--line2);text-align:left;
@@ -230,8 +235,8 @@ input[type=range]{width:100%;accent-color:#fff}
 @media(max-width:900px){.facts{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.facts{grid-template-columns:1fr}}
 .fact:hover,.step:hover,.faq details:hover{border-color:var(--line2)}
-.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s,transform .7s}.reveal.in{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
+.reveal{transform:translateY(14px);transition:transform .6s}.reveal.in{transform:none}
+@media(prefers-reduced-motion:reduce){.reveal{transform:none}}
 .fact{transition:border-color .2s;background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:20px}
 .fact b{display:block;font-size:34px;font-weight:250;letter-spacing:-.03em;margin-bottom:8px}
 .fact p{color:var(--soft);font-size:14px}
@@ -250,7 +255,7 @@ input[type=range]{width:100%;accent-color:#fff}
 .faq summary:after{content:"+";position:absolute;right:0;top:12px;font-size:22px;font-weight:300;color:var(--muted);transition:transform .2s}
 .faq details[open] summary:after{transform:rotate(45deg)}
 .faq p{color:var(--soft);padding:0 0 18px;font-size:15px}
-footer{padding:70px 0 50px;color:var(--faint);font-size:13px}
+footer{padding:70px 0 50px;color:var(--dim);font-size:13px}
 footer p+p{margin-top:6px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,40px);opacity:0;background:#fff;color:#000;
   padding:11px 18px;border-radius:14px;font-weight:600;font-size:14px;transition:.25s;z-index:50;pointer-events:none;max-width:90vw;text-align:center}
@@ -397,7 +402,7 @@ footer p+p{margin-top:6px}
       <div class="cloud" id="cloud"></div>
       <div class="os">
         <button class="osb" id="osA"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.6 9.48l1.84-3.18a.39.39 0 00-.68-.39l-1.87 3.23a11.43 11.43 0 00-9.78 0L5.24 5.91a.39.39 0 10-.68.39L6.4 9.48A10.78 10.78 0 001 18h22a10.78 10.78 0 00-5.4-8.52zM7 15.25A1.25 1.25 0 118.25 14 1.25 1.25 0 017 15.25zm10 0A1.25 1.25 0 1118.25 14 1.25 1.25 0 0117 15.25z"/></svg><b>Android</b><small>Приложение, уведомление и виджеты</small></button>
-        <button class="osb" id="osI"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.97-3.46a4.24 4.24 0 00-3.33-1.8c-1.42-.15-2.77.83-3.49.83s-1.83-.81-3-.79a4.45 4.45 0 00-3.77 2.28c-1.6 2.79-.41 6.92 1.15 9.18.76 1.11 1.67 2.35 2.86 2.31 1.15-.05 1.58-.74 2.97-.74s1.78.74 2.99.72c1.24-.02 2.02-1.13 2.77-2.24a9.94 9.94 0 001.26-2.58 3.98 3.98 0 01-2.38-3.71zM14.08 5.84A3.92 3.92 0 0015 3a4 4 0 00-2.6 1.34 3.74 3.74 0 00-.94 2.74 3.3 3.3 0 002.62-1.24z"/></svg><b>iPhone</b><small>Сайт как приложение и виджеты</small></button>
+        <button class="osb" id="osI"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.97-3.46a4.24 4.24 0 00-3.33-1.8c-1.42-.15-2.77.83-3.49.83s-1.83-.81-3-.79a4.45 4.45 0 00-3.77 2.28c-1.6 2.79-.41 6.92 1.15 9.18.76 1.11 1.67 2.35 2.86 2.31 1.15-.05 1.58-.74 2.97-.74s1.78.74 2.99.72c1.24-.02 2.02-1.13 2.77-2.24a9.94 9.94 0 001.26-2.58 3.98 3.98 0 01-2.38-3.71zM14.08 5.84A3.92 3.92 0 0015 3a4 4 0 00-2.6 1.34 3.74 3.74 0 00-.94 2.74 3.3 3.3 0 002.62-1.24z"/></svg><b>iPhone</b><small>Виджет с таймером на экран блокировки</small></button>
       </div>
     </div>
     <div id="guide"></div>
@@ -525,17 +530,23 @@ function customWeek(c) {
   }).filter(Boolean));
 }
 let cls = store.get("class", null);
-if (!DATA.classes[cls]) cls = "7Б";
+let pick = !DATA.classes[cls]; // новичок: сначала просим выбрать класс
+if (pick) cls = "7Б";
 let custom = store.get("custom", null);
 let useCustom = !!store.get("useCustom", false) && !!custom;
+if (useCustom) pick = false;
 let WEEK = [];
 function rebuild() { WEEK = useCustom ? customWeek(custom) : classWeek(cls); }
 rebuild();
 const title = () => useCustom ? "своё" : cls;
 
+const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const holiday = d => (DATA.holidays || []).find(x => iso(d) >= x[0] && iso(d) <= x[1]) || null;
+const lessonsOn = d => useCustom || !holiday(d) ? WEEK[dow(d)] : [];
+const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 function at(date, min) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d.getTime() + min * 60000; }
 function compute(now) {
-  const s = {}, list = WEEK[dow(now)], sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const s = {}, list = lessonsOn(now), sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
   if (list.length) {
     const first = list[0], last = list[list.length - 1];
     s.count = list.length; s.end = hm(last.end); s.list = list;
@@ -552,12 +563,13 @@ function compute(now) {
       }
     }
     s.kind = "AFTER";
-  } else s.kind = "OFF";
-  for (let d = 1; d <= 7; d++) {
+  } else { s.kind = "OFF"; s.holiday = useCustom ? null : holiday(now); }
+  for (let d = 1; d <= 120; d++) {
     const date = new Date(now); date.setDate(date.getDate() + d);
-    const l = WEEK[dow(date)];
+    const l = lessonsOn(date);
     if (!l.length) continue;
-    Object.assign(s, {next: l[0], nCount: l.length, nEnd: hm(l[l.length - 1].end), nLabel: d === 1 ? "Завтра" : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : WHEN[dow(date)], target: at(date, l[0].start)});
+    const far = d > 6, dm = date.getDate() + " " + MONTHS[date.getMonth()];
+    Object.assign(s, {next: l[0], nCount: l.length, nEnd: hm(l[l.length - 1].end), nLabel: d === 1 ? "Завтра" : far ? dm : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : far ? dm : WHEN[dow(date)], target: at(date, l[0].start)});
     break;
   }
   return s;
@@ -590,13 +602,20 @@ function renderLive() {
     sideH = s.soon ? "Звонок" : "День"; sideV = s.soon ? hm(n.start) : "Сегодня"; statH = "Уроков"; statV = s.count + " · до " + s.end;
     nH = "Первый урок · " + hm(n.start); nS = n.subject; nR = n.room; foot = "Сегодня " + plural(s.count) + " · " + hm(n.start) + "–" + s.end;
   } else {
-    st = s.kind === "AFTER" ? "Уроки закончились" : "Выходной"; t = s.kind === "AFTER" ? "Свободен" : "Отдыхай";
+    st = s.kind === "AFTER" ? "Уроки закончились" : s.holiday ? s.holiday[2] : "Выходной"; t = s.kind === "AFTER" ? "Свободен" : s.holiday ? "Каникулы" : "Отдыхай";
     if (n) {
       big = hm(n.start); sideH = "День"; sideV = s.nLabel; statH = "Уроков"; statV = s.nCount + " · до " + s.nEnd;
       nH = s.nLabel + " · " + hm(n.start); nS = n.subject; nR = n.room; foot = s.nLabel + ": " + plural(s.nCount) + ", " + hm(n.start) + "–" + s.nEnd;
+      if (s.holiday) { sideH = "Уроки с"; foot = "Уроки с " + s.nWhen + ", " + hm(n.start); }
     } else big = "нет";
   }
+  if (!useCustom && DATA.term_end && iso(now) > DATA.term_end && !s.holiday) foot = "Четверть закончилась, расписание могло измениться. Новое появится здесь, как только его утвердят.";
+  if (pick) {
+    st = "Привет"; t = "Выбери свой класс"; room = sideH = sideV = statH = statV = nS = big = ""; timer = null; prog = -1; live = false;
+    foot = "Нажми на свой класс, и здесь появится таймер до звонка, урок и кабинет.";
+  }
   $("lStatus").textContent = st; $("lStatus").classList.toggle("on", live);
+  document.querySelector(".live .stats").hidden = !sideH;
   $("lTitle").textContent = t;
   $("lRoom").textContent = room; $("lRoom").hidden = !room;
   $("lSideH").textContent = sideH; $("lSideV").textContent = sideV;
@@ -607,8 +626,8 @@ function renderLive() {
   $("lTimer").textContent = timer ? fmtTimer(timer - now) : big;
   const pg = document.querySelector(".lesson.cur .pg"); if (pg) pg.style.width = Math.round(prog * 100) + "%";
   const dots = $("lDots"); dots.textContent = "";
-  if (s.list && s.kind !== "AFTER") s.list.forEach((l, i) => dots.append(h("i", {class: s.kind === "LESSON" && i === s.idx ? "c" : (s.idx != null && (i < s.idx || (s.kind === "BREAK" && i === s.idx))) ? "d" : ""})));
-  const key = s.kind + (s.cur ? s.cur.num : 0) + (s.next ? s.next.num : 0) + title() + now.toDateString();
+  if (!pick && s.list && s.kind !== "AFTER") s.list.forEach((l, i) => dots.append(h("i", {class: s.kind === "LESSON" && i === s.idx ? "c" : (s.idx != null && (i < s.idx || (s.kind === "BREAK" && i === s.idx))) ? "d" : ""})));
+  const key = (pick ? "P" : "") + s.kind + (s.cur ? s.cur.num : 0) + (s.next ? s.next.num : 0) + title() + now.toDateString();
   if (key !== lastKey) { lastKey = key; renderDay(); renderRooms(); }
   document.title = (timer ? fmtTimer(timer - now) + " · " : "") + "Звонок · " + title();
 }
@@ -622,8 +641,8 @@ function renderClasses() {
   const grades = {};
   CLASSES.forEach(c => (grades[parseInt(c)] = grades[parseInt(c)] || []).push(c));
   for (const g in grades) box.append(h("div", {class: "grade"}, h("span", {class: "g", text: g}),
-    grades[g].map(c => h("button", {class: "pill" + (!useCustom && c === cls ? " on" : ""), text: c, onclick: () => {
-      cls = c; useCustom = false; store.set("class", c); store.set("useCustom", false); $("cUse").checked = false;
+    grades[g].map(c => h("button", {class: "pill" + (!pick && !useCustom && c === cls ? " on" : ""), text: c, onclick: () => {
+      pick = false; cls = c; useCustom = false; store.set("class", c); store.set("useCustom", false); $("cUse").checked = false;
       rebuild(); selDay = null; renderClasses(); lastKey = ""; renderLive();
     }}))));
   if (custom) box.append(h("div", {class: "grade"}, h("span", {class: "g", text: "★"}),
@@ -693,7 +712,11 @@ const ROOMS = Object.keys(ROOM_USE).sort((a, b) => (parseInt(a) || 999) - (parse
 })();
 function renderRooms() {
   const q = $("rq").value.trim().toLowerCase().replace(/^каб\.?\s*/, ""), d = +$("rday").value, now = new Date(), today = dow(now) === d;
-  const nowMin = now.getHours() * 60 + now.getMinutes(), slotNow = today ? BELLS.findIndex(b => b && nowMin >= b[0] && nowMin < b[1]) + 1 : 0;
+  const nowMin = now.getHours() * 60 + now.getMinutes(), used = n => Object.values(ROOM_USE).some(us => us.some(u => u.day === d && u.num === n));
+  const lastSlot = BELLS.reduce((m, b, i) => used(i + 1) ? i + 1 : m, 0), off = today && !!holiday(now);
+  let slotNow = today && !off ? BELLS.findIndex(b => b && nowMin >= b[0] && nowMin < b[1]) + 1 : 0;
+  if (slotNow && !used(slotNow)) slotNow = 0;
+  const over = today && (off || !lastSlot || nowMin >= BELLS[lastSlot - 1][1]);
   const res = $("rres"); res.textContent = "";
   const room = ROOMS.find(r => r.toLowerCase() === q) || (q ? ROOMS.find(r => r.toLowerCase().startsWith(q)) : null);
   if (!room) {
@@ -705,7 +728,7 @@ function renderRooms() {
       const use = ROOM_USE[room].filter(u => u.day === d && u.num === i + 1);
       if (!use.length && i >= 8) return;
       res.append(h("div", {class: "rrow" + (slotNow === i + 1 ? " now" : "")}, h("span", {class: "t", text: (i + 1) + " · " + hm(b[0]) + "–" + hm(b[1])}),
-        use.length ? h("span", null, use.map((u, k) => [k ? ", " : "", h("b", {text: u.cls}), " " + u.subject])) : h("span", {style: "color:var(--faint)", text: "свободен"})));
+        use.length ? h("span", null, use.map((u, k) => [k ? ", " : "", h("b", {text: u.cls}), " " + u.subject])) : h("span", {style: "color:var(--dim)", text: "свободен"})));
     });
   }
   const free = $("free"); free.textContent = "";
@@ -713,8 +736,8 @@ function renderRooms() {
     $("freeH").textContent = "Свободны сейчас · " + slotNow + " урок";
     ROOMS.filter(r => r !== "спортзал" && !ROOM_USE[r].some(u => u.day === d && u.num === slotNow)).forEach(r => free.append(h("button", {class: "chip", text: r, onclick: () => { $("rq").value = r; renderRooms(); }})));
   } else {
-    $("freeH").textContent = "Свободные кабинеты";
-    free.append(h("div", {class: "note", style: "padding:4px 6px", text: "Покажем во время уроков. Нажми на кабинет ниже, чтобы увидеть его день."}));
+    $("freeH").textContent = over ? (off ? "Каникулы" : "Уроки закончились") : "Свободные кабинеты";
+    free.append(h("div", {class: "note", style: "padding:4px 6px", text: over ? "Сейчас все кабинеты свободны. Нажми на кабинет, чтобы увидеть его день." : "Покажем во время уроков. Нажми на кабинет ниже, чтобы увидеть его день."}));
     ROOMS.slice(0, 40).forEach(r => free.append(h("button", {class: "chip", text: r, onclick: () => { $("rq").value = r; renderRooms(); }})));
   }
 }
@@ -890,7 +913,7 @@ function renderCloud() {
   names.forEach((n, i) => {
     const [x, y] = POS[i % POS.length], key = os === "ios" ? "ios" : Object.keys(ANDROID).find(k => ANDROID[k].names.includes(n));
     c.append(h("button", {class: "brand" + (brand === n ? " on" : ""), text: n,
-      style: `left:${x}%;top:${y}%;font-size:${14 + (i * 7) % 9}px;--d:${7 + (i * 13) % 6}s;--dl:-${(i * 17) % 7}s;transform-origin:center`,
+      style: `left:${x}%;top:${y}%;translate:-${x}% 0;max-width:100%;font-size:${14 + (i * 7) % 9}px;--d:${7 + (i * 13) % 6}s;--dl:-${(i * 17) % 7}s;transform-origin:center`,
       onclick: () => { if (os !== "ios") os = "android"; brand = n; renderOs(); renderGuide(key); $("guide").scrollIntoView({behavior: "smooth", block: "start"}); }}));
   });
 }

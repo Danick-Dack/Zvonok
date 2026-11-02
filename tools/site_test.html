@@ -28,6 +28,30 @@ document.getElementById("f").onload = () => setTimeout(() => {
     ok(w.plural(1) === "1 урок" && w.plural(3) === "3 урока" && w.plural(7) === "7 уроков" && w.plural(11) === "11 уроков", "склонение «урок»");
   });
 
+  run("каникулы", () => {
+    ev('cls="7Б";useCustom=false;rebuild()');
+    let s = w.compute(at("2026-12-30T10:00:00"));
+    ok(s.kind === "OFF" && s.holiday && s.holiday[2] === "Зимние каникулы" && s.nLabel === "11 января", "30 декабря: каникулы, уроки с 11 января");
+    s = w.compute(at("2026-12-25T16:00:00"));
+    ok(s.kind === "AFTER" && s.nLabel === "11 января", "25 декабря после уроков: дальше 11 января");
+    s = w.compute(at("2026-12-16T10:00:00"));
+    ok(s.kind === "OFF" && s.holiday[2] === "День Независимости", "16 декабря: праздник");
+  });
+
+  run("кабинеты после уроков", () => {
+    ev(`(() => { const R = Date, T = "2026-11-02T16:00:00";
+      window.Date = class extends R { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return new R(T).getTime(); } };
+      try { $("rday").value = 0; $("rq").value = ""; renderRooms(); } finally { window.Date = R; } })()`);
+    ok(d.getElementById("freeH").textContent === "Уроки закончились", "пн 16:00: «Уроки закончились», а не «9 урок»");
+  });
+
+  run("первый заход", () => {
+    ev('pick=true;lastKey="";renderLive()');
+    ok(d.getElementById("lTitle").textContent === "Выбери свой класс" && d.getElementById("lTimer").textContent === "", "новичок сначала выбирает класс");
+    ev('pick=false;lastKey="";renderLive()');
+    ok(d.getElementById("lTitle").textContent !== "Выбери свой класс", "после выбора класса виден таймер");
+  });
+
   const classes = ev("CLASSES");
   ok(classes.length === 19, "19 классов");
   for (const c of classes) run("класс " + c, () => {
@@ -56,7 +80,7 @@ document.getElementById("f").onload = () => setTimeout(() => {
   run("iPhone", () => {
     ev('os="ios";renderOs();renderGuide("ios")');
     const t = d.getElementById("guide").textContent;
-    ok(!t.includes("Способ 1") && t.includes("Виджет на экран блокировки") && t.includes("Скопировать скрипт"), "инструкция для iPhone");
+    ok(!t.includes("Способ 1") && t.includes("Виджет на экран блокировки") && t.includes("Скопировать скрипт") && !/null|undefined/.test(t), "инструкция для iPhone без «null»");
   });
 
   run("код своего расписания", () => {
