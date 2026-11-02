@@ -56,7 +56,7 @@ document.getElementById("f").onload = () => setTimeout(() => {
   run("iPhone", () => {
     ev('os="ios";renderOs();renderGuide("ios")');
     const t = d.getElementById("guide").textContent;
-    ok(t.includes("Способ 1") && t.includes("На экран „Домой“") && t.includes("Скопировать скрипт"), "инструкция для iPhone");
+    ok(!t.includes("Способ 1") && t.includes("Виджет на экран блокировки") && t.includes("Скопировать скрипт"), "инструкция для iPhone");
   });
 
   run("код своего расписания", () => {
