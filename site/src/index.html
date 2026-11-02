@@ -351,7 +351,7 @@ footer p+p{margin-top:6px}
       <div class="ed">
         <div>
           <div class="wall pv" id="pv"></div>
-          <p class="note">Предпросмотр: уведомление, виджет 2×2 и виджет 2×1.</p>
+          <p class="note">Непрозрачность меняет только фон виджетов: уведомления Android всегда рисует на сплошной подложке, цвет темы у них меняется.</p>
         </div>
         <div class="card" style="padding:16px">
           <div class="caps" style="margin-bottom:12px">Тема</div>
@@ -771,7 +771,8 @@ function renderTheme() {
   const tm = (size) => h("div", {class: "tm", style: `font-size:${size}px;color:${text}`, text: th.s ? "24:16" : "24 мин"});
   const pb = () => th.p ? h("div", {class: "pb", style: "background:" + track}, h("i", {style: "background:#" + accV})) : null;
   const pv = $("pv"); pv.textContent = "";
-  pv.append(h("div", {class: "pv-n", style: "background:#" + th.bg},
+  const cap = t => h("div", {class: "lab", style: "color:rgba(255,255,255,.75);margin:0 0 6px 4px", text: t});
+  pv.append(cap("Уведомление · фон всегда сплошной"), h("div", {class: "pv-n", style: "background:#" + th.bg},
     h("div", {style: "display:flex;align-items:center"}, h("span", {class: "lab", style: "color:" + muted, text: "УРОК 3 / 7"}), dots()),
     h("div", {class: "tt", style: "color:" + text + ";font-size:19px"}, h("span", {text: "Физика"}), ch("48/49", true)),
     h("div", {style: "display:flex;align-items:end;gap:14px;margin-top:4px"}, tm(42), h("div", {style: "margin-left:auto;text-align:right;padding-bottom:4px"},
@@ -780,16 +781,16 @@ function renderTheme() {
     th.n ? h("div", {style: "display:flex;align-items:center;margin-top:12px"}, h("div", {style: "flex:1"}, h("div", {class: "lab", style: "color:" + muted, text: "ДАЛЕЕ · 10:50"}),
       h("div", {style: "color:" + soft + ";font-size:14px", text: "Программирование"})), ch("56/57", false)) : null));
   const w = h("div", {class: "pv-w"});
-  w.append(h("div", {class: "pv-2", style: `background:${bgA};border-radius:${rad}px`},
+  w.append(h("div", null, cap("Виджет 2×2"), h("div", {class: "pv-2", style: `background:${bgA};border-radius:${rad}px`},
     h("div", {style: "display:flex;align-items:center"}, h("span", {class: "lab", style: "color:" + muted, text: "УРОК 3 / 7"}), dots()),
     h("div", {class: "tt", style: "color:" + text}, h("span", {text: "Физика"}), ch("48/49", true)),
     h("div", {style: "display:flex;align-items:end"}, tm(32), h("div", {style: "margin-left:auto;text-align:right"}, h("div", {class: "lab", style: "color:" + muted + ";font-size:7px", text: "ЗВОНОК"}), h("div", {style: "color:" + text + ";font-size:12px;font-weight:600", text: "10:30"}))),
     pb(),
-    th.n ? h("div", {class: "nx", style: "color:" + soft}, h("span", {style: "flex:none;color:" + muted, text: "→"}), h("span", {text: "Программирование"}), ch("56/57", false)) : null));
-  w.append(h("div", {class: "pv-1", style: `background:${bgA};border-radius:${rad}px`},
+    th.n ? h("div", {class: "nx", style: "color:" + soft}, h("span", {style: "flex:none;color:" + muted, text: "→"}), h("span", {text: "Программирование"}), ch("56/57", false)) : null)));
+  w.append(h("div", null, cap("Виджет 2×1"), h("div", {class: "pv-1", style: `background:${bgA};border-radius:${rad}px`},
     h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {style: "flex:1"}, h("div", {class: "lab", style: "color:" + muted, text: "УРОК 3/7"}), tm(26)),
       th.n ? h("div", {style: "text-align:right"}, ch("56/57", false), h("div", {style: "font-size:10px;color:" + muted + ";margin-top:3px", text: "Программ…"})) : null),
-    pb()));
+    pb())));
   pv.append(w);
 
   const pr = $("thPresets"); pr.textContent = "";
