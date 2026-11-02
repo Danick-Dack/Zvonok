@@ -50,6 +50,7 @@ nav a:hover{background:var(--s2);color:var(--fg)}
   font-weight:600;font-size:15px;text-decoration:none;transition:transform .15s,background .15s;white-space:nowrap}
 .btn:active{transform:scale(.97)}
 .btn.w{background:#fff;color:#000}
+.btn.w:hover{background:#e6e6e8}
 .btn.d{background:var(--s2);border:1px solid var(--line2);color:var(--fg)}
 .btn.d:hover{background:var(--s3)}
 .btn.sm{padding:9px 14px;font-size:14px;border-radius:12px}
@@ -88,7 +89,7 @@ h1 b{font-weight:650}
 .ltitle h2{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.15;flex:1}
 .chip{display:inline-block;font-weight:650;font-size:14px;padding:4px 10px;border-radius:9px;background:#1b1b1e;border:1px solid var(--line2);white-space:nowrap}
 .chip.now{background:#fff;color:#000;border-color:#fff}
-.timer{font-size:clamp(64px,13vw,92px);font-weight:200;letter-spacing:-.04em;line-height:1;margin-top:10px}
+.timer{text-shadow:0 0 48px rgba(255,255,255,.18);font-size:clamp(64px,13vw,92px);font-weight:200;letter-spacing:-.04em;line-height:1;margin-top:10px}
 .bar2{height:4px;border-radius:4px;background:#232326;margin-top:14px;overflow:hidden}
 .bar2 i{display:block;height:100%;background:#fff;border-radius:4px;transition:width .6s}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
@@ -112,7 +113,8 @@ section{padding:70px 0 10px}
 .tools .seg{flex:1;min-width:280px}
 .card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:8px}
 .lesson{display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:16px}
-.lesson.cur{background:#161618;border:1px solid #2c2c30}
+.lesson.cur{background:#161618;border:1px solid #2c2c30;position:relative;overflow:hidden}
+.lesson .pg{position:absolute;left:0;bottom:0;height:2px;background:#fff;transition:width .6s}
 .lesson.nx{background:#0f0f11}
 .lesson.past{opacity:.38}
 .lesson .t{width:50px;font-variant-numeric:tabular-nums}
@@ -227,7 +229,10 @@ input[type=range]{width:100%;accent-color:#fff}
 .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 @media(max-width:900px){.facts{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.facts{grid-template-columns:1fr}}
-.fact{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.fact:hover,.step:hover,.faq details:hover{border-color:var(--line2)}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s,transform .7s}.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
+.fact{transition:border-color .2s;background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:20px}
 .fact b{display:block;font-size:34px;font-weight:250;letter-spacing:-.03em;margin-bottom:8px}
 .fact p{color:var(--soft);font-size:14px}
 
@@ -238,6 +243,13 @@ input[type=range]{width:100%;accent-color:#fff}
 .qr svg{display:block}
 .msg{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:14px;color:var(--soft);font-size:14px;margin-top:12px;white-space:pre-line}
 
+.faq{display:grid;gap:8px}
+.faq details{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:0 18px}
+.faq summary{cursor:pointer;list-style:none;padding:16px 28px 16px 0;font-weight:600;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary:after{content:"+";position:absolute;right:0;top:12px;font-size:22px;font-weight:300;color:var(--muted);transition:transform .2s}
+.faq details[open] summary:after{transform:rotate(45deg)}
+.faq p{color:var(--soft);padding:0 0 18px;font-size:15px}
 footer{padding:70px 0 50px;color:var(--faint);font-size:13px}
 footer p+p{margin-top:6px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,40px);opacity:0;background:#fff;color:#000;
@@ -259,6 +271,7 @@ footer p+p{margin-top:6px}
       <a href="#rooms">Кабинеты</a>
       <a href="#make">Конструктор</a>
       <a href="#install">Установить</a>
+      <a href="#faq">Вопросы</a>
     </nav>
     <a class="btn w sm" href="#install">Скачать</a>
   </div>
@@ -351,7 +364,7 @@ footer p+p{margin-top:6px}
       <div class="ed">
         <div>
           <div class="wall pv" id="pv"></div>
-          <p class="note">Непрозрачность меняет только фон виджетов: уведомления Android всегда рисует на сплошной подложке, цвет темы у них меняется.</p>
+          <p class="note">Предпросмотр. На телефоне Android рисует уведомление на сплошной подложке, поэтому прозрачность видна только у виджетов.</p>
         </div>
         <div class="card" style="padding:16px">
           <div class="caps" style="margin-bottom:12px">Тема</div>
@@ -394,6 +407,26 @@ footer p+p{margin-top:6px}
       <div class="fact"><b>0 КБ</b><p>данных уходит в сеть. У приложения нет даже разрешения на интернет, а у сайта нет счётчиков и внешних запросов.</p></div>
       <div class="fact"><b>~60 КБ</b><p>весит приложение. Всё расписание внутри: работает в метро, в подвале и без мобильного интернета.</p></div>
       <div class="fact"><b>19</b><p>классов: от 7А до 11Г. Выбираешь свой, или собираешь своё расписание в конструкторе.</p></div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="sh"><h3>Вопросы и <b>ответы</b></h3></div>
+    <div class="faq">
+      <details><summary>Это официальное приложение лицея?</summary><p>Нет. «Звонок» сделал ученик лицея для своих. Расписание взято из утверждённого расписания на 2 четверть. Если в лицее что-то поменяли, собери своё расписание в конструкторе: в приложении это «Настройки → Своё расписание».</p></details>
+      <details><summary>Почему Android пишет «Неизвестное приложение» или «Небезопасно»?</summary><p>Так Android реагирует на любое приложение не из Google Play. Нажми «Подробнее» → «Всё равно установить». У «Звонка» нет разрешения на интернет, так что он физически не может ничего отправить. Исходный код открыт: его может проверить любой.</p></details>
+      <details><summary>Что приложение знает обо мне?</summary><p>Ничего, кроме выбранного класса и настроек, и всё это хранится только на телефоне. Нет аккаунтов, рекламы, аналитики и резервных копий в облаке. Сайт тоже не ставит счётчиков и не грузит ничего со сторонних серверов: выбранный класс хранится только в твоём браузере.</p></details>
+      <details><summary>Сколько тратит батареи?</summary><p>Почти ничего. Пока экран выключен, приложение не просыпается и не будит телефон, а таймеры тикают силами самой системы. Если хочешь ещё меньше расхода, включи «Экономный таймер» (без секунд), а на каникулах — режим «Каникулы»: тогда не работает вообще ничего.</p></details>
+      <details><summary>Уведомление пропало или перестало обновляться</summary><p>Почти всегда это экономия батареи у производителя. Выбери в разделе «Установить» марку своего телефона и выполни шаги для неё, особенно «Автозапуск» и «Без ограничений». Потом открой приложение один раз: уведомление вернётся. На Xiaomi ещё помогает закрепить «Звонок» в «Недавних» (значок замка).</p></details>
+      <details><summary>Уведомление можно смахнуть?</summary><p>Кнопка «Очистить всё» его не убирает. На Android 14 и новее система разрешает смахнуть любое уведомление, поэтому «Звонок» сразу показывает его снова. Выключить уведомление можно только в настройках приложения.</p></details>
+      <details><summary>Таймер показывает минус или неверное время</summary><p>Проверь, что на телефоне включены «Время сети» и правильный часовой пояс. Включи «Точное время звонков» в настройках приложения, если там горит «Включить». Минус секунды на 1–2 после звонка — нормально, уведомление обновится, как только посмотришь на экран.</p></details>
+      <details><summary>Виджет обрезается или не обновляется</summary><p>Зажми виджет и растяни его на клетку больше: «Звонок» сам подстроит размер таймера под высоту. Если не обновляется — проверь «Автозапуск» и батарею для своей марки в разделе «Установить».</p></details>
+      <details><summary>Как сменить класс?</summary><p>В приложении нажми на белую плашку с классом в правом верхнем углу или «Настройки → Класс». На сайте — выбери класс в начале страницы, он запомнится.</p></details>
+      <details><summary>Как обновить приложение?</summary><p>В приложении: «Обновить приложение». Браузер скачает свежий APK — открой его и нажми «Обновить». Если Android пишет «Приложение не установлено», удали старую версию и поставь заново: настройки при этом сбросятся, расписание — нет.</p></details>
+      <details><summary>Работает без интернета?</summary><p>Да. Приложение интернет вообще не использует. Сайт после первого открытия сохраняется в браузере и тоже открывается без сети. А ещё его можно скачать одним файлом и отправить в чат.</p></details>
+      <details><summary>Как отправить приложение другу без интернета?</summary><p>В приложении: «Отправить приложение другу» — по Bluetooth, Quick Share или в мессенджер. Друг получит файл APK и установит его так же, как ты.</p></details>
+      <details><summary>Есть ли на iPhone уведомление, как на Android?</summary><p>Нет: Apple не даёт сайтам и скриптам держать постоянное уведомление. Зато есть виджеты на экране блокировки через бесплатный Scriptable (шаги в разделе «Установить» → iPhone) и сайт, который ставится как приложение.</p></details>
+      <details><summary>Как удалить?</summary><p>Как любое приложение: зажми иконку «Звонок» → «Удалить». После удаления на телефоне не остаётся ничего.</p></details>
     </div>
   </section>
 
@@ -568,6 +601,7 @@ function renderLive() {
   $("lFoot").textContent = foot;
   $("lBar").hidden = prog < 0; if (prog >= 0) $("lBarI").style.width = Math.round(Math.min(1, Math.max(0, prog)) * 100) + "%";
   $("lTimer").textContent = timer ? fmtTimer(timer - now) : big;
+  const pg = document.querySelector(".lesson.cur .pg"); if (pg) pg.style.width = Math.round(prog * 100) + "%";
   const dots = $("lDots"); dots.textContent = "";
   if (s.list && s.kind !== "AFTER") s.list.forEach((l, i) => dots.append(h("i", {class: s.kind === "LESSON" && i === s.idx ? "c" : (s.idx != null && (i < s.idx || (s.kind === "BREAK" && i === s.idx))) ? "d" : ""})));
   const key = s.kind + (s.cur ? s.cur.num : 0) + (s.next ? s.next.num : 0) + title() + now.toDateString();
@@ -622,7 +656,7 @@ function renderDay() {
       h("div", {class: "t"}, h("b", {text: hm(l.start)}), h("small", {text: hm(l.end)})),
       h("div", {class: "bar"}),
       h("div", {class: "m"}, h("b", {text: l.subject}), h("small", {text: cur ? "Сейчас · урок " + l.num : nx ? "Следующий · урок " + l.num : "Урок " + l.num + " · " + (l.end - l.start) + " мин"})),
-      l.room ? h("span", {class: "chip" + (cur ? " now" : ""), text: l.room}) : null));
+      l.room ? h("span", {class: "chip" + (cur ? " now" : ""), text: l.room}) : null, cur ? h("i", {class: "pg"}) : null));
   });
   renderWeek();
 }
@@ -772,7 +806,7 @@ function renderTheme() {
   const pb = () => th.p ? h("div", {class: "pb", style: "background:" + track}, h("i", {style: "background:#" + accV})) : null;
   const pv = $("pv"); pv.textContent = "";
   const cap = t => h("div", {class: "lab", style: "color:rgba(255,255,255,.75);margin:0 0 6px 4px", text: t});
-  pv.append(cap("Уведомление · фон всегда сплошной"), h("div", {class: "pv-n", style: "background:#" + th.bg},
+  pv.append(cap("Уведомление"), h("div", {class: "pv-n", style: "background:" + bgA},
     h("div", {style: "display:flex;align-items:center"}, h("span", {class: "lab", style: "color:" + muted, text: "УРОК 3 / 7"}), dots()),
     h("div", {class: "tt", style: "color:" + text + ";font-size:19px"}, h("span", {text: "Физика"}), ch("48/49", true)),
     h("div", {style: "display:flex;align-items:end;gap:14px;margin-top:4px"}, tm(42), h("div", {style: "margin-left:auto;text-align:right;padding-bottom:4px"},
@@ -868,22 +902,28 @@ function renderGuide(key) {
     const steps = h("div", {class: "steps"},
       step("Скачай приложение", "Файл Zvonok-165.apk, около 60 КБ. Без интернета? Попроси друга: в приложении есть «Отправить приложение другу».",
         h("a", {class: "btn w", href: APK, rel: "noopener noreferrer", text: "Скачать APK"})),
-      step("Установи", "Открой скачанный файл. Если телефон спросит — разреши установку из этого источника. Play Защита может показать «Неизвестное приложение»: нажми «Подробнее» → «Всё равно установить». В приложении нет интернета и рекламы."),
-      step("Выбери класс", "Открой «Звонок», выбери свой класс и разреши уведомления. Чёрное уведомление с таймером появится сразу."),
+      step("Найди файл", "Когда загрузка закончится, нажми на уведомление браузера «Загружено» или открой приложение «Файлы» → «Загрузки» → Zvonok-165.apk."),
+      step("Разреши установку", "Телефон попросит разрешить установку из браузера или файлового менеджера: «Настройки» → включи «Разрешить из этого источника» → вернись назад. Это нужно один раз."),
+      step("Установи", "Нажми «Установить». Play Защита может показать «Неизвестное приложение»: «Подробнее» → «Всё равно установить». В приложении нет интернета и рекламы — подробнее в разделе «Вопросы»."),
+      step("Выбери класс и разреши уведомления", "Открой «Звонок», выбери свой класс и нажми «Разрешить» на запрос уведомлений. Чёрное уведомление с таймером появится сразу."),
+      step("Проверь настройки в приложении", "Пролистай вниз до «Настроек»: напротив «Показ уведомления», «Точное время звонков» и «Без ограничений батареи» должно быть «✓ Готово». Если видишь «Включить» — нажми и разреши."),
       ...(grp ? grp.steps.map(s => step(s[0], s[1])) : []),
-      step("Добавь виджет", "Зажми пустое место на рабочем столе → Виджеты → «Звонок» (2×2) или «Звонок · мини» (2×1). Цвета меняются в «Оформлении»."));
+      step("Добавь виджет", "Зажми пустое место на рабочем столе → «Виджеты» → найди «Звонок»: большой 2×2 или «Звонок · мини» 2×1. Перетащи на экран. Цвета и прозрачность — в «Настройки → Оформление» или в конструкторе выше."),
+      step("Готово", "Выключи и включи экран: на экране блокировки будет урок, кабинет и таймер до звонка. Если уведомления нет — смотри «Вопросы» ниже."));
     g.append(steps, h("div", {class: "warn", text: "Обновление: просто скачай новый APK и установи поверх. Если Android пишет «Приложение не установлено» — удали старую версию и поставь заново."}));
   } else {
     g.append(h("div", {class: "bhead"}, h("span", {class: "caps", text: "iPhone · iOS 16 и новее"})));
     const sel = h("select", {class: "f", style: "flex:1;min-width:140px", "aria-label": "Класс для скрипта"}, CLASSES.map(c => h("option", {value: c, text: "Класс " + c})));
     sel.value = cls;
     g.append(h("div", {class: "steps"},
-      step("Открой сайт в Safari", "Именно в Safari — так его можно поставить как приложение."),
-      step("Добавь на экран «Домой»", "Нажми «Поделиться» (квадрат со стрелкой) → «На экран „Домой“» → «Добавить». Иконка «Звонок» откроется на весь экран и будет работать без интернета."),
-      step("Виджеты на экран блокировки", "Поставь бесплатное приложение Scriptable из App Store. Потом скопируй скрипт для своего класса, в Scriptable нажми «+», вставь и назови «Звонок».",
+      step("Открой сайт в Safari", "Именно в Safari: в Chrome и других браузерах на iPhone нет нужного пункта. Ссылку можно открыть из QR-кода камерой."),
+      step("Добавь на экран «Домой»", "Нажми «Поделиться» (квадрат со стрелкой вверх, внизу экрана) → пролистай вниз → «На экран „Домой“» → «Добавить». Иконка «Звонок» откроется на весь экран и будет работать без интернета."),
+      step("Поставь Scriptable", "Для виджетов открой App Store и найди бесплатное приложение «Scriptable» (разработчик Simon B. Støvring). Открой его один раз."),
+      step("Скопируй скрипт своего класса", "Выбери класс и нажми «Скопировать скрипт». В Scriptable нажми «+» справа сверху, вставь текст (зажми поле → «Вставить»), нажми на название сверху и назови «Звонок». Нажми «Готово».",
         sel, h("button", {class: "btn w", text: "Скопировать скрипт", onclick: () => copy(scriptFor(sel.value), "Скрипт для " + sel.value + " скопирован")}),
         h("button", {class: "btn d", text: "Скачать .js", onclick: () => download("Zvonok-" + sel.value + ".js", scriptFor(sel.value))})),
-      step("Добавь виджет", "Экран блокировки: зажми его → «Настроить» → поле виджетов → Scriptable. Рабочий стол: зажми пустое место → «+» → Scriptable. Нажми на виджет и выбери скрипт «Звонок».")),
+      step("Виджет на экран блокировки", "Зажми экран блокировки → «Настроить» → «Экран блокировки» → нажми на поле виджетов под часами → Scriptable → прямоугольный. Нажми на добавленный виджет → Script → «Звонок»."),
+      step("Виджет на рабочий стол", "Зажми пустое место → «+» (или «Изменить» → «Добавить виджет») → Scriptable → выбери размер. Нажми на виджет → Script → «Звонок».")),
       h("div", {class: "warn", text: "На iPhone нет постоянного уведомления как на Android: Apple не даёт его делать сайтам и скриптам. Зато виджеты на экране блокировки показывают таймер до звонка и кабинет."}));
   }
 }
@@ -915,6 +955,10 @@ $("fTerm").textContent = "Расписание: " + DATA.term + ", утверж�
 
 /* ---------- старт ---------- */
 renderClasses();
+if ("IntersectionObserver" in window) {
+  const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))), {rootMargin: "0px 0px -8% 0px"});
+  document.querySelectorAll("section").forEach(s => { s.classList.add("reveal"); io.observe(s); });
+}
 renderCloud();
 tick();
 if (/^https?:$/.test(location.protocol) && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

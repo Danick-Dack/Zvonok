@@ -1,0 +1,67 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Звонок: тесты сайта</title>
+<iframe id="f" src="_site_under_test.html" style="width:1100px;height:800px"></iframe>
+<pre id="out"></pre>
+<script>
+const out = [];
+const ok = (cond, name) => out.push((cond ? "PASS " : "FAIL ") + name);
+const run = (name, fn) => { try { fn(); } catch (e) { ok(false, name + ": " + e); } };
+const at = (iso) => new Date(iso);
+
+document.getElementById("f").onload = () => setTimeout(() => {
+  const w = document.getElementById("f").contentWindow, d = w.document, ev = s => w.eval(s);
+  ok(d.getElementById("lTitle").textContent !== "", "скрипт сайта запустился");
+
+  run("таймер 7Б", () => {
+    ev('cls="7Б";useCustom=false;rebuild()');
+    const c = t => w.compute(at(t));
+    let s = c("2026-11-02T08:20:00"); ok(s.kind === "LESSON" && s.cur.subject === "Классный час", "пн 8:20 — классный час");
+    s = c("2026-11-02T08:47:00"); ok(s.kind === "BREAK" && s.next.subject === "Казахский яз. и лит.", "пн 8:47 — перемена, дальше казахский");
+    s = c("2026-11-02T07:30:00"); ok(s.kind === "BEFORE" && s.soon, "пн 7:30 — скоро уроки");
+    s = c("2026-11-02T06:00:00"); ok(s.kind === "BEFORE" && !s.soon, "пн 6:00 — без отсчёта");
+    s = c("2026-11-02T15:24:00"); ok(s.kind === "LESSON" && s.cur.num === 8 && !s.next, "пн 15:24 — последний урок");
+    s = c("2026-11-02T16:00:00"); ok(s.kind === "AFTER" && s.nLabel === "Завтра" && s.next.subject === "Геометрия", "пн 16:00 — завтра геометрия");
+    s = c("2026-11-06T16:00:00"); ok(s.kind === "AFTER" && s.nLabel === "Понедельник", "пт 16:00 — в понедельник");
+    s = c("2026-11-07T12:00:00"); ok(s.kind === "OFF" && s.next.subject === "Классный час", "сб — выходной");
+    ok(w.fmtTimer(3723000) === "1:02:03" && w.fmtTimer(59000) === "0:59", "формат таймера");
+    ok(w.plural(1) === "1 урок" && w.plural(3) === "3 урока" && w.plural(7) === "7 уроков" && w.plural(11) === "11 уроков", "склонение «урок»");
+  });
+
+  const classes = ev("CLASSES");
+  ok(classes.length === 19, "19 классов");
+  for (const c of classes) run("класс " + c, () => {
+    ev(`cls=${JSON.stringify(c)};useCustom=false;rebuild();selDay=null;renderDay();renderLive()`);
+    const n = d.querySelectorAll("#dayList .lesson").length;
+    ok(n > 0 && !d.body.innerText.includes("undefined"), "класс " + c + ": " + n + " уроков");
+    new (Object.getPrototypeOf(async function () {}).constructor)(w.scriptFor(c));
+    ok(!w.scriptFor(c).includes("__"), "скрипт Scriptable для " + c);
+  });
+
+  run("кабинеты", () => {
+    let bad = 0;
+    for (const r of ev("ROOMS")) {
+      d.getElementById("rq").value = r; w.renderRooms();
+      if (/object|undefined/.test(d.getElementById("rres").innerText)) bad++;
+    }
+    ok(bad === 0, "поиск по " + ev("ROOMS").length + " кабинетам");
+  });
+
+  run("темы", () => {
+    for (const p of ev("PRESETS")) { ev(`th.bg=${JSON.stringify(p[1])};th.ac=${JSON.stringify(p[2])};th.op=40;renderTheme()`); }
+    ok(/^ZV1;bg=[0-9A-F]{6};ac=[0-9A-F]{6};op=\d+;r=\d+;s=[01];p=[01];n=[01];d=[01]$/.test(ev("thCode()")), "код темы для приложения");
+    ok(d.querySelector(".pv-n").style.background !== "", "предпросмотр уведомления");
+  });
+
+  run("код своего расписания", () => {
+    ev('fillFromClass(ed,"9А")');
+    const code = ev("edCode()"), back = JSON.parse(ev("b64d")(code.slice(5)));
+    ok(code.startsWith("ZVS1:") && JSON.stringify(back) === JSON.stringify(ev("edJson()")), "код туда и обратно");
+    ok(back.days[0][0][0] === "Алгебра", "в коде кириллица не ломается");
+    ok(w.customWeek(back)[0].length === 8, "своё расписание читается");
+  });
+
+  out.push("DONE");
+  document.getElementById("out").textContent = out.join("\n");
+}, 500);
+</script>
