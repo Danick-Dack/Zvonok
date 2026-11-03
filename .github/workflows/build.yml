@@ -2,6 +2,7 @@ name: Build APK
 
 on:
   push:
+    branches: ['**']   # только ветки: перенос тегов не запускает лишних сборок
     paths-ignore:
       - 'site/**'
       - 'tools/**'
