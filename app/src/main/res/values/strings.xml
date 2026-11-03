@@ -3,5 +3,7 @@
     <string name="app_name">Звонок</string>
     <string name="widget_desc">Текущий урок, таймер до звонка и следующий кабинет</string>
     <string name="widget_mini_name">Звонок · мини</string>
+    <string name="widget_day_name">Звонок · день</string>
+    <string name="widget_day_desc">Таймер до звонка и все уроки на сегодня</string>
     <string name="widget_mini_desc">Таймер до звонка и кабинет следующего урока</string>
 </resources>

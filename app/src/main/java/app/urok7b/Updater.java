@@ -108,13 +108,15 @@ public final class Updater {
 
         boolean notif = !vacation && notifWanted(ctx, d);
         boolean widgets = widgetIds(ctx, LessonWidget.class).length > 0
-                || widgetIds(ctx, MiniWidget.class).length > 0;
+                || widgetIds(ctx, MiniWidget.class).length > 0
+                || widgetIds(ctx, DayWidget.class).length > 0;
 
         if (force || screenOn || !d.sig.equals(lastSig)) {
             lastSig = d.sig;
             notif = updateNotification(ctx, d, t, notif);
             LessonWidget.updateAll(ctx, d, t);
             MiniWidget.updateAll(ctx, d, t);
+            DayWidget.updateAll(ctx, d, t, s);
         }
         scheduleBuzz(ctx, now, !vacation && prefs(ctx).getBoolean(KEY_BUZZ, false));
         if (vacation) {
