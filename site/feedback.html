@@ -115,8 +115,10 @@ textarea.f{min-height:160px;resize:vertical;line-height:1.45}
 </footer>
 <script>
 "use strict";
-// анонимные сообщения уходят письмом через FormSubmit (без аккаунтов). Шлём только тип, текст и класс
-const ENDPOINT = "https://formsubmit.co/ajax/zvonok165lyceumalmaty@gmail.com";
+// анонимные сообщения уходят письмом на почту проекта, без аккаунтов. Шлём только тип, текст и класс
+// основной путь Web3Forms (ключ публичный по замыслу сервиса, письма идут только на почту проекта), запасной FormSubmit
+const W3F_KEY = "47a818a4-abad-4577-951b-19ed93e1ae86";
+const FALLBACK = "https://formsubmit.co/ajax/zvonok165lyceumalmaty@gmail.com";
 const CLASSES = ["7А","7Б","7В","8А","8Б","8В","8Г","9А","9Б","9В","9Г","10А","10Б","10В","10Г","11А","11Б","11В","11Г"];
 const MAX = 1000, PAUSE = 30000;
 const KINDS = ["Идея", "Ошибка", "Другое"];
@@ -150,11 +152,16 @@ async function send() {
   if (text.length < 3) return;
   if (left() > 0) { fail("Подожди полминуты и отправь ещё раз."); update(); return; }
   if (navigator.onLine === false) { fail("Не получилось отправить, нет интернета. Текст сохранён, попробуй позже."); return; }
-  const data = {"Тип": kind, "Сообщение": text, "Класс": sel.value || "не указан", _subject: "Звонок: " + kind, _template: "box", _captcha: "false"};
+  const fields = {"Тип": kind, "Сообщение": text, "Класс": sel.value || "не указан"};
+  const post = (url, body) => fetch(url, {method: "POST", headers: {"Content-Type": "application/json", Accept: "application/json"}, body: JSON.stringify(body), credentials: "omit", referrerPolicy: "origin"})
+    .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok || j.success === false || j.success === "false") throw new Error(r.status); }));
   $("send").disabled = true;
   try {
-    const r = await fetch(ENDPOINT, {method: "POST", headers: {"Content-Type": "application/json", Accept: "application/json"}, body: JSON.stringify(data), credentials: "omit", referrerPolicy: "no-referrer"});
-    if (!r.ok) throw new Error(r.status);
+    try {
+      await post("https://api.web3forms.com/submit", Object.assign({access_key: W3F_KEY, subject: "Звонок: " + kind, from_name: "Звонок · анонимно"}, fields));
+    } catch (e) {
+      await post(FALLBACK, Object.assign({_subject: "Звонок: " + kind, _template: "box", _captcha: "false"}, fields));
+    }
     store.set("fbLast", Date.now()); store.set("fbDraft", ""); txt.value = "";
     $("form").hidden = true; $("done").hidden = false;
   } catch (e) {
