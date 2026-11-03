@@ -81,22 +81,22 @@
             android:id="@+id/n_chrono"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-thin"
+            android:fontFamily="sans-serif-light"
             android:fontFeatureSettings="tnum"
             android:includeFontPadding="false"
             android:maxLines="1"
             android:textColor="#FFFFFF"
-            android:textSize="46sp" />
+            android:textSize="44sp" />
 
         <TextView
             android:id="@+id/n_big"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-thin"
+            android:fontFamily="sans-serif-light"
             android:includeFontPadding="false"
             android:maxLines="1"
             android:textColor="#FFFFFF"
-            android:textSize="46sp"
+            android:textSize="44sp"
             android:visibility="gone" />
 
         <FrameLayout

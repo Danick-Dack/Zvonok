@@ -97,11 +97,11 @@ public class LessonWidget extends AppWidgetProvider {
         float timer, title;
         int padH, padV;
         if (h <= 0 || h < 150) {        // низкая ячейка или размер неизвестен
-            timer = 26; title = 13; padH = 12; padV = 8;
+            timer = 28; title = 13; padH = 12; padV = 8;
         } else if (h < 185) {
-            timer = 30; title = 14; padH = 13; padV = 10;
+            timer = 32; title = 14; padH = 13; padV = 10;
         } else {
-            timer = 34; title = 15; padH = 14; padV = 12;
+            timer = 36; title = 15; padH = 14; padV = 12;
         }
         rv.setTextViewTextSize(R.id.w_chrono, TypedValue.COMPLEX_UNIT_SP, timer);
         rv.setTextViewTextSize(R.id.w_big, TypedValue.COMPLEX_UNIT_SP, timer);

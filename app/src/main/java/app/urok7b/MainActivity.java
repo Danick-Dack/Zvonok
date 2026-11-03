@@ -34,8 +34,9 @@ public class MainActivity extends Activity {
     private static final String[] MONTHS = {"января", "февраля", "марта", "апреля", "мая", "июня",
             "июля", "августа", "сентября", "октября", "ноября", "декабря"};
 
-    private TextView date, badge, status, dots, title, room, big, caption, sideH, sideV, statH, statV;
-    private TextView nextH, nextS, nextR, foot, dayTitle, dayMeta, update;
+    private TextView date, badge, status, title, room, big, caption, sideH, sideV, statH, statV;
+    private TextView nextH, nextS, nextR, foot, dayTitle, dayMeta, dayNote, update, vac;
+    private LinearLayout dots;
     private Chronometer chrono;
     private RingView ring;
     private LinearLayout nextCard, list;
@@ -119,8 +120,7 @@ public class MainActivity extends Activity {
         status.setBackground(Ui.round(this, Color.parseColor("#1E1E20"), 12, 0));
         top.addView(status);
         top.addView(new View(this), Ui.weight(1));
-        dots = Ui.text(this, "", 8, FAINT, null);
-        dots.setLetterSpacing(0.3f);
+        dots = Ui.horizontal(this); // капсулы уроков дня
         top.addView(dots);
         hero.addView(top);
 
@@ -195,6 +195,11 @@ public class MainActivity extends Activity {
         nextCard.addView(foot);
         root.addView(nextCard);
 
+        // сколько учебных дней до каникул
+        vac = Ui.text(this, "", 13, MUTED, null);
+        vac.setPadding(dp(4), dp(12), dp(4), 0);
+        root.addView(vac);
+
         // дни недели
         LinearLayout days = Ui.horizontal(this);
         days.setBackground(Ui.round(this, Ui.CARD, 18, Ui.LINE));
@@ -222,6 +227,15 @@ public class MainActivity extends Activity {
         dh.addView(dayMeta);
         root.addView(dh);
 
+        // пометка дня: каникулы или замены
+        dayNote = Ui.text(this, "", 13, SOFT, null);
+        dayNote.setPadding(dp(14), dp(10), dp(14), dp(10));
+        dayNote.setBackground(Ui.round(this, 0, 14, Color.parseColor("#2B2B30")));
+        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        np.bottomMargin = dp(10);
+        root.addView(dayNote, np);
+
         list = Ui.vertical(this);
         root.addView(list);
 
@@ -247,7 +261,8 @@ public class MainActivity extends Activity {
         } else {
             Updates.askOnce(this, () -> Updates.check(this, ok -> showUpdate()));
         }
-        if (Updates.due(this)) Updates.check(this, ok -> showUpdate());
+        if (Updates.due(this)) Updates.check(this, ok -> { showUpdate(); rebuild(); });
+        else if (Updates.changesDue(this)) Updates.checkChanges(this, this::rebuild);
         showUpdate();
         rebuild();
     }
@@ -293,8 +308,7 @@ public class MainActivity extends Activity {
         badge.setText(Schedule.title());
         status.setText((d.live ? "●  " : "") + d.label);
         status.setTextColor(d.live ? TEXT : SOFT);
-        dots.setVisibility(d.dotTotal > 0 ? View.VISIBLE : View.GONE);
-        dots.setText(Updater.dots(d, TEXT, Color.parseColor("#5A5A5A"), Color.parseColor("#262626")));
+        buildDots(d);
 
         if (d.timer) {
             if (d.target != lastTarget) {
@@ -325,6 +339,9 @@ public class MainActivity extends Activity {
         setChip(nextR, d.nextRoom);
         foot.setText(d.foot);
         foot.setVisibility(d.foot.isEmpty() ? View.GONE : View.VISIBLE);
+        String v = Schedule.vacationText(Schedule.vacation(now));
+        vac.setText(v);
+        vac.setVisibility(v.isEmpty() ? View.GONE : View.VISIBLE);
 
         if (selected == null) selected = defaultDay(now, s);
         String sig = selected + "|" + d.sig + "|" + today + "|" + d.progress / 5;
@@ -340,7 +357,10 @@ public class MainActivity extends Activity {
             case LESSON: return "ДО ЗВОНКА";
             case BREAK: return "ДО УРОКА";
             case BEFORE: return s.notify ? "ДО УРОКОВ" : "ПЕРВЫЙ ЗВОНОК";
-            default: return s.next == null ? "" : s.nextDayLabel.toUpperCase() + " В";
+            default:
+                if (s.next == null) return "";
+                if (s.holiday != null && s.nextDays > 1) return Schedule.word(s.nextDays, "ДЕНЬ", "ДНЯ", "ДНЕЙ").replaceAll("^\\d+ ", "") + " ДО УРОКОВ";
+                return s.nextDayLabel.toUpperCase() + " В";
         }
     }
 
@@ -366,12 +386,49 @@ public class MainActivity extends Activity {
         dayBtn[5].setVisibility(Schedule.lessons(DayOfWeek.SATURDAY).isEmpty() ? View.GONE : View.VISIBLE);
     }
 
+    /** Капсулы уроков дня: прошедшие серые, текущий длиннее и белый, будущие тёмные. */
+    private void buildDots(Updater.Display d) {
+        dots.removeAllViews();
+        dots.setVisibility(d.dotTotal > 0 ? View.VISIBLE : View.GONE);
+        for (int i = 1; i <= d.dotTotal; i++) {
+            boolean cur = i == d.dotCurrent;
+            View c = new View(this);
+            c.setBackground(Ui.round(this, cur ? TEXT : i <= d.dotDone ? Color.parseColor("#5A5A60")
+                    : Color.parseColor("#262629"), 2, 0));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(cur ? 18 : 10), dp(4));
+            lp.leftMargin = dp(4);
+            dots.addView(c, lp);
+        }
+    }
+
     private void buildList(ZonedDateTime now, Schedule.Status s, long nowMs, int progress) {
         list.removeAllViews();
-        boolean isToday = selected == now.getDayOfWeek();
+        // выбранный день недели: сегодня или ближайший такой день впереди (с заменами и каникулами)
+        LocalDate date = now.toLocalDate().plusDays((selected.getValue() - now.getDayOfWeek().getValue() + 7) % 7);
+        String off = Schedule.dayOff(date);
+        boolean isToday = selected == now.getDayOfWeek() && off == null;
         int nowMin = now.getHour() * 60 + now.getMinute();
-        List<Schedule.Lesson> l = Schedule.lessons(selected);
-        dayTitle.setText(isToday ? "Сегодня" : Schedule.dayName(selected));
+        List<Schedule.Lesson> l = off != null ? Schedule.lessons(selected) : Schedule.lessonsOn(date);
+        dayTitle.setText(selected == now.getDayOfWeek() ? "Сегодня" : Schedule.dayName(selected));
+        String note = "";
+        if (off != null) {
+            note = Schedule.dateText(date) + ": " + off + ". Уроков не будет, ниже обычное расписание этого дня.";
+        } else if (Schedule.changesOn(date) != null) {
+            String n = Schedule.clean(Schedule.changesOn(date).optString("note", ""));
+            List<Integer> gone = Schedule.cancelledOn(date);
+            StringBuilder sb = new StringBuilder(n);
+            if (n.isEmpty() && !gone.isEmpty()) sb.append("Есть изменения в расписании");
+            if (!gone.isEmpty()) {
+                sb.append(". ").append(gone.size() > 1 ? "Отменены уроки " : "Отменён урок ");
+                for (int i = 0; i < gone.size(); i++) sb.append(i > 0 ? ", " : "").append(gone.get(i));
+            }
+            note = sb.toString();
+            if (note.isEmpty()) {
+                for (Schedule.Lesson x : l) if (x.changed || x.shortBell) note = "Есть изменения в расписании";
+            }
+        }
+        dayNote.setText(note);
+        dayNote.setVisibility(note.isEmpty() ? View.GONE : View.VISIBLE);
         if (l.isEmpty()) {
             dayMeta.setText("");
             TextView e = Ui.text(this, "Уроков нет. Отдыхай.", 15, MUTED, null);
@@ -383,13 +440,14 @@ public class MainActivity extends Activity {
         for (int i = 0; i < l.size(); i++) {
             Schedule.Lesson x = l.get(i);
             if (i > 0) {
-                boolean on = isToday && s.kind == Schedule.Kind.BREAK && s.next == x;
+                boolean on = isToday && s.kind == Schedule.Kind.BREAK && s.next != null && s.next.num == x.num;
                 int len = x.start - l.get(i - 1).end;
                 list.addView(row(null, on ? "●  перемена сейчас · ещё " + Schedule.fmtLeft(s.targetMillis - nowMs)
                         : (len > 25 ? "окно " : "перемена ") + len + " мин", on, false, false, -1, false, false));
             }
-            boolean cur = isToday && s.kind == Schedule.Kind.LESSON && s.current == x;
-            boolean next = isToday && (s.kind == Schedule.Kind.BREAK || s.kind == Schedule.Kind.BEFORE) && s.next == x;
+            boolean cur = isToday && s.kind == Schedule.Kind.LESSON && s.current != null && s.current.num == x.num;
+            boolean next = isToday && (s.kind == Schedule.Kind.BREAK || s.kind == Schedule.Kind.BEFORE)
+                    && s.next != null && s.next.num == x.num;
             list.addView(row(x, null, cur, next, isToday && !cur && x.end <= nowMin, cur ? progress : -1,
                     i == 0, i == l.size() - 1));
         }
@@ -463,6 +521,13 @@ public class MainActivity extends Activity {
             mid.addView(pb, pl);
         }
         box.addView(mid);
+        if (x.changed) {
+            // замена: плашка с рамкой
+            TextView z = Ui.text(this, "замена", 10, SOFT, "sans-serif-medium");
+            z.setPadding(dp(6), dp(2), dp(6), dp(2));
+            z.setBackground(Ui.round(this, 0, 6, Color.parseColor("#8A8A91")));
+            box.addView(z);
+        }
         if (!x.room.isEmpty()) {
             TextView c = chip(cur);
             c.setText(x.room);

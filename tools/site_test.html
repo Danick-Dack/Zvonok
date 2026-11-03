@@ -45,6 +45,92 @@ document.getElementById("f").onload = () => setTimeout(() => {
     ok(d.getElementById("freeH").textContent === "Уроки закончились", "пн 16:00: «Уроки закончились», а не «9 урок»");
   });
 
+  // выполнить код сайта «как будто сейчас» T
+  const withDate = (T, code) => ev(`(() => { const R = Date, T = ${JSON.stringify(T)};
+      window.Date = class extends R { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return new R(T).getTime(); } };
+      try { return (${code}); } finally { window.Date = R; } })()`);
+
+  run("замены", () => {
+    ev(`cls="7Б";useCustom=false;pick=false;rebuild();CHANGES={days:{
+      "2026-11-03":{note:"Сокращённые уроки",bells:[["8:00","8:30"],["8:35","9:05"],["9:15","9:45"],["9:55","10:25"],["10:35","11:05"],["11:15","11:45"],["11:50","12:20"]],
+        classes:{"7Б":{"1":{subject:"fiz",room:"48"},"2":"нет урока","8":{subject:"Шахматы",room:"40"}}}},
+      "2026-11-04":{off:"Актированный день"}}}`);
+    const l = w.dayLessons("7Б", at("2026-11-03T12:00:00"));
+    ok(l[0].subject === "Физика" && l[0].room === "48" && l[0].changed && l[0].end === 510, "замена 1 урока и сокращённый звонок");
+    ok(!l.some(x => x.num === 2), "2 урок отменён");
+    ok(l[1].subject === "Физика" && !l[1].changed && l[1].short && l[1].start === 555, "остальные уроки по сокращённым звонкам");
+    ok(!l.some(x => x.num === 8), "лишний урок без звонка не появляется");
+    let s = w.compute(at("2026-11-03T08:20:00"));
+    ok(s.kind === "LESSON" && s.cur.subject === "Физика" && s.target === at("2026-11-03T08:30:00").getTime(), "таймер идёт по замене");
+    s = w.compute(at("2026-11-04T09:00:00"));
+    ok(s.kind === "OFF" && s.holiday[2] === "Актированный день" && d.getElementById("lTitle") && true, "день off: уроков нет");
+    const a = w.dayLessons("7А", at("2026-11-03T12:00:00"))[0];
+    ok(a.subject === "Физика" && !a.changed && a.end === 510, "у другого класса только сокращённые звонки");
+    withDate("2026-11-03T08:20:00", 'lastKey="",renderLive(),selDay=1,renderDay()');
+    ok(d.getElementById("lChg").textContent === "замена" && !d.getElementById("lChg").hidden, "пометка «замена» в карточке");
+    ok(d.getElementById("dayNote").textContent.includes("Сокращённые уроки") && d.getElementById("dayNote").textContent.includes("Отменён урок 2"), "пометка дня: заметка и отмена");
+    ok(d.querySelector("#dayList .lesson .m small").textContent.includes("замена"), "пометка «замена» в списке дня");
+    ev('CHANGES={days:{}};lastKey=""');
+  });
+
+  run("счётчик до каникул", () => {
+    ev('cls="7Б";useCustom=false;rebuild()');
+    let v = w.vacation(at("2026-12-21T07:00:00"));
+    ok(v && v.n === 5 && v.name === "Зимние каникулы", "21 декабря утром: 5 учебных дней");
+    v = w.vacation(at("2026-12-21T17:00:00"));
+    ok(v.n === 4, "после уроков сегодня не считается");
+    ok(w.vacationText(w.vacation(at("2026-12-25T09:00:00"))).startsWith("Сегодня последний учебный день"), "последний день");
+    ok(w.vacationText(w.vacation(at("2026-12-14T09:00:00"))) === "До каникул 9 учебных дней", "праздник 16 декабря не считается");
+    ok(w.vacation(at("2026-12-30T09:00:00")) === null, "в каникулы счётчика нет");
+    ok(w.daysWord(1) === "1 учебный день" && w.daysWord(3) === "3 учебных дня" && w.daysWord(18) === "18 учебных дней", "склонение дней");
+  });
+
+  run("ссылка на класс", () => {
+    ev('location.hash="#10a"');
+    ok(ev("classFromHash()") === "10А", "#10a это 10А");
+    ev('location.hash="#9%D0%B3"');
+    ok(ev("classFromHash()") === "9Г", "кириллица #9г");
+    ev('location.hash="#schedule"');
+    ok(ev("classFromHash()") === null, "якорь меню не класс");
+    ev('location.hash="#10a";openHashClass();rebuild();renderClasses()');
+    ok(ev("cls") === "10А" && ev("shareUrl()").endsWith("/#10a"), "открывает класс и делится ссылкой на него");
+    ok(d.getElementById("qr").innerHTML.includes("<path") && d.getElementById("shMsg").textContent.includes("#10a"), "QR и сообщение с классом");
+    ok(ev('QRS["10А"]') !== ev('QRS[""]'), "у класса свой QR");
+    d.querySelector("#classes .pill").click();
+    ok(ev("classFromHash()") === null && ev("cls") === "7А", "выбор своего класса убирает #10a из адреса");
+    ev('cls="7Б";rebuild();renderClasses()');
+  });
+
+  run("кабинет: короткий ответ", () => {
+    ev('cls="7Б";useCustom=false;rebuild()');
+    const use = withDate("2026-11-02T10:00:00", "roomDay(new Date())");
+    const t = w.roomNow("46", use, 600);
+    ok(/^Сейчас: 7Б, история Казахстана, освободится в \d+:\d\d$/.test(t) || /^Сейчас: .+, освободится в /.test(t), "занят: кто и когда освободится (" + t + ")");
+    const f = w.roomNow("46", use, 16 * 60);
+    ok(f === "Сейчас свободен до конца дня", "после уроков свободен");
+    withDate("2026-11-02T10:40:00", '($("rday").value=0,$("rq").value="",renderRooms())');
+    ok(d.getElementById("freeH").textContent.startsWith("Свободны на следующем уроке · 10:50") && d.querySelectorAll("#free .chip").length > 0, "на перемене: свободны на следующем уроке");
+    withDate("2026-11-02T10:40:00", '($("rq").value="46",renderRooms())');
+    ok(d.getElementById("rnow") && d.getElementById("rnow").textContent.startsWith("Сейчас"), "строка «Сейчас» в поиске");
+    ev('$("rq").value="";renderRooms()');
+  });
+
+  run("где друг", () => {
+    ev('cls="7Б";useCustom=false;pick=false;rebuild()');
+    withDate("2026-11-02T10:00:00", '($("fCls").value="9А",renderFriend())');
+    const t = d.getElementById("fOut").textContent;
+    ok(t.includes("Сейчас у 9А:") && t.includes("Общие перемены") && /Домой|вместе/.test(t), "где друг: сейчас, перемены, домой: " + t);
+    withDate("2026-11-07T10:00:00", "renderFriend()");
+    ok(d.getElementById("fOut").textContent.startsWith("Понедельник у 9А"), "в выходной показывает ближайший день");
+  });
+
+  run("ошибка и календарь", () => {
+    ev('selDay=0');
+    const u = ev("reportUrl()");
+    ok(u.startsWith("https://github.com/Danick-Dack/Zvonok/issues/new?title=") && decodeURIComponent(u).includes("Класс: 7Б") && decodeURIComponent(u).includes("1. Классный час"), "ссылка на issue с классом и днём");
+    ok(ev('calUrl("10Г")') === "webcal://danick-dack.github.io/Zvonok/cal/10G.ics", "ссылка на календарь класса");
+  });
+
   run("первый заход", () => {
     ev('pick=true;lastKey="";renderLive()');
     ok(d.getElementById("lTitle").textContent === "Выбери свой класс" && d.getElementById("lTimer").textContent === "", "новичок сначала выбирает класс");
@@ -81,6 +167,7 @@ document.getElementById("f").onload = () => setTimeout(() => {
     ev('os="ios";renderOs();renderGuide("ios")');
     const t = d.getElementById("guide").textContent;
     ok(!t.includes("Способ 1") && t.includes("Виджет на экран блокировки") && t.includes("Скопировать скрипт") && !/null|undefined/.test(t), "инструкция для iPhone без «null»");
+    ok(t.includes("Уведомления перед уроком через Календарь") && d.getElementById("calSub").href.startsWith("webcal://"), "блок с подпиской на календарь");
   });
 
   run("код своего расписания", () => {
@@ -91,7 +178,42 @@ document.getElementById("f").onload = () => setTimeout(() => {
     ok(w.customWeek(back)[0].length === 8, "своё расписание читается");
   });
 
-  out.push("DONE");
-  document.getElementById("out").textContent = out.join("\n");
+  pages().then(() => {
+    out.push("DONE");
+    document.getElementById("out").textContent = out.join("\n");
+  });
 }, 500);
+
+// отдельные страницы: «Что нового» и «Написать нам»
+function load(src) {
+  return new Promise(r => {
+    const f = document.createElement("iframe"); f.src = src; f.style.cssText = "width:390px;height:800px";
+    f.onload = () => setTimeout(() => r(f.contentWindow), 300); document.body.append(f);
+  });
+}
+async function pages() {
+  try {
+    let w = await load("_changelog_under_test.html"), d = w.document;
+    const n = d.querySelectorAll(".rel").length, all = w.eval("LOG.length");
+    ok(n === all && n > 3 && !!d.querySelector(".rel .chip.now"), "что нового: все записи, самая свежая с плашкой «Новое»");
+    [...d.querySelectorAll("#flt button")].find(b => b.textContent === "iPhone").click();
+    ok([...d.querySelectorAll(".rel")].every(c => c.textContent.includes("iPhone")) && d.querySelectorAll(".rel").length < n, "фильтр по iPhone");
+    ok(!/—/.test(d.body.innerText) && !/undefined|null/.test(d.body.innerText), "что нового: без длинных тире и мусора");
+    w = await load("_feedback_under_test.html"); d = w.document;
+    ok(d.getElementById("pTitle").textContent === "Через GitHub" && !d.getElementById("pText").textContent.includes("Анонимно"), "без Google Формы честно: через GitHub, не анонимно");
+    ok(d.getElementById("send").disabled, "пустой текст не отправить");
+    const t = d.getElementById("text"); t.value = "Хочу тёмную тему посветлее"; t.dispatchEvent(new w.Event("input"));
+    ok(!d.getElementById("send").disabled && d.getElementById("cnt").textContent === "26 / 1000", "счётчик и кнопка");
+    ok(t.maxLength === 1000 && d.getElementById("cls").options[0].textContent === "Не указывать" && d.getElementById("cls").options.length === 20, "лимит 1000 и выбор класса");
+    w.eval('localStorage.setItem("zv.fbLast", Date.now()); update()');
+    ok(d.getElementById("send").disabled && /^Ещё \d+ с$/.test(d.getElementById("send").textContent), "не чаще раза в 30 секунд");
+    w.eval('localStorage.removeItem("zv.fbLast"); localStorage.removeItem("zv.fbDraft")');
+    // телефон 390px: никакой горизонтальной прокрутки, превью виджетов iPhone на месте
+    w = await load("_site_under_test.html"); d = w.document;
+    w.eval('pick=false;os="ios";renderOs();renderGuide("ios")');
+    ok(d.documentElement.scrollWidth <= 390, "390px: нет горизонтальной прокрутки (" + d.documentElement.scrollWidth + ")");
+    ok(d.querySelectorAll("#iosPv .scr").length === 2 && d.querySelectorAll(".step .ill svg").length === 5 && !/undefined|null|NaN/.test(d.getElementById("iosPv").innerText), "превью виджетов iPhone и картинки к шагам");
+  } catch (e) { ok(false, "страницы: " + e); }
+}
+
 </script>

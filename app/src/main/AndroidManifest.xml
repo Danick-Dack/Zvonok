@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-        Приватность: интернет нужен только для проверки обновлений — один HTTPS-запрос к GitHub
-        раз в сутки, когда приложение открыто (можно выключить). Данные о пользователе не отправляются.
+        Приватность: интернет нужен только если пользователь разрешил: раз в сутки спросить GitHub о новой версии
+        и раз в 3 часа скачать замены в расписании со своего сайта, когда приложение открыто. Данные о пользователе не отправляются.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

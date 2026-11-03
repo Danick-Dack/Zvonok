@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://docs.google.com; object-src 'none'; base-uri 'none'; form-action https://docs.google.com">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Напиши, что придумал или что сломалось в «Звонке».">
+<link rel="icon" href="@FAVICON@">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Написать нам · Звонок</title>
+<style>
+@COMMON_CSS@
+.promise{display:flex;gap:14px;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:18px;padding:16px 18px}
+.promise svg{flex:none;width:20px;height:20px;margin-top:2px}
+.promise b{display:block;font-size:17px;font-weight:650}
+.promise p{color:var(--soft);font-size:15px;margin-top:2px}
+.lbl{margin:26px 0 10px}
+textarea.f{min-height:160px;resize:vertical;line-height:1.45}
+.cnt{text-align:right;font-size:12px;color:var(--muted);margin-top:6px}
+.cnt.hi{color:#ff8a8a}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:20px}
+.row .f{width:auto;flex:1;min-width:160px}
+#send{width:100%;margin-top:22px}
+.err{color:#ffb4b4;font-size:14px;margin-top:12px}
+.done{text-align:center;padding:34px 18px}
+.done svg{width:64px;height:64px}
+.done b{display:block;font-size:22px;font-weight:600;margin:14px 0 18px}
+.hint{margin-top:28px}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+@HEADER@
+<main class="wrap">
+  <div class="sh"><h1>Написать <b>нам</b></h1><p>Идея, ошибка или просто спасибо. Мы читаем всё.</p></div>
+  <div class="promise" id="promise">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    <div><b id="pTitle">Анонимно</b><p id="pText">Мы не узнаём ни имя, ни телефон, ни аккаунт. Приходит только то, что ты напишешь ниже.</p></div>
+  </div>
+  <div id="form">
+    <div class="caps lbl">Что это?</div>
+    <div class="seg" id="kind" role="group" aria-label="Что это"></div>
+    <div class="caps lbl">Текст</div>
+    <textarea class="f" id="text" maxlength="1000" placeholder="Напиши, что придумал или что сломалось" aria-label="Текст сообщения"></textarea>
+    <div class="cnt" id="cnt">0 / 1000</div>
+    <div class="row"><label class="caps" for="cls" style="margin:0">Класс (не обязательно)</label><select class="f" id="cls"></select></div>
+    <button class="btn w" id="send" disabled>Отправить</button>
+    <div class="err" id="err" role="alert" hidden></div>
+  </div>
+  <div class="card done" id="done" hidden>
+    <svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="54" cy="54" r="40" fill="none" stroke="#2a2a2a" stroke-width="7"/><path d="M54 14A40 40 0 1 1 14 54" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="M38 55l11 11 22-24" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <b>Спасибо! Получили.</b>
+    <button class="btn d sm" id="again">Отправить ещё</button>
+  </div>
+  <p class="note hint">Ошибка в расписании? Лучше сообщи прямо из <a href="./#schedule">расписания</a>, там уже будет класс и урок.</p>
+</main>
+<footer class="wrap">
+  <p class="links"><a href="./">Расписание</a> · <a href="changelog.html">Что нового</a></p>
+  <p>«Звонок» сделал ученик лицея №165 для своих. Это неофициальный проект.</p>
+</footer>
+<script>
+"use strict";
+// Google Форма: ID и номера полей подставляет сборка (tools/build_site.py). Пока пусто, отправляем через GitHub.
+const FORM_ID = "@FEEDBACK_FORM_ID@";
+const ENTRIES = /*@FEEDBACK_ENTRIES@*/{};
+const CLASSES = /*@CLASSES@*/[];
+const REPO = "https://github.com/Danick-Dack/Zvonok";
+const MAX = 1000, PAUSE = 30000;
+const KINDS = ["Идея", "Ошибка", "Другое"];
+const GOOGLE = !!FORM_ID && !!ENTRIES.type && !!ENTRIES.text;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("zv." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("zv." + k, JSON.stringify(v)); } catch (e) {} }
+};
+let kind = KINDS[0], waitT;
+
+if (!GOOGLE) {
+  // через GitHub не анонимно: честно говорим об этом
+  $("pTitle").textContent = "Через GitHub";
+  $("promise").querySelector("svg").innerHTML = '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>';
+  $("pText").textContent = "Для этого нужен аккаунт GitHub, и твоё сообщение будет видно всем. Не пиши туда ничего личного.";
+  $("send").innerHTML = 'Отправить через GitHub <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"/></svg>';
+}
+function renderKind() {
+  const box = $("kind"); box.textContent = "";
+  KINDS.forEach(k => { const b = document.createElement("button"); b.textContent = k; b.className = k === kind ? "on" : ""; b.onclick = () => { kind = k; renderKind(); }; box.append(b); });
+}
+const sel = $("cls");
+[["", "Не указывать"]].concat(CLASSES.map(c => [c, c])).forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.append(o); });
+const txt = $("text");
+txt.value = store.get("fbDraft", "");
+function left() { return Math.max(0, store.get("fbLast", 0) + PAUSE - Date.now()); }
+function update() {
+  const n = txt.value.length, w = left();
+  $("cnt").textContent = n + " / " + MAX; $("cnt").classList.toggle("hi", n >= 950);
+  $("send").disabled = txt.value.trim().length < 3 || w > 0;
+  if (w > 0) { $("send").textContent = "Ещё " + Math.ceil(w / 1000) + " с"; clearTimeout(waitT); waitT = setTimeout(update, 1000 - w % 1000 + 20); }
+  else if (/^Ещё/.test($("send").textContent)) $("send").textContent = GOOGLE ? "Отправить" : "Отправить через GitHub";
+}
+txt.oninput = () => { store.set("fbDraft", txt.value); $("err").hidden = true; update(); };
+function fail(t) { $("err").textContent = t; $("err").hidden = false; }
+async function send() {
+  const text = txt.value.trim().slice(0, MAX);
+  if (text.length < 3) return;
+  if (left() > 0) { fail("Подожди полминуты и отправь ещё раз."); update(); return; }
+  if (!GOOGLE) {
+    const body = text + (sel.value ? "\n\nКласс: " + sel.value : "");
+    window.open(REPO + "/issues/new?title=" + encodeURIComponent(kind + ": " + text.split("\n")[0].slice(0, 60)) + "&body=" + encodeURIComponent(body), "_blank", "noopener");
+    store.set("fbLast", Date.now()); update();
+    return;
+  }
+  if (navigator.onLine === false) { fail("Не получилось отправить, нет интернета. Текст сохранён, попробуй позже."); return; }
+  // в форму уходят только тип, текст и класс. Ни устройства, ни времени, ни идентификаторов
+  const data = new URLSearchParams();
+  data.append(ENTRIES.type, kind);
+  data.append(ENTRIES.text, text);
+  if (sel.value && ENTRIES.class) data.append(ENTRIES.class, sel.value);
+  $("send").disabled = true;
+  try {
+    await fetch("https://docs.google.com/forms/d/e/" + encodeURIComponent(FORM_ID) + "/formResponse", {method: "POST", mode: "no-cors", body: data, credentials: "omit", referrerPolicy: "no-referrer"});
+    store.set("fbLast", Date.now()); store.set("fbDraft", ""); txt.value = "";
+    $("form").hidden = true; $("done").hidden = false;
+  } catch (e) {
+    fail("Не получилось отправить, нет интернета. Текст сохранён, попробуй позже.");
+  }
+  update();
+}
+$("send").onclick = send;
+$("again").onclick = () => { $("done").hidden = true; $("form").hidden = false; update(); txt.focus(); };
+renderKind(); update();
+if (/^https?:$/.test(location.protocol) && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

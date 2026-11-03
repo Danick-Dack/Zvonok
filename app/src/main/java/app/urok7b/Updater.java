@@ -19,6 +19,7 @@ import android.text.style.ForegroundColorSpan;
 import android.view.View;
 import android.widget.RemoteViews;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 
@@ -42,12 +43,17 @@ public final class Updater {
     public static final String KEY_NOTIF = "notif_enabled";
     public static final String KEY_SCHOOL_ONLY = "school_only";
     public static final String KEY_VACATION = "vacation";
+    public static final String KEY_BUZZ = "buzz_before_lesson";   // вибрация за 2 мин до урока
+    static final String ACTION_BUZZ = "app.urok7b.BUZZ";
+    static final String CHANNEL_BUZZ = "lesson_buzz";
+    static final int BUZZ_ID = 8;
+    static final long BUZZ_LEAD = 2 * 60_000L;
 
     /** Готовые тексты для уведомления, виджетов и главного экрана. */
     public static final class Display {
         public Schedule.Kind kind;
         public boolean live;          // идут уроки (урок, перемена, последний час до уроков)
-        public String label = "";     // "УРОК 3 / 7"
+        public String label = "";     // "УРОК 3 ИЗ 7"
         public String title = "";     // "Физика"
         public String room = "";      // кабинет текущего урока
         public boolean timer;         // обратный отсчёт до target
@@ -62,7 +68,7 @@ public final class Updater {
         public int dotTotal;          // точки уроков дня (0 — не показывать)
         public int dotDone;
         public int dotCurrent;
-        public String nextHead = "";  // "ДАЛЕЕ · 10:50"
+        public String nextHead = "";  // "ДАЛЬШЕ · 10:50"
         public String nextSubject = "";
         public String nextRoom = "";
         public String foot = "";      // нижняя строка
@@ -74,6 +80,7 @@ public final class Updater {
         public String miniRoom = "";
         public String miniSub = "";
         public String sig = "";          // меняется только при смене урока / перемены / дня
+        public boolean holiday;          // каникулы или праздник
     }
 
     private static String lastSig = "";
@@ -109,6 +116,7 @@ public final class Updater {
             LessonWidget.updateAll(ctx, d, t);
             MiniWidget.updateAll(ctx, d, t);
         }
+        scheduleBuzz(ctx, now, !vacation && prefs(ctx).getBoolean(KEY_BUZZ, false));
         if (vacation) {
             cancelAlarm(ctx);
             return;
@@ -156,21 +164,22 @@ public final class Updater {
                 d.timer = true;
                 d.progress = pct(s, now);
                 d.dotTotal = s.todayCount;
-                d.dotDone = c.num - 1;
-                d.dotCurrent = c.num;
-                d.label = "УРОК " + c.num + " / " + s.todayCount;
+                d.dotDone = (s.index < 0 ? c.num - 1 : s.index);
+                d.dotCurrent = d.dotDone + 1;
+                int idx = s.index < 0 ? c.num - 1 : s.index;
+                d.label = (n == null ? "ПОСЛЕДНИЙ УРОК" : "УРОК " + (idx + 1) + " ИЗ " + s.todayCount) + (c.changed ? " · ЗАМЕНА" : "");
                 d.title = c.subject;
                 d.room = c.room;
                 d.sideHead = "ЗВОНОК";
                 d.sideValue = d.sideShort = c.endText();
                 d.statHead = "ДОМОЙ В";
                 d.statValue = s.todayEnd;
-                int rest = s.todayCount - indexOf(s, c) - 1;
+                int rest = s.todayCount - idx - 1;
                 d.foot = rest <= 0 ? "Последний урок, дальше домой"
                         : "Потом ещё " + Schedule.lessonsWord(rest) + " · до " + s.todayEnd;
                 d.notifTitle = c.subject + " · осталось " + left;
                 if (n != null) {
-                    d.nextHead = "ДАЛЕЕ · " + n.startText();
+                    d.nextHead = "ДАЛЬШЕ · " + n.startText() + (n.changed ? " · ЗАМЕНА" : "");
                     d.nextSubject = n.subject;
                     d.nextRoom = n.room;
                     d.notifText = "Звонок в " + c.endText() + " → " + n.subject
@@ -180,7 +189,7 @@ public final class Updater {
                     d.miniRoom = n.room;
                     d.miniSub = n.subject;
                 } else {
-                    d.nextHead = "ПОСЛЕДНИЙ УРОК";
+                    d.nextHead = "ПОТОМ";
                     d.nextSubject = "Домой в " + c.endText();
                     d.notifText = "Последний урок · домой в " + c.endText();
                     d.compactText = d.notifText;
@@ -188,7 +197,7 @@ public final class Updater {
                     d.miniSub = "в " + c.endText();
                 }
                 d.compactTitle = c.subject + (c.room.isEmpty() ? "" : " · " + c.roomText());
-                d.miniLabel = "УРОК " + c.num + "/" + s.todayCount;
+                d.miniLabel = n == null ? "ПОСЛЕДНИЙ" : "УРОК " + (idx + 1) + "/" + s.todayCount;
                 break;
             }
             case BREAK: {
@@ -197,14 +206,14 @@ public final class Updater {
                 d.timer = true;
                 d.progress = pct(s, now);
                 d.dotTotal = s.todayCount;
-                d.dotDone = indexOf(s, p) + 1;
-                d.label = "ПЕРЕМЕНА · " + (n.start - p.end) + " МИН";
+                d.dotDone = (s.index < 0 ? p.num - 1 : s.index) + 1;
+                d.label = (n.start - p.end > 25 ? "ОКНО · " : "ПЕРЕМЕНА · ") + (n.start - p.end) + " МИН";
                 d.title = n.start - p.end > 25 ? "Окно" : "Перемена";
                 d.sideHead = "НА УРОК";
                 d.sideValue = d.sideShort = n.startText();
                 d.statHead = "ДОМОЙ В";
                 d.statValue = s.todayEnd;
-                d.nextHead = "УРОК " + n.num + " · " + n.startText();
+                d.nextHead = "ИДИ В" + (n.changed ? " · ЗАМЕНА" : "");
                 d.nextSubject = n.subject;
                 d.nextRoom = n.room;
                 d.foot = "Осталось " + Schedule.lessonsWord(s.todayCount - d.dotDone) + " · до " + s.todayEnd;
@@ -222,15 +231,15 @@ public final class Updater {
                 d.live = s.notify;
                 d.timer = s.notify; // отсчёт — только в последний час перед уроками
                 d.dotTotal = s.todayCount;
-                d.label = s.notify ? "ДО УРОКОВ" : "СЕГОДНЯ";
-                d.title = s.notify ? "Скоро уроки" : "Сегодня " + Schedule.lessonsWord(s.todayCount);
+                d.label = s.notify ? "СКОРО УРОКИ" : "СЕГОДНЯ " + Schedule.lessonsWord(s.todayCount).toUpperCase();
+                d.title = s.notify ? "Скоро уроки" : "Уроки с " + n.startText();
                 d.big = n.startText();
                 d.sideHead = s.notify ? "ЗВОНОК" : "ДЕНЬ";
                 d.sideValue = s.notify ? n.startText() : "Сегодня";
                 d.sideShort = d.sideValue;
                 d.statHead = "УРОКОВ";
                 d.statValue = s.todayCount + " · до " + s.todayEnd;
-                d.nextHead = "ПЕРВЫЙ УРОК · " + n.startText();
+                d.nextHead = "ПЕРВЫЙ · " + n.startText() + (n.changed ? " · ЗАМЕНА" : "");
                 d.nextSubject = n.subject;
                 d.nextRoom = n.room;
                 d.foot = "Сегодня " + Schedule.lessonsWord(s.todayCount) + " · "
@@ -248,16 +257,38 @@ public final class Updater {
             }
             default: {
                 boolean after = s.kind == Schedule.Kind.AFTER;
-                d.label = after ? "УРОКИ ЗАКОНЧИЛИСЬ" : "ВЫХОДНОЙ";
-                d.title = after ? "Свободен" : "Отдыхай";
-                if (n != null) {
+                boolean vac = Schedule.isVacation(s.holiday);
+                d.holiday = s.holiday != null;
+                boolean longOff = d.holiday && s.nextDays > 1; // однодневный праздник как обычный вечер
+                d.label = after ? "УРОКИ ЗАКОНЧИЛИСЬ" : d.holiday ? s.holiday.toUpperCase() : "ВЫХОДНОЙ";
+                d.title = after ? "Свободен" : d.holiday ? (vac ? "Каникулы" : "Выходной") : "Отдыхай";
+                if (n != null && longOff) {
+                    // каникулы: крупно сколько дней до уроков
+                    String date = Schedule.dateText(s.nextDate);
+                    d.big = String.valueOf(s.nextDays);
+                    d.sideHead = "ДО УРОКОВ";
+                    d.sideValue = date;
+                    d.sideShort = date;
+                    d.statHead = "УРОКОВ";
+                    d.statValue = s.nextDayCount + " · до " + s.nextDayEnd;
+                    d.nextHead = date.toUpperCase() + " · " + n.startText();
+                    d.nextSubject = n.subject;
+                    d.nextRoom = n.room;
+                    d.foot = "Уроки с " + date + ", " + n.startText();
+                    d.notifTitle = d.title + " · уроки с " + date;
+                    d.notifText = "Первый урок: " + n.subject + (n.room.isEmpty() ? "" : ", " + n.roomText());
+                    d.compactText = d.notifText;
+                    d.miniLabel = vac ? "КАНИКУЛЫ" : "ВЫХОДНОЙ";
+                    d.miniRoom = "";
+                    d.miniSub = "уроки с " + date;
+                } else if (n != null) {
                     d.big = n.startText();
                     d.sideHead = "ДЕНЬ";
                     d.sideValue = s.nextDayLabel;
                     d.sideShort = s.nextDayShort;
                     d.statHead = "УРОКОВ";
                     d.statValue = s.nextDayCount + " · до " + s.nextDayEnd;
-                    d.nextHead = s.nextDayLabel.toUpperCase() + " · " + n.startText();
+                    d.nextHead = s.nextDayLabel.toUpperCase() + " · " + Schedule.lessonsWord(s.nextDayCount).toUpperCase();
                     d.nextSubject = n.subject;
                     d.nextRoom = n.room;
                     d.foot = s.nextDayLabel + ": " + Schedule.lessonsWord(s.nextDayCount) + ", "
@@ -277,17 +308,11 @@ public final class Updater {
             }
         }
         // минуты в подпись не входят, иначе при выключенном экране экономии не будет
-        d.sig = s.kind + "|" + (s.current == null ? 0 : s.current.num) + "|"
+        d.sig = s.kind + "|" + d.title + "|" + d.room + "|" + d.nextSubject + "|" + d.nextRoom + "|"
+                + (s.current == null ? 0 : s.current.num) + "|"
                 + (s.next == null ? 0 : s.next.num) + "|" + d.timer + "|" + s.targetMillis
                 + "|" + Schedule.title();
         return d;
-    }
-
-    /** Порядковый номер урока в дне (номер урока может не совпадать, если первые уроки пустые). */
-    private static int indexOf(Schedule.Status s, Schedule.Lesson l) {
-        java.util.List<Schedule.Lesson> list = Schedule.lessons(java.time.LocalDate.now().getDayOfWeek());
-        int i = list.indexOf(l);
-        return i < 0 ? l.num - 1 : i;
     }
 
     private static int pct(Schedule.Status s, long now) {
@@ -303,7 +328,7 @@ public final class Updater {
         for (int i = 1; i <= d.dotTotal; i++) {
             int color = i == d.dotCurrent ? now : (i <= d.dotDone ? done : left);
             int start = sb.length();
-            sb.append('●');
+            sb.append('▬');
             sb.setSpan(new ForegroundColorSpan(color), start, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         return sb;
@@ -540,6 +565,97 @@ public final class Updater {
             else am.setWindow(AlarmManager.RTC, when, 60_000, pi);
         } catch (SecurityException e) {
             am.setWindow(AlarmManager.RTC, when, 60_000, pi);
+        }
+    }
+
+    // ---------- вибрация перед уроком ----------
+
+    private static PendingIntent buzzIntent(Context ctx) {
+        Intent i = new Intent(ctx, TickReceiver.class).setAction(ACTION_BUZZ);
+        return PendingIntent.getBroadcast(ctx, 4, i,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    /** Начало ближайшего урока, до которого ещё больше 2 минут (0: уроков впереди нет). */
+    static long nextBuzzLesson(ZonedDateTime now) {
+        long nowMs = now.toInstant().toEpochMilli();
+        ZonedDateTime t = now;
+        for (int i = 0; i < 4; i++) {
+            Schedule.Status s = Schedule.compute(t);
+            long start = s.nextStartMillis;
+            if (start == 0) {
+                // последний урок дня: смотрим, что будет после звонка
+                if (s.targetMillis <= t.toInstant().toEpochMilli()) return 0;
+                start = s.targetMillis;
+            } else if (start - BUZZ_LEAD > nowMs) {
+                return start;
+            }
+            t = ZonedDateTime.ofInstant(Instant.ofEpochMilli(start + 1000), now.getZone());
+        }
+        return 0;
+    }
+
+    /**
+     * Одно точное будильное напоминание (RTC_WAKEUP) за 2 минуты до ближайшего звонка на урок.
+     * Только если пользователь сам включил вибрацию в настройках.
+     */
+    private static void scheduleBuzz(Context ctx, ZonedDateTime now, boolean on) {
+        AlarmManager am = ctx.getSystemService(AlarmManager.class);
+        if (am == null) return;
+        PendingIntent pi = buzzIntent(ctx);
+        long start = on ? nextBuzzLesson(now) : 0;
+        if (start == 0) {
+            am.cancel(pi);
+            return;
+        }
+        long when = start - BUZZ_LEAD;
+        boolean exact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
+        try {
+            if (exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
+            else am.setWindow(AlarmManager.RTC_WAKEUP, when, 60_000, pi);
+        } catch (SecurityException e) {
+            am.setWindow(AlarmManager.RTC_WAKEUP, when, 60_000, pi);
+        }
+    }
+
+    /** Сработало напоминание: тихо вибрируем, если урок правда вот-вот начнётся. */
+    static void buzz(Context ctx) {
+        SharedPreferences p = prefs(ctx);
+        if (!p.getBoolean(KEY_BUZZ, false) || p.getBoolean(KEY_VACATION, false)) return;
+        Schedule.load(ctx);
+        ZonedDateTime now = ZonedDateTime.now();
+        long nowMs = now.toInstant().toEpochMilli();
+        Schedule.Status s = Schedule.compute(now);
+        long left = s.nextStartMillis - nowMs;
+        if (s.next == null || left <= 0 || left > BUZZ_LEAD + 60_000) return;
+        NotificationManager nm = ctx.getSystemService(NotificationManager.class);
+        if (nm == null) return;
+        if (nm.getNotificationChannel(CHANNEL_BUZZ) == null) {
+            // без звука, только вибрация; в беззвучном режиме и «Не беспокоить» телефон промолчит сам
+            NotificationChannel ch = new NotificationChannel(CHANNEL_BUZZ, "Вибрация перед уроком",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            ch.setDescription("Короткая вибрация за 2 минуты до звонка на урок");
+            ch.setSound(null, null);
+            ch.enableVibration(true);
+            ch.setVibrationPattern(new long[]{0, 120, 140, 120});
+            ch.setShowBadge(false);
+            nm.createNotificationChannel(ch);
+        }
+        Schedule.Lesson n = s.next;
+        Notification.Builder b = new Notification.Builder(ctx, CHANNEL_BUZZ)
+                .setSmallIcon(R.drawable.ic_notif)
+                .setContentTitle("Через " + Math.max(1, Math.round(left / 60000f)) + " мин: " + n.subject)
+                .setContentText(n.room.isEmpty() ? "Звонок в " + n.startText() : n.roomText() + " · звонок в " + n.startText())
+                .setCategory(Notification.CATEGORY_REMINDER)
+                .setAutoCancel(true)
+                .setLocalOnly(true)
+                .setShowWhen(false)
+                .setTimeoutAfter(BUZZ_LEAD + 30_000)
+                .setContentIntent(openApp(ctx));
+        try {
+            nm.notify(BUZZ_ID, b.build());
+        } catch (RuntimeException ignored) {
+            // нет разрешения на уведомления
         }
     }
 

@@ -6,3 +6,5 @@ local.properties
 *.jks
 *.keystore
 tools/_site_under_test.html
+tools/_*_under_test.html
+tools/_site_for_preview.html

@@ -6,7 +6,11 @@
 Берёт data/schedule.json, site/src/index.html, ios/Uroki7B.js и собирает:
   site/index.html          : весь сайт одним файлом (работает офлайн, даже как файл из Telegram)
   site/poster.html         : плакат A4 с QR-кодом для класса
-  site/cal/*.ics           : календарь каждого класса для виджета на экране блокировки iPhone
+  site/cal/*.ics           : календарь каждого класса с напоминанием за 3 минуты до урока
+  site/changes.json        : замены и сокращённые уроки (копия data/changes.json)
+  site/og.png              : картинка для превью ссылки в мессенджерах
+  site/changelog.html      : «Что нового» из data/changelog.json
+  site/feedback.html       : «Написать нам» (Google Форма или запасной путь через GitHub)
   site/manifest.webmanifest, site/sw.js, иконки: чтобы сайт ставился «как приложение»
 Нужны пакеты: qrcode, pillow (pip install qrcode pillow).
 """
@@ -18,12 +22,30 @@ import re
 
 import qrcode
 import qrcode.image.svg
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE_URL = "https://danick-dack.github.io/Zvonok/"
 APK_URL = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk"
 OUT = os.path.join(ROOT, "site")
+
+# Обратная связь через Google Форму: ID из ссылки .../forms/d/e/<ID>/viewform и номера полей entry.NNN
+# (тип, текст, класс). Пока пусто, страница предлагает отправить через GitHub и честно пишет, что это не анонимно.
+FEEDBACK_FORM_ID = ""
+FEEDBACK_ENTRIES = {"type": "", "text": "", "class": ""}
+
+LOGO = ('<svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="54" cy="54" r="24" fill="none" stroke="#2a2a2a" stroke-width="6"/>'
+        '<path d="M54 30A24 24 0 1 1 30 54" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>'
+        '<path d="M54 42v12l8 5" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+NAV = [("./#schedule", "Расписание"), ("./#rooms", "Кабинеты"), ("./#install", "Установить"), ("./#faq", "Вопросы"),
+       ("changelog.html", "Что нового"), ("feedback.html", "Написать нам")]
+
+
+def header(active):
+    """Шапка для отдельных страниц: тот же логотип и меню, что на главной."""
+    links = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == active else "", t) for h, t in NAV)
+    return ('<header><div class="wrap bar"><a class="logo" href="./" aria-label="Звонок">%s Звонок</a><nav>%s</nav></div></header>'
+            % (LOGO, links))
 
 
 def read(*p):
@@ -65,18 +87,106 @@ def icon(size, pad_ratio=0.0):
     return im.resize((size, size), Image.LANCZOS)
 
 
-def scriptable_template():
-    """Скрипт для Scriptable (iPhone) с метками вместо данных 7Б: сайт подставит любой класс."""
+def qr_code(url):
+    """QR как строка «размер:hex» (сайт рисует его сам): 19 классов весят ~3 КБ вместо ~60 КБ SVG."""
+    q = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=2)
+    q.add_data(url)
+    q.make(fit=True)
+    m = q.get_matrix()
+    bits = "".join("1" if x else "0" for row in m for x in row)
+    bits += "0" * (-len(bits) % 4)
+    return "%d:%s" % (len(m), "".join("%x" % int(bits[i:i + 4], 2) for i in range(0, len(bits), 4)))
+
+
+def font(size, bold=False):
+    names = (["seguisb.ttf", "segoeuib.ttf", "DejaVuSans-Bold.ttf", "arialbd.ttf"] if bold
+             else ["segoeuisl.ttf", "segoeuil.ttf", "DejaVuSans-ExtraLight.ttf", "DejaVuSans.ttf", "arial.ttf"])
+    dirs = [r"C:\Windows\Fonts", "/usr/share/fonts/truetype/dejavu", "/Library/Fonts"]
+    for n in names:
+        for d in dirs:
+            f = os.path.join(d, n)
+            if os.path.exists(f):
+                return ImageFont.truetype(f, size)
+    return ImageFont.load_default(size)
+
+
+def og_image():
+    """Превью ссылки 1200×630: чёрный фон, кольцо-таймер и название."""
+    W, H = 1200, 630
+    im = Image.new("RGB", (W, H), (0, 0, 0))
+    glow = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(glow).ellipse([700, -300, 1500, 500], fill=34)
+    from PIL import ImageFilter
+    im.paste((255, 255, 255), (0, 0), glow.filter(ImageFilter.GaussianBlur(120)))
+    d = ImageDraw.Draw(im)
+    cx, cy, r, w = 930, 315, 170, 16
+    box = [cx - r, cy - r, cx + r, cy + r]
+    d.ellipse(box, outline=(40, 40, 42), width=w)
+    d.arc(box, start=-90, end=170, fill=(255, 255, 255), width=w)
+    t = font(84)
+    d.text((cx, cy - 8), "24:16", font=t, fill=(255, 255, 255), anchor="mm")
+    d.text((cx, cy + 62), "ДО ЗВОНКА", font=font(22, True), fill=(138, 138, 145), anchor="mm")
+    d.text((80, 150), "ЛИЦЕЙ №165", font=font(26, True), fill=(138, 138, 145))
+    d.text((72, 190), "Звонок.", font=font(150), fill=(255, 255, 255))
+    d.text((80, 390), "Сколько до звонка,", font=font(40), fill=(199, 199, 204))
+    d.text((80, 440), "какой урок дальше и где кабинет", font=font(40), fill=(199, 199, 204))
+    d.text((80, 540), SITE_URL.replace("https://", "").rstrip("/"), font=font(24, True), fill=(90, 90, 98))
+    return im
+
+
+def scriptable_template(data):
+    """Скрипт для Scriptable (iPhone): общие данные (каникулы, предметы, сайт) вписываем сразу,
+    а класс, звонки, неделю и тему сайт подставит сам (метки __CLASS__, __BELLS__, __WEEK__, __THEME__)."""
     js = read("ios", "Uroki7B.js")
-    js = re.sub(r"const BELLS = \[.*?\];", "const BELLS = __BELLS__;", js, count=1, flags=re.S)
-    js = re.sub(r"const WEEK = \{.*?\n\};", "const WEEK = __WEEK__;", js, count=1, flags=re.S)
-    # пустые уроки («окна») пропускаем
-    js = js.replace(
-        "  return raw.map((p, i) => ({\n    num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: p[0], room: p[1],\n  }));",
-        "  return raw.map((p, i) => (p && p[0] ? {\n    num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: p[0], room: p[1],\n  } : null)).filter(Boolean);")
-    js = js.replace("Уроки 7Б", "__TITLE__").replace("Расписание 7Б", "Расписание __CLASS__")
-    assert "__BELLS__" in js and "__WEEK__" in js, "не нашёл данные в ios/Uroki7B.js"
+    a = js.index("// ---------- данные")
+    b = js.index("// ---------- конец данных ----------")
+    j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+    block = "\n".join([
+        "// ---------- данные (сайт подставляет сюда выбранный класс) ----------",
+        'const CLASS = "__CLASS__";',
+        'const THEME = "__THEME__"; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее',
+        "const BELLS = __BELLS__;",
+        "const WEEK = __WEEK__;",
+        "const HOLIDAYS = " + j(data["holidays"]) + ";",
+        "const TERM_END = " + j(data["term_end"]) + ";",
+        "const SUBJECTS = " + j(data["subjects"]) + ";",
+        "const SITE = " + j(SITE_URL) + ";",
+        ""])
+    js = js[:a] + block + js[b:]
+    js = js.replace("// Звонок 7Б:", "// Звонок __CLASS__:")
     return js
+
+
+def ios_sample(data):
+    """ios/Uroki7B.js держим рабочим для 7Б со свежими данными (его можно вставить в Scriptable как есть)."""
+    js = read("ios", "Uroki7B.js")
+    a = js.index("// ---------- данные")
+    b = js.index("// ---------- конец данных ----------")
+    j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+    bells = [[int(x.split(":")[0]) * 60 + int(x.split(":")[1]) for x in pair] for pair in data["bells"]]
+    week = {}
+    for d, day in enumerate(data["classes"]["7Б"]):
+        arr = []
+        for raw in day:
+            code, _, room = (raw or "").partition(" ")
+            arr.append([data["subjects"].get(code, code), "спортзал" if room == "с/з" else room] if raw else ["", ""])
+        if arr:
+            week[str(d + 1)] = arr
+    block = "\n".join([
+        "// ---------- данные (сайт подставляет сюда выбранный класс) ----------",
+        'const CLASS = "7Б";',
+        'const THEME = ""; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее',
+        "const BELLS = " + j(bells) + ";",
+        "const WEEK = " + j(week) + ";",
+        "const HOLIDAYS = " + j(data["holidays"]) + ";",
+        "const TERM_END = " + j(data["term_end"]) + ";",
+        "const SUBJECTS = " + j(data["subjects"]) + ";",
+        "const SITE = " + j(SITE_URL) + ";",
+        ""])
+    out = js[:a] + block + js[b:]
+    if out != js:
+        with open(os.path.join(ROOT, "ios", "Uroki7B.js"), "w", encoding="utf-8", newline="\n") as f:
+            f.write(out)
 
 
 def js_literal(obj):
@@ -110,37 +220,92 @@ def ics_fold(line):
     return "\r\n ".join(out)
 
 
-def calendar(data, cls):
-    """Календарь класса: каждый урок повторяется раз в неделю. iPhone показывает ближайший урок
-    в виджете «Календарь» на экране блокировки, без сторонних приложений."""
+def day_lessons(data, changes, cls, date):
+    """Уроки класса на дату с каникулами и заменами (та же логика, что на сайте и в приложениях).
+    Возвращает [(номер, начало, конец, предмет, кабинет)]."""
+    iso = date.isoformat()
+    ch = changes.get("days", {}).get(iso) or {}
+    if any(h[0] <= iso <= h[1] for h in data["holidays"]) or ch.get("off"):
+        return []
+    bells = list(data["bells"])
+    if ch.get("bells"):  # звонки на этот день целиком
+        bells = [b or (data["bells"][i] if i < len(data["bells"]) else None) for i, b in enumerate(ch["bells"])]
+    raw = data["classes"][cls][date.weekday()] if date.weekday() < len(data["classes"][cls]) else []
+    out = {}
+    for i, r in enumerate(raw):
+        if r and i < len(bells) and bells[i]:
+            code, _, room = r.partition(" ")
+            out[i + 1] = [data["subjects"].get(code, code), room]
+    for n, f in ((ch.get("classes") or {}).get(cls) or {}).items():
+        n = int(n)
+        if f is None or (isinstance(f, str) and f.strip().lower().startswith("нет")):
+            out.pop(n, None)
+        elif isinstance(f, dict) and n <= len(bells) and bells[n - 1]:
+            old = out.get(n, ["", ""])
+            subj = f.get("subject") or old[0]
+            out[n] = [data["subjects"].get(subj, subj), f["room"] if f.get("room") is not None else old[1]]
+    return [(n, bells[n - 1][0], bells[n - 1][1], v[0], "спортзал" if v[1] == "с/з" else v[1])
+            for n, v in sorted(out.items()) if v[0]]
+
+
+def calendar(data, changes, cls):
+    """Календарь класса: уроки повторяются раз в неделю до конца четверти, кроме каникул и праздников.
+    Дни с заменами вырезаны из повторов и добавлены отдельными событиями. За 3 минуты до урока
+    iPhone показывает напоминание."""
     import datetime
     base = datetime.date(*FIRST_MONDAY)
+    end = datetime.date.fromisoformat(data["term_end"])
     stamp = datetime.datetime.strptime(data["updated"], "%Y-%m-%d").strftime("%Y%m%dT000000Z")
     days = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Zvonok//165//RU", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
              "X-WR-CALNAME:Звонок " + cls, "X-WR-CALDESC:Расписание " + cls + ", " + data["school"],
              "X-PUBLISHED-TTL:PT12H", "REFRESH-INTERVAL;VALUE=DURATION:PT12H"]
+    t = lambda date, hm: date.strftime("%Y%m%d") + "T%02d%02d00" % tuple(int(x) for x in hm.split(":"))
+
+    def where(room):
+        return room if room == "спортзал" or not room else "каб. " + room
+
+    def event(uid, date, start, stop, subj, room, num, extra=()):
+        what = subj + (", " + where(room) if room else "")
+        return ["BEGIN:VEVENT", "UID:" + uid, "DTSTAMP:" + stamp,
+                "DTSTART:" + t(date, start), "DTEND:" + t(date, stop), *extra,
+                "SUMMARY:" + ics_text(what), "LOCATION:" + ics_text(room), "DESCRIPTION:" + ics_text("%d урок" % num),
+                "TRANSP:OPAQUE",
+                "BEGIN:VALARM", "ACTION:DISPLAY", "TRIGGER:-PT3M", "DESCRIPTION:" + ics_text("Через 3 мин: " + what), "END:VALARM",
+                "END:VEVENT"]
+
+    # даты четверти, где день отличается от обычной недели: каникулы, праздники, замены
+    special = set()
+    date = base
+    while date <= end:
+        iso = date.isoformat()
+        if any(h[0] <= iso <= h[1] for h in data["holidays"]) or iso in changes.get("days", {}):
+            special.add(date)
+        date += datetime.timedelta(days=1)
+
     for d, lessons in enumerate(data["classes"][cls]):
-        date = base + datetime.timedelta(days=d)
+        first = base + datetime.timedelta(days=d)
         for i, raw in enumerate(lessons):
             if not raw or i >= len(data["bells"]):
                 continue
             code, _, room = raw.partition(" ")
             room = "спортзал" if room == "с/з" else room
-            subj = data["subjects"].get(code, code)
-            t = lambda hm: date.strftime("%Y%m%d") + "T%02d%02d00" % tuple(int(x) for x in hm.split(":"))
-            lines += ["BEGIN:VEVENT", "UID:%s-%d-%d@zvonok165" % (slug(cls), d + 1, i + 1), "DTSTAMP:" + stamp,
-                      "DTSTART:" + t(data["bells"][i][0]), "DTEND:" + t(data["bells"][i][1]),
-                      "RRULE:FREQ=WEEKLY;BYDAY=" + days[d],
-                      "SUMMARY:" + ics_text(subj + (", " + (room if room == "спортзал" else "каб. " + room) if room else "")),
-                      "LOCATION:" + ics_text(room), "DESCRIPTION:" + ics_text("%d урок" % (i + 1)),
-                      "TRANSP:OPAQUE", "END:VEVENT"]
+            ex = sorted(x for x in special if x.weekday() == d)
+            extra = ["RRULE:FREQ=WEEKLY;BYDAY=%s;UNTIL=%sT235959" % (days[d], end.strftime("%Y%m%d"))]
+            extra += ["EXDATE:" + t(x, data["bells"][i][0]) for x in ex]
+            lines += event("%s-%d-%d@zvonok165" % (slug(cls), d + 1, i + 1), first, data["bells"][i][0], data["bells"][i][1],
+                           data["subjects"].get(code, code), room, i + 1, extra)
+    for date in sorted(special):
+        for n, start, stop, subj, room in day_lessons(data, changes, cls, date):
+            lines += event("%s-%s-%d@zvonok165" % (slug(cls), date.strftime("%Y%m%d"), n), date, start, stop, subj, room, n)
     lines.append("END:VCALENDAR")
     return "\r\n".join(ics_fold(l) for l in lines) + "\r\n"
 
 
 def main():
     data = json.loads(read("data", "schedule.json"))
+    changes = json.loads(read("data", "changes.json"))
+    ios_sample(data)
     tpl = read("site", "src", "index.html")
 
     ico = icon(180)
@@ -150,7 +315,9 @@ def main():
 
     page = (tpl
             .replace("/*@DATA@*/null", js_literal(data))
-            .replace("/*@SCRIPTABLE@*/null", js_literal(scriptable_template()))
+            .replace("/*@SCRIPTABLE@*/null", js_literal(scriptable_template(data)))
+            .replace("/*@CHANGES@*/null", js_literal(changes))
+            .replace("/*@QRS@*/null", js_literal(dict([("", qr_code(SITE_URL))] + [(c, qr_code(SITE_URL + "#" + slug(c).lower())) for c in data["classes"]])))
             .replace("@QR@", qr_svg(SITE_URL))
             .replace("@FAVICON@", favicon)
             .replace("@SITE_URL@", SITE_URL)
@@ -185,12 +352,25 @@ def main():
             {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
         ],
     }, ensure_ascii=False, indent=2))
+    css = read("site", "src", "common.css")
+    classes = sorted(data["classes"], key=lambda c: (int(re.match(r"\d+", c)[0]), c))
+    for name, extra in (("changelog.html", {"/*@CHANGELOG@*/[]": js_literal(json.loads(read("data", "changelog.json")))}),
+                        ("feedback.html", {"@FEEDBACK_FORM_ID@": re.sub(r"[^\w-]", "", FEEDBACK_FORM_ID),
+                                           "/*@FEEDBACK_ENTRIES@*/{}": js_literal(FEEDBACK_ENTRIES),
+                                           "/*@CLASSES@*/[]": js_literal(classes)})):
+        t = read("site", "src", name).replace("@COMMON_CSS@", css).replace("@HEADER@", header(name)).replace("@FAVICON@", favicon)
+        for k, v in extra.items():
+            assert k in t, k
+            t = t.replace(k, v)
+        write(name, t)
     write("sw.js", read("site", "src", "sw.js"))
     write(".nojekyll", "")
     os.makedirs(os.path.join(OUT, "cal"), exist_ok=True)
     for c in data["classes"]:
         with open(os.path.join(OUT, "cal", slug(c) + ".ics"), "w", encoding="utf-8", newline="") as f:
-            f.write(calendar(data, c))
+            f.write(calendar(data, changes, c))
+    write("changes.json", json.dumps(changes, ensure_ascii=False, indent=1))
+    og_image().save(os.path.join(OUT, "og.png"), optimize=True)
     print("site/index.html", len(page) // 1024, "KB")
 
 

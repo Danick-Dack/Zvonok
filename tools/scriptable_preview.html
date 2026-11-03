@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Предпросмотр виджетов iPhone</title>
+<!--
+  Эмулятор API Scriptable: рисует виджеты скрипта iPhone во всех размерах, в pt 1:1, для разных моментов дня.
+  Параметры адреса: ?site=<копия site/index.html без CSP>&cls=7Б&sheet=lock|home|large|mono|app&param=<код темы>
+  Обычно запускается через: py tools/preview_iphone.py
+  Только приблизительно: на Windows нет шрифта SF, ширина текста немного другая.
+-->
+<style>
+:root{--bg:#202024}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:#ddd;font:13px "Segoe UI",system-ui,sans-serif;padding:16px;width:max-content}
+h1{font-size:15px;font-weight:600;margin:0 0 12px;color:#fff}
+.err{color:#ff7b7b;font:11px Consolas,monospace;white-space:pre-wrap;max-width:360px}
+.grid{display:grid;gap:14px}
+.cell{display:flex;flex-direction:column;gap:6px}
+.cap{font-size:12px;color:#aaa}.cap b{color:#fff;font-weight:600}
+.log{font:10px Consolas,monospace;color:#888;max-width:560px;white-space:pre-wrap}
+/* обои */
+.lock{width:390px;height:250px;border-radius:30px;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,#41598f,#1d2440 48%,#6a3448);display:flex;flex-direction:column;align-items:center;padding-top:26px}
+.lock.light{background:linear-gradient(160deg,#c9d8f0,#f2e3d2 55%,#e8b8a8)}
+.lock .date{color:rgba(255,255,255,.85);font-size:17px;font-weight:600;display:flex;gap:8px;align-items:center;height:24px}
+.lock .clock{color:rgba(255,255,255,.92);font:600 92px/1 "Segoe UI Variable Display","Segoe UI",sans-serif;letter-spacing:-2px;margin:2px 0 14px}
+.lock .row{display:flex;gap:12px;align-items:center}
+.home{width:max-content;border-radius:30px;padding:18px;background:linear-gradient(150deg,#7f97c9,#c7a6c9 50%,#e9c19c);display:flex;gap:18px;align-items:flex-start}
+.home.mono{background:linear-gradient(150deg,#2b3550,#3a2f45 50%,#4a3a30)}
+/* виджет */
+.w{position:relative;overflow:hidden;flex:none;font-family:"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;color:#fff}
+.w.home{border-radius:22px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.w.circ{border-radius:50%}
+.w.inl .tx{white-space:nowrap;text-overflow:ellipsis}
+.w .acbg{position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,.16);backdrop-filter:blur(10px)}
+.w .bgimg{position:absolute;inset:0;background-size:100% 100%}
+.vib{filter:url(#vibrant)}
+.mono .w.home{background:rgba(255,255,255,.10)!important;backdrop-filter:blur(20px)}
+.mono .w.home > .bgimg{display:none}
+.mono .w.home > .c{filter:url(#vibrant)}
+.c{position:absolute;inset:0;display:flex;flex-direction:column}
+.st{display:flex;min-width:0;min-height:0;position:relative}
+.tx{min-width:0;overflow:hidden;line-height:1.2}
+.tx.one{white-space:nowrap;text-overflow:ellipsis}
+.im{flex:none;background-size:100% 100%}
+.app{width:390px;height:844px;border:0;border-radius:40px;background:#000}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <!-- экран блокировки iOS: цвет убирается, яркость превращается в непрозрачность белого -->
+  <filter id="vibrant" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#000" result="k"/>
+    <feComposite in="SourceGraphic" in2="k" operator="over" result="c"/>
+    <feColorMatrix in="c" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  .2126 .7152 .0722 0 0"/>
+  </filter>
+</svg>
+<h1 id="h"></h1>
+<div id="out"></div>
+<script>
+"use strict";
+const Q = new URLSearchParams(location.search);
+const CLS = Q.get("cls") || "7Б", SHEET = Q.get("sheet") || "lock", PARAM = Q.get("param") || null;
+
+// Моменты: понедельник 2 ноября 2026 у 7Б и др. (локальное время)
+const MOMENTS = [
+  ["Урок", "2026-11-02T09:57:00"],
+  ["Последний урок", "2026-11-02T15:10:00"],
+  ["Перемена", "2026-11-02T10:37:00"],
+  ["До уроков, < 60 мин", "2026-11-02T07:35:00"],
+  ["До уроков, рано", "2026-11-02T06:20:00"],
+  ["После уроков", "2026-11-02T16:40:00"],
+  ["Пятница вечер", "2026-11-06T18:00:00"],
+  ["Выходной", "2026-11-07T12:00:00"],
+  ["Праздник 16.12", "2026-12-16T10:00:00"],
+  ["Каникулы", "2026-12-30T11:00:00"],
+  ["Почти полночь", "2026-11-02T23:59:30"],
+];
+const SIZES = {
+  accessoryRectangular: [160, 72], accessoryCircular: [72, 72], accessoryInline: [200, 22],
+  small: [170, 170], medium: [364, 170], large: [364, 382],
+};
+
+/* ---------- API Scriptable (только то, что есть в настоящем) ---------- */
+const SCALE = 3;
+class Size { constructor(w, h) { this.width = w; this.height = h; } }
+class Point { constructor(x, y) { this.x = x; this.y = y; } }
+class Rect {
+  constructor(x, y, w, h) { this.x = x; this.y = y; this.width = w; this.height = h; }
+  get minX() { return this.x; } get minY() { return this.y; } get maxX() { return this.x + this.width; } get maxY() { return this.y + this.height; }
+  get midX() { return this.x + this.width / 2; } get midY() { return this.y + this.height / 2; }
+  get size() { return new Size(this.width, this.height); } get origin() { return new Point(this.x, this.y); }
+}
+class Color {
+  constructor(hex, alpha) {
+    let h = String(hex).replace("#", "");
+    if (h.length === 3) h = h.split("").map(c => c + c).join("");
+    let a = 1;
+    if (h.length === 8) { a = parseInt(h.slice(6), 16) / 255; h = h.slice(0, 6); }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) throw new Error("Color: плохой hex " + hex);
+    this.hex = h.toUpperCase(); this.alpha = alpha == null ? a : alpha;
+    this.red = parseInt(h.slice(0, 2), 16) / 255; this.green = parseInt(h.slice(2, 4), 16) / 255; this.blue = parseInt(h.slice(4), 16) / 255;
+  }
+  css() { return `rgba(${Math.round(this.red * 255)},${Math.round(this.green * 255)},${Math.round(this.blue * 255)},${this.alpha})`; }
+  static dynamic(light, dark) { return dark; }
+}
+Object.entries({black: "000000", darkGray: "555555", lightGray: "AAAAAA", white: "FFFFFF", gray: "808080", red: "FF0000", green: "00FF00",
+  blue: "0000FF", cyan: "00FFFF", yellow: "FFFF00", magenta: "FF00FF", orange: "FF8000", purple: "800080", brown: "996633"})
+  .forEach(([k, v]) => Color[k] = () => new Color(v));
+Color.clear = () => new Color("000000", 0);
+
+class Font { constructor(name, size) { this.name = name; this.size = size; this.weight = 400; this.kind = "named"; } }
+const W = {ultraLight: 100, thin: 200, light: 300, regular: 400, medium: 500, semibold: 600, bold: 700, heavy: 800, black: 900};
+const mk = (kind, weight) => size => Object.assign(new Font("", size), {kind, weight});
+for (const [k, v] of Object.entries(W)) {
+  Font[k + "SystemFont"] = mk("sys", v);
+  Font[k + "MonospacedSystemFont"] = mk("mono", v);
+  Font[k + "RoundedSystemFont"] = mk("round", v);
+}
+Font.systemFont = mk("sys", 400);
+Font.italicSystemFont = size => Object.assign(mk("sys", 400)(size), {italic: true});
+Object.entries({largeTitle: [34, 400], title1: [28, 400], title2: [22, 400], title3: [20, 400], headline: [17, 600], subheadline: [15, 400],
+  body: [17, 400], callout: [16, 400], footnote: [13, 400], caption1: [12, 400], caption2: [11, 400]})
+  .forEach(([k, [s, w]]) => Font[k] = () => mk("sys", w)(s));
+const FAM = {sys: '"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif',
+  round: '"SF Pro Rounded","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif',
+  mono: '"SF Mono",Consolas,monospace'};
+const fontCss = f => f ? `${f.italic ? "italic " : ""}${f.weight} ${f.size}px ${FAM[f.kind] || JSON.stringify(f.name) + "," + FAM.sys}` : `400 17px ${FAM.sys}`;
+
+class LinearGradient { constructor() { this.colors = []; this.locations = []; this.startPoint = new Point(0, 0); this.endPoint = new Point(0, 1); } }
+const gradCss = g => {
+  const dx = g.endPoint.x - g.startPoint.x, dy = g.endPoint.y - g.startPoint.y;
+  const ang = Math.atan2(dx, -dy) * 180 / Math.PI;
+  return `linear-gradient(${ang}deg,${g.colors.map((c, i) => c.css() + (g.locations[i] != null ? " " + g.locations[i] * 100 + "%" : "")).join(",")})`;
+};
+
+class Image {
+  constructor(src, size) { this.src = src; this.size = size; }
+  static fromData() { throw new Error("Image.fromData в предпросмотре нет"); }
+  static fromFile() { throw new Error("Image.fromFile в предпросмотре нет"); }
+}
+
+class Path {
+  constructor() { this.ops = []; }
+  move(p) { this.ops.push(c => c.moveTo(p.x, p.y)); }
+  addLine(p) { this.ops.push(c => c.lineTo(p.x, p.y)); }
+  addLines(ps) { ps.forEach((p, i) => i ? this.addLine(p) : this.move(p)); }
+  addRect(r) { this.ops.push(c => c.rect(r.x, r.y, r.width, r.height)); }
+  addRects(rs) { rs.forEach(r => this.addRect(r)); }
+  addEllipse(r) { this.ops.push(c => { c.moveTo(r.x + r.width, r.y + r.height / 2); c.ellipse(r.x + r.width / 2, r.y + r.height / 2, r.width / 2, r.height / 2, 0, 0, Math.PI * 2); }); }
+  addRoundedRect(r, cw, ch) { this.ops.push(c => c.roundRect(r.x, r.y, r.width, r.height, Math.min(cw, ch, r.width / 2, r.height / 2))); }
+  addCurve(p, c1, c2) { this.ops.push(c => c.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, p.x, p.y)); }
+  addQuadCurve(p, cp) { this.ops.push(c => c.quadraticCurveTo(cp.x, cp.y, p.x, p.y)); }
+  closeSubpath() { this.ops.push(c => c.closePath()); }
+}
+
+class DrawContext {
+  constructor() { this._size = new Size(200, 200); this.respectScreenScale = false; this.opaque = true; this._path = null; this._init(); }
+  _init() {
+    this.cv = document.createElement("canvas");
+    this.cv.width = Math.ceil(this._size.width * SCALE); this.cv.height = Math.ceil(this._size.height * SCALE);
+    this.g = this.cv.getContext("2d"); this.g.scale(SCALE, SCALE);
+    this.fill = "#000"; this.strokeC = "#000"; this.lw = 1; this.font = Font.systemFont(17); this.tc = "#000"; this.align = "left";
+  }
+  get size() { return this._size; }
+  set size(s) { this._size = s; this._init(); }
+  setFillColor(c) { this.fill = c.css(); } setStrokeColor(c) { this.strokeC = c.css(); } setLineWidth(w) { this.lw = w; }
+  setFont(f) { this.font = f; } setTextColor(c) { this.tc = c.css(); }
+  setTextAlignedLeft() { this.align = "left"; } setTextAlignedCenter() { this.align = "center"; } setTextAlignedRight() { this.align = "right"; }
+  _bg() { if (this.opaque && !this._painted) { this._painted = true; this.g.fillStyle = "#fff"; this.g.fillRect(0, 0, this._size.width, this._size.height); } }
+  fillRect(r) { this._bg(); this.g.fillStyle = this.fill; this.g.fillRect(r.x, r.y, r.width, r.height); }
+  fill(r) { this.fillRect(r); }
+  strokeRect(r) { this._bg(); this.g.strokeStyle = this.strokeC; this.g.lineWidth = this.lw; this.g.strokeRect(r.x, r.y, r.width, r.height); }
+  stroke(r) { this.strokeRect(r); }
+  fillEllipse(r) { this._bg(); const g = this.g; g.beginPath(); g.ellipse(r.midX, r.midY, r.width / 2, r.height / 2, 0, 0, Math.PI * 2); g.fillStyle = this.fill; g.fill(); }
+  strokeEllipse(r) { this._bg(); const g = this.g; g.beginPath(); g.ellipse(r.midX, r.midY, r.width / 2, r.height / 2, 0, 0, Math.PI * 2); g.strokeStyle = this.strokeC; g.lineWidth = this.lw; g.stroke(); }
+  addPath(p) { this._path = p; }
+  _run() { const g = this.g; g.beginPath(); (this._path ? this._path.ops : []).forEach(op => op(g)); }
+  strokePath() { this._bg(); this._run(); this.g.strokeStyle = this.strokeC; this.g.lineWidth = this.lw; this.g.lineJoin = "round"; this.g.stroke(); this._path = null; }
+  fillPath() { this._bg(); this._run(); this.g.fillStyle = this.fill; this.g.fill(); this._path = null; }
+  drawText(t, p) { this._bg(); const g = this.g; g.font = fontCss(this.font); g.fillStyle = this.tc; g.textBaseline = "top"; g.textAlign = "left"; g.fillText(t, p.x, p.y); }
+  drawTextInRect(t, r) {
+    this._bg(); const g = this.g; g.font = fontCss(this.font); g.fillStyle = this.tc; g.textBaseline = "top"; g.textAlign = this.align;
+    g.fillText(t, this.align === "center" ? r.midX : this.align === "right" ? r.maxX : r.x, r.y, r.width);
+  }
+  drawImageInRect(img, r) { this._bg(); const i = img._el; if (i && i.complete) this.g.drawImage(i, r.x, r.y, r.width, r.height); }
+  drawImageAtPoint(img, p) { this.drawImageInRect(img, new Rect(p.x, p.y, img.size.width, img.size.height)); }
+  getImage() { this._bg(); const src = this.cv.toDataURL(); const im = new Image(src, new Size(this._size.width, this._size.height)); im._el = Object.assign(document.createElement("img"), {src}); return im; }
+}
+
+const SYM = {"arrow.triangle.2.circlepath": "⟳", "house.fill": "⌂", "snowflake": "❄", "sun.max.fill": "☀", "bell.fill": "🔔︎", "arrow.right": "→",
+  "figure.walk": "🚶︎", "moon.zzz.fill": "☾", "door.left.hand.open": "▯", "clock.fill": "◷", "calendar": "▦", "checkmark.circle.fill": "✓", "graduationcap.fill": "🎓︎"};
+class SFSymbol {
+  static named(name) {
+    const s = new SFSymbol(); s.name = name; s.ch = SYM[name] || "●"; s.f = Font.systemFont(17);
+    if (!SYM[name]) console.log("SFSymbol без картинки в предпросмотре: " + name);
+    return s;
+  }
+  applyFont(f) { this.f = f; }
+  get image() {
+    const sz = Math.ceil(this.f.size * 1.2), cv = document.createElement("canvas"); cv.width = cv.height = sz * SCALE;
+    const g = cv.getContext("2d"); g.scale(SCALE, SCALE); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.font = `${this.f.weight} ${this.f.size}px "Segoe UI Symbol","Segoe UI",sans-serif`; g.fillText(this.ch, sz / 2, sz / 2 + 1);
+    const im = new Image(cv.toDataURL(), new Size(sz, sz)); im.template = true; return im;
+  }
+}
+for (const k of Object.keys(W)) SFSymbol.prototype["apply" + k[0].toUpperCase() + k.slice(1) + "Weight"] = function () {};
+
+class WidgetSpacer { constructor(n) { this.length = n; } }
+class WidgetText {
+  constructor(t) { this.text = t; this.lineLimit = 0; this.minimumScaleFactor = 1; this.align = "left"; }
+  leftAlignText() { this.align = "left"; } centerAlignText() { this.align = "center"; } rightAlignText() { this.align = "right"; }
+}
+class WidgetDate extends WidgetText {
+  constructor(d) { super(""); this.date = d; this.style = "date"; }
+  applyTimerStyle() { this.style = "timer"; } applyTimeStyle() { this.style = "time"; } applyDateStyle() { this.style = "date"; }
+  applyRelativeStyle() { this.style = "relative"; } applyOffsetStyle() { this.style = "offset"; }
+}
+class WidgetImage {
+  constructor(i) { if (!(i instanceof Image)) throw new Error("addImage: нужна картинка Image"); this.image = i; this.resizable = true; this.imageOpacity = 1; this.align = "left"; }
+  leftAlignImage() { this.align = "left"; } centerAlignImage() { this.align = "center"; } rightAlignImage() { this.align = "right"; }
+  applyFittingContentMode() {} applyFillingContentMode() {}
+}
+class Container {
+  constructor() { this.kids = []; this.spacing = 0; this.pad = null; this.dir = "v"; this.alignC = "start"; }
+  addText(t) { const x = new WidgetText(String(t)); this.kids.push(x); return x; }
+  addDate(d) { if (!(d instanceof Date)) throw new Error("addDate: нужна дата"); const x = new WidgetDate(d); this.kids.push(x); return x; }
+  addImage(i) { const x = new WidgetImage(i); this.kids.push(x); return x; }
+  addSpacer(n) { const x = new WidgetSpacer(n == null ? null : n); this.kids.push(x); return x; }
+  addStack() { const x = new WidgetStack(); this.kids.push(x); return x; }
+  setPadding(t, l, b, r) { this.pad = [t, l, b, r]; }
+  useDefaultPadding() { this.pad = null; }
+}
+class WidgetStack extends Container {
+  constructor() { super(); this.dir = "h"; this.size = new Size(0, 0); this.cornerRadius = 0; this.borderWidth = 0; this.pad = [0, 0, 0, 0]; }
+  layoutHorizontally() { this.dir = "h"; } layoutVertically() { this.dir = "v"; }
+  topAlignContent() { this.alignC = "start"; } centerAlignContent() { this.alignC = "center"; } bottomAlignContent() { this.alignC = "end"; }
+}
+class ListWidget extends Container {
+  constructor() { super(); this.alignC = "center"; this.addAccessoryWidgetBackground = false; }
+  presentSmall() { return Promise.resolve(); } presentMedium() { return Promise.resolve(); } presentLarge() { return Promise.resolve(); }
+  presentExtraLarge() { return Promise.resolve(); } presentAccessoryInline() { return Promise.resolve(); }
+  presentAccessoryCircular() { return Promise.resolve(); } presentAccessoryRectangular() { return Promise.resolve(); }
+}
+
+/* ---------- отрисовка дерева виджета в DOM ---------- */
+let NOW = new Date();
+const two = n => String(n).padStart(2, "0");
+function dateText(x) {
+  const d = x.date, ms = d - NOW;
+  if (x.style === "timer") {
+    const t = Math.floor(Math.abs(ms) / 1000), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), S = t % 60;
+    return (H ? H + ":" + two(M) : M) + ":" + two(S);
+  }
+  if (x.style === "time") return d.getHours() + ":" + two(d.getMinutes());
+  if (x.style === "relative") return Math.round(Math.abs(ms) / 60000) + " мин";
+  if (x.style === "offset") return (ms >= 0 ? "+" : "−") + Math.round(Math.abs(ms) / 60000) + " мин";
+  return d.toLocaleDateString("ru-RU", {day: "numeric", month: "long"});
+}
+// жадность по осям, как в SwiftUI: Spacer и таймер растягиваются, стек с ними тоже
+function greedy(x, parentDir, inList) {
+  if (x instanceof WidgetSpacer) return x.length == null ? {h: parentDir === "h", v: parentDir === "v"} : {h: false, v: false};
+  if (x instanceof WidgetDate && x.style === "timer") return {h: true, v: false};
+  if (x instanceof WidgetText) return {h: inList, v: false};
+  if (x instanceof WidgetStack) {
+    const g = {h: false, v: false};
+    x.kids.forEach(k => { const q = greedy(k, x.dir, false); g.h = g.h || q.h; g.v = g.v || q.v; });
+    if (x.size.width > 0) g.h = false;
+    if (x.size.height > 0) g.v = false;
+    return g;
+  }
+  return {h: false, v: false};
+}
+const AL = {start: "flex-start", center: "center", end: "flex-end"};
+function el(x, dir, inList, mono) {
+  const g = greedy(x, dir, inList), main = dir === "h" ? g.h : g.v, cross = dir === "h" ? g.v : g.h;
+  let e;
+  if (x instanceof WidgetSpacer) {
+    e = document.createElement("div");
+    e.style.flex = x.length == null ? "1 1 0" : `0 0 ${x.length}px`;
+    e.style.minWidth = e.style.minHeight = "0";
+    return e;
+  }
+  if (x instanceof WidgetText) {
+    e = document.createElement("div"); e.className = "tx" + (x.lineLimit === 1 ? " one" : "");
+    e.textContent = x instanceof WidgetDate ? dateText(x) : x.text;
+    e.style.font = fontCss(x.font);
+    if (x.font && x.font.kind === "round") e.style.fontVariantNumeric = "tabular-nums";
+    e.style.color = x.textColor ? x.textColor.css() : "#fff";
+    if (x.textOpacity != null) e.style.opacity = x.textOpacity;
+    e.style.textAlign = x.align;
+    if (x.lineLimit > 1) { e.style.display = "-webkit-box"; e.style.webkitLineClamp = x.lineLimit; e.style.webkitBoxOrient = "vertical"; }
+    if (x.minimumScaleFactor < 1) e.dataset.msf = x.minimumScaleFactor;
+    if (x.shadowColor) e.style.textShadow = `${(x.shadowOffset || {x: 0}).x}px ${(x.shadowOffset || {y: 0}).y}px ${x.shadowRadius || 0}px ${x.shadowColor.css()}`;
+  } else if (x instanceof WidgetImage) {
+    e = document.createElement("div"); e.className = "im";
+    const s = x.imageSize || x.image.size;
+    e.style.width = s.width + "px"; e.style.height = s.height + "px";
+    if (x.tintColor || x.image.template) {
+      e.style.background = (x.tintColor || new Color("FFFFFF")).css();
+      e.style.webkitMaskImage = `url(${x.image.src})`; e.style.webkitMaskSize = "100% 100%";
+    } else e.style.backgroundImage = `url(${x.image.src})`;
+    e.style.opacity = x.imageOpacity;
+    if (x.cornerRadius) e.style.borderRadius = x.cornerRadius + "px";
+    if (dir === "v") e.style.alignSelf = AL[{left: "start", center: "center", right: "end"}[x.align]];
+  } else {
+    e = document.createElement("div"); e.className = "st";
+    box(e, x, false, mono);
+  }
+  // место в родителе
+  e.style.flex = main ? "1 1 0" : "0 1 auto";
+  if (cross) e.style.alignSelf = "stretch";
+  if (x instanceof WidgetStack) {
+    if (x.size.width > 0) { e.style.width = x.size.width + "px"; e.style.flexShrink = dir === "h" ? "0" : e.style.flexShrink; }
+    if (x.size.height > 0) { e.style.height = x.size.height + "px"; if (dir === "v") e.style.flexShrink = "0"; }
+  }
+  return e;
+}
+function box(e, x, isList, mono) {
+  e.style.flexDirection = x.dir === "h" ? "row" : "column";
+  if (x.pad) e.style.padding = x.pad.map(n => n + "px").join(" ");
+  e.style.alignItems = AL[x.alignC];
+  if (isList) e.style.justifyContent = "center";
+  if (x.backgroundGradient) e.style.background = gradCss(x.backgroundGradient);
+  if (x.backgroundColor) e.style.backgroundColor = x.backgroundColor.css();
+  if (x.backgroundImage) { e.style.backgroundImage = `url(${x.backgroundImage.src})`; e.style.backgroundSize = "100% 100%"; }
+  if (x.cornerRadius) e.style.borderRadius = x.cornerRadius + "px";
+  if (x.borderWidth && x.borderColor) e.style.border = `${x.borderWidth}px solid ${x.borderColor.css()}`;
+  x.kids.forEach((k, i) => {
+    const c = el(k, x.dir, isList, mono);
+    if (i && x.spacing) c.style[x.dir === "h" ? "marginLeft" : "marginTop"] = x.spacing + "px";
+    e.appendChild(c);
+  });
+}
+function renderWidget(w, family) {
+  const [wd, ht] = SIZES[family], acc = family.startsWith("accessory");
+  const e = document.createElement("div");
+  e.className = "w " + (acc ? "acc" : "home") + (family === "accessoryCircular" ? " circ" : family === "accessoryInline" ? " inl" : "");
+  e.style.width = wd + "px"; e.style.height = ht + "px";
+  if (!acc) e.style.background = "#000";
+  if (w.addAccessoryWidgetBackground) e.appendChild(Object.assign(document.createElement("div"), {className: "acbg"}));
+  const c = document.createElement("div"); c.className = "c" + (acc ? " vib" : "");
+  if (!w.pad) w.pad = acc ? [0, 0, 0, 0] : [16, 16, 16, 16];
+  if (family === "accessoryInline") { w.kids = w.kids.filter(k => k instanceof WidgetText || k instanceof WidgetImage).slice(0, 2); w.pad = [0, 0, 0, 0]; w.dir = "h"; w.alignC = "center"; }
+  box(c, w, true, false);
+  if (!acc) {
+    if (w.backgroundGradient) { e.style.background = gradCss(w.backgroundGradient); }
+    if (w.backgroundColor) e.style.background = w.backgroundColor.css();
+  }
+  if (w.backgroundImage) { const b = document.createElement("div"); b.className = "bgimg" + (acc ? " vib" : ""); b.style.backgroundImage = `url(${w.backgroundImage.src})`; e.appendChild(b); }
+  // c и фон: в моно-режиме фон убираем, а содержимое делаем «вибрирующим»
+  c.style.background = "none"; c.style.backgroundColor = "transparent";
+  e.appendChild(c);
+  return e;
+}
+function shrinkText(root) {
+  root.querySelectorAll(".tx[data-msf]").forEach(t => {
+    const base = parseFloat(getComputedStyle(t).fontSize), min = base * parseFloat(t.dataset.msf);
+    let s = base;
+    while ((t.scrollWidth > t.clientWidth + 0.5 || t.scrollHeight > t.clientHeight + 1) && s > min) { s = Math.max(min, s * 0.95); t.style.fontSize = s + "px"; }
+  });
+}
+
+/* ---------- запуск скрипта в «моменте» ---------- */
+const files = {};
+let CHANGES = null; // ?changes=<файл>: что вернёт Request (иначе «нет сети»)
+function makeEnv(nowIso, family, logs) {
+  const T = new Date(nowIso).getTime(), R = Date;
+  class FakeDate extends R { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return T; } }
+  FakeDate.UTC = R.UTC; FakeDate.parse = R.parse;
+  const acc = family && family.startsWith("accessory");
+  let widget = null, html = null;
+  const env = {
+    Date: FakeDate, Size, Point, Rect, Color, Font, LinearGradient, Image, Path, DrawContext, SFSymbol, ListWidget,
+    config: {runsInApp: !family, runsInWidget: !!family, runsInAccessoryWidget: !!acc, widgetFamily: family || undefined, runsWithSiri: false,
+      runsFromHomeScreen: false, runsInActionExtension: false, runsInNotification: false},
+    args: {widgetParameter: PARAM, queryParameters: {}, plainTexts: [], urls: [], fileURLs: [], images: []},
+    Script: {name: () => "Звонок", complete() {}, setWidget(w) { widget = w; }, setShortcutOutput() {}},
+    Device: {screenSize: () => new Size(390, 844), screenScale: () => 3, isUsingDarkAppearance: () => true, locale: () => "ru_KZ",
+      language: () => "ru", preferredLanguages: () => ["ru-KZ"], model: () => "iPhone", isPhone: () => true, isPad: () => false, systemVersion: () => "26.0",
+      name: () => "iPhone"},
+    Request: class { constructor(url) { this.url = url; this.method = "GET"; this.headers = {}; this.timeoutInterval = 60; logs.push("Request " + url); }
+      _f() { return CHANGES ? Promise.resolve(JSON.parse(CHANGES)) : Promise.reject(new Error("офлайн (предпросмотр)")); } load() { return this._f(); } loadString() { return this._f(); } loadJSON() { return this._f(); } loadImage() { return this._f(); } },
+    FileManager: {local: () => fm, iCloud: () => fm},
+    WebView: class { loadHTML(h) { html = h; return Promise.resolve(); } present() { return Promise.resolve(); } evaluateJavaScript() { return Promise.resolve(); } },
+    Alert: class { addAction() {} addCancelAction() {} present() { return Promise.resolve(0); } presentAlert() { return Promise.resolve(0); } presentSheet() { return Promise.resolve(0); } },
+    console: {log: (...a) => logs.push(a.join(" ")), warn: (...a) => logs.push("warn " + a.join(" ")), error: (...a) => logs.push("error " + a.join(" "))},
+  };
+  const fm = {
+    documentsDirectory: () => "/docs", cacheDirectory: () => "/cache", libraryDirectory: () => "/lib", temporaryDirectory: () => "/tmp",
+    joinPath: (a, b) => a + "/" + b, fileExists: p => p in files, readString: p => files[p] ? files[p].s : null,
+    writeString: (p, s) => { files[p] = {s, t: new FakeDate()}; }, remove: p => { delete files[p]; },
+    modificationDate: p => files[p] ? files[p].t : null, creationDate: p => files[p] ? files[p].t : null,
+    isDirectory: () => false, createDirectory() {}, listContents: () => Object.keys(files), isFileDownloaded: () => true, downloadFileFromiCloud: () => Promise.resolve(),
+  };
+  return {env, get widget() { return widget; }, get html() { return html; }};
+}
+async function runScript(src, nowIso, family) {
+  const logs = [], box = makeEnv(nowIso, family, logs), names = Object.keys(box.env);
+  const AF = Object.getPrototypeOf(async function () {}).constructor;
+  try {
+    await new AF(...names, '"use strict";\n' + src)(...names.map(n => box.env[n]));
+  } catch (e) { return {error: (e && e.stack) || String(e), logs}; }
+  return {widget: box.widget, html: box.html, logs, refresh: box.widget && box.widget.refreshAfterDate};
+}
+
+/* ---------- листы ---------- */
+const hhmm = d => d.getHours() + ":" + two(d.getMinutes());
+const DAYS = ["воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"];
+const MON = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+function cap(name, iso, r) {
+  const d = new Date(iso), c = document.createElement("div"); c.className = "cap";
+  c.innerHTML = `<b></b> · ${DAYS[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}, ${hhmm(d)}` + (r ? ` · обновится в ${r}` : "");
+  c.firstChild.textContent = name; return c;
+}
+function errBox(r) { const e = document.createElement("div"); e.className = "err"; e.textContent = r.error; return e; }
+async function widgetEl(src, iso, fam) {
+  NOW = new Date(iso);
+  const r = await runScript(src, iso, fam);
+  if (r.error) return {el: errBox(r), r};
+  if (!r.widget) return {el: errBox({error: "Script.setWidget не вызван (" + fam + ")"}), r};
+  return {el: renderWidget(r.widget, fam), r};
+}
+const rf = r => r && r.refresh ? (r.refresh.getDate() !== NOW.getDate() ? r.refresh.getDate() + "." + two(r.refresh.getMonth() + 1) + " " : "") + hhmm(r.refresh) : "";
+
+async function sheet(src) {
+  const out = document.getElementById("out");
+  const grid = document.createElement("div"); grid.className = "grid"; out.appendChild(grid);
+  const cols = {lock: 3, home: 2, large: 4, mono: 2, app: 4}[SHEET] || 3;
+  grid.style.gridTemplateColumns = `repeat(${cols}, max-content)`;
+  const moments = SHEET === "app" ? MOMENTS.filter((m, i) => [0, 2, 5, 9].includes(i)) : MOMENTS;
+  for (const [name, iso] of moments) {
+    const cell = document.createElement("div"); cell.className = "cell"; grid.appendChild(cell);
+    const d = new Date(iso);
+    if (SHEET === "lock") {
+      const L = document.createElement("div"); L.className = "lock";
+      const [ri, rr, rc] = [await widgetEl(src, iso, "accessoryInline"), await widgetEl(src, iso, "accessoryRectangular"), await widgetEl(src, iso, "accessoryCircular")];
+      const date = document.createElement("div"); date.className = "date";
+      date.append(Object.assign(document.createElement("span"), {textContent: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"][d.getDay()] + ", " + d.getDate() + " " + MON[d.getMonth()].slice(0, 3)}), ri.el);
+      ri.el.style.height = "22px";
+      const clock = Object.assign(document.createElement("div"), {className: "clock", textContent: hhmm(d)});
+      const row = document.createElement("div"); row.className = "row"; row.append(rr.el, rc.el);
+      L.append(date, clock, row);
+      cell.append(cap(name, iso, rf(rr.r)), L);
+    } else if (SHEET === "home" || SHEET === "mono") {
+      const H = document.createElement("div"); H.className = "home" + (SHEET === "mono" ? " mono" : "");
+      const a = await widgetEl(src, iso, "small"), b = await widgetEl(src, iso, "medium");
+      H.append(a.el, b.el);
+      cell.append(cap(name, iso, rf(a.r)), H);
+    } else if (SHEET === "large") {
+      const H = document.createElement("div"); H.className = "home";
+      const a = await widgetEl(src, iso, "large"); H.append(a.el);
+      cell.append(cap(name, iso, rf(a.r)), H);
+    } else if (SHEET === "app") {
+      const r = await runScript(src, iso, null);
+      if (r.error || !r.html) { cell.append(cap(name, iso), errBox(r.error ? r : {error: "WebView.loadHTML не вызван"})); continue; }
+      const T = new Date(iso).getTime();
+      const fake = `<script>(()=>{const R=Date,T=${T};window.Date=class extends R{constructor(...a){super(...(a.length?a:[T]))}static now(){return T}};})()<\/script>`;
+      const f = document.createElement("iframe"); f.className = "app";
+      f.srcdoc = r.html.replace(/<head>/i, "<head>" + fake);
+      cell.append(cap(name, iso), f);
+    }
+  }
+  shrinkText(out);
+}
+
+async function main() {
+  document.getElementById("h").textContent = "Скрипт iPhone · " + CLS + " · " + SHEET + (PARAM ? " · " + PARAM : "");
+  let src = null;
+  const site = Q.get("site");
+  if (Q.get("changes")) CHANGES = await (await fetch(Q.get("changes"))).text();
+  if (site) {
+    const f = document.createElement("iframe"); f.src = site; f.style.cssText = "position:absolute;left:-9999px;width:1000px;height:600px";
+    document.body.appendChild(f);
+    await new Promise(r => f.onload = r);
+    await new Promise(r => setTimeout(r, 300));
+    src = f.contentWindow.scriptFor(CLS);
+    f.remove();
+  }
+  if (!src) { document.getElementById("out").append(errBox({error: "Нет скрипта: укажи ?site=..."})); return; }
+  await sheet(src);
+  document.body.dataset.done = "1";
+}
+main().catch(e => { document.getElementById("out").append(errBox({error: e.stack || String(e)})); document.body.dataset.done = "1"; });
+</script>
+</body>
+</html>

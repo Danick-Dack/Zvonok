@@ -193,7 +193,7 @@ public class StyleActivity extends Activity {
         d.live = true;
         d.timer = true;
         d.target = System.currentTimeMillis() + 24 * 60_000L + 16_000L;
-        d.label = "УРОК 3 / 7";
+        d.label = "УРОК 3 ИЗ 7";
         d.title = "Физика";
         d.room = "48/49";
         d.sideHead = "ЗВОНОК";
@@ -204,7 +204,7 @@ public class StyleActivity extends Activity {
         d.dotTotal = 7;
         d.dotDone = 2;
         d.dotCurrent = 3;
-        d.nextHead = "ДАЛЕЕ · 10:50";
+        d.nextHead = "ДАЛЬШЕ · 10:50";
         d.nextSubject = "Программирование";
         d.nextRoom = "56/57";
         d.compactTitle = "Физика · каб. 48/49";

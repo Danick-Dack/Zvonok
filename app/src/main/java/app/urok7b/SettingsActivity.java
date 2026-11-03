@@ -53,7 +53,8 @@ public class SettingsActivity extends Activity {
                     t.save(this);
                     Updater.update(this);
                 }));
-        notif.addView(flag("Каникулы", "Всё на паузе: ни уведомления, ни будильников", Updater.KEY_VACATION, false));
+        notif.addView(flag("Вибрация перед уроком", "Тихо вибрирует за 2 минуты до звонка на урок", Updater.KEY_BUZZ, false));
+        notif.addView(flag("Каникулы", "Всё на паузе: ни уведомления, ни будильников. Каникулы из расписания приложение знает и само", Updater.KEY_VACATION, false));
 
         LinearLayout upd = section("ОБНОВЛЕНИЯ");
         boolean avail = Updates.available(this);
@@ -71,7 +72,7 @@ public class SettingsActivity extends Activity {
                         });
                     }
                 }));
-        upd.addView(flag("Проверять автоматически", "Раз в сутки, когда приложение открыто. Нужен интернет", Updates.KEY_AUTO, false));
+        upd.addView(flag("Проверять автоматически", "Новая версия раз в сутки, замены в расписании раз в 3 часа, когда приложение открыто. Нужен интернет", Updates.KEY_AUTO, false));
 
         LinearLayout checks = section("ПРОВЕРКА ТЕЛЕФОНА");
         NotificationManager nm = getSystemService(NotificationManager.class);
@@ -118,7 +119,7 @@ public class SettingsActivity extends Activity {
                         "Смотри, это «Звонок». Там расписание всех классов лицея №165 и таймер до звонка: " + SITE), "Поделиться"))));
 
         TextView foot = Ui.text(this, "Про приватность: в интернет приложение выходит, только если ты разрешил, и только чтобы узнать "
-                + "про новую версию. Рекламы, аккаунтов и аналитики нет, твои данные остаются на телефоне.\n\n"
+                + "про новую версию и замены в расписании. Рекламы, аккаунтов и аналитики нет, твои данные остаются на телефоне.\n\n"
                 + "Про батарею: пока экран выключен, приложение ничего не делает и телефон не будит.", 12, Ui.MUTED, null);
         foot.setLineSpacing(0, 1.2f);
         foot.setPadding(Ui.dp(this, 4), Ui.dp(this, 22), Ui.dp(this, 4), 0);

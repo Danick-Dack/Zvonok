@@ -1,0 +1,51 @@
+/* Общие стили для «Что нового» и «Написать нам» (главная держит свои). Сборка вставляет их в страницу. */
+:root{
+  --bg:#000; --s1:#0b0b0c; --s2:#121214; --s3:#19191c; --line:#1f1f23; --line2:#2b2b30;
+  --fg:#f5f5f7; --soft:#c7c7cc; --muted:#8a8a91; --faint:#4b4b52;
+  --r:22px; --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--font);-webkit-font-smoothing:antialiased;overflow-x:clip;padding-bottom:env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+a{color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+.caps{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.glow{position:fixed;left:0;right:0;top:0;height:70vh;pointer-events:none;z-index:-1;background:radial-gradient(60% 50% at 50% 0%,rgba(255,255,255,.07),transparent 70%)}
+header{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.06);padding-top:env(safe-area-inset-top)}
+header .wrap{max-width:1080px}
+.bar{display:flex;align-items:center;gap:18px;height:58px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em;text-decoration:none;font-size:18px}
+.logo svg{width:26px;height:26px}
+nav{display:flex;gap:4px;margin-left:auto}
+nav a{white-space:nowrap;text-decoration:none;color:var(--soft);font-size:14px;padding:8px 12px;border-radius:12px}
+nav a:hover,nav a[aria-current=page]{background:var(--s2);color:var(--fg)}
+@media(max-width:1000px){nav{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:14px;min-height:44px;
+  font-weight:600;font-size:15px;text-decoration:none;transition:transform .15s,background .15s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn.w{background:#fff;color:#000}.btn.w:hover{background:#e6e6e8}
+.btn.w:disabled{background:#3a3a3f;color:#8a8a91;cursor:default;transform:none}
+.btn.d{background:var(--s2);border:1px solid var(--line2);color:var(--fg)}.btn.d:hover{background:var(--s3)}
+.btn.sm{padding:9px 14px;font-size:14px;border-radius:12px;min-height:40px}
+.sh{padding:44px 0 22px}
+.sh h1{font-size:clamp(34px,6vw,44px);font-weight:300;letter-spacing:-.03em;line-height:1.05}
+.sh h1 b{font-weight:650}
+.sh p{color:var(--muted);margin-top:10px;max-width:34em}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.seg{display:flex;background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:4px;gap:2px}
+.seg button{flex:1;padding:9px 12px;border-radius:12px;font-weight:600;font-size:15px;color:var(--soft);min-height:40px}
+.seg button.on{background:#fff;color:#000}
+.chip{display:inline-block;font-weight:650;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:8px;
+  background:#1b1b1e;border:1px solid var(--line2);white-space:nowrap}
+.chip.now{background:#fff;color:#000;border-color:#fff}
+.f{width:100%;background:var(--s2);border:1px solid var(--line2);border-radius:14px;padding:12px 14px;font-size:17px;outline:none;min-width:0}
+.f:focus{border-color:#8a8a91}
+.note{color:var(--muted);font-size:14px}
+footer.wrap{padding:60px 18px 50px;color:var(--muted);font-size:13px}
+footer p+p{margin-top:6px}
+footer .links a{color:var(--soft);font-size:14px;text-decoration:none}footer .links a:hover{text-decoration:underline}
+[hidden]{display:none!important}

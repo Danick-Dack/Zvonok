@@ -8,8 +8,20 @@
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="Звонок: расписание всех классов лицея №165. Сколько до звонка, какой урок следующий и в каком кабинете. Есть приложение для Android и виджеты для iPhone.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Звонок">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:url" content="@SITE_URL@">
 <meta property="og:title" content="Звонок. Расписание лицея №165">
-<meta property="og:description" content="Сколько до звонка, какой урок дальше и в каком кабинете. Все классы, без рекламы.">
+<meta property="og:description" content="Сколько до звонка, какой урок дальше и в каком кабинете. Все классы, работает офлайн, без рекламы.">
+<meta property="og:image" content="@SITE_URL@og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Звонок: таймер до звонка, урок и кабинет">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Звонок. Расписание лицея №165">
+<meta name="twitter:description" content="Сколько до звонка, какой урок дальше и в каком кабинете.">
+<meta name="twitter:image" content="@SITE_URL@og.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Звонок">
@@ -21,6 +33,8 @@
 :root{
   --bg:#000; --s1:#0b0b0c; --s2:#121214; --s3:#19191c; --line:#1f1f23; --line2:#2b2b30;
   --fg:#f5f5f7; --soft:#c7c7cc; --muted:#8a8a91; --faint:#4b4b52; --dim:#8a8a91; --accent:#fff;
+  --acc:#fff; --ring-track:#1c1c20; --glass:rgba(255,255,255,.06); --glass-line:rgba(255,255,255,.09);
+  --rounded:ui-rounded,"SF Pro Rounded",-apple-system,"Segoe UI Variable Display",system-ui,sans-serif;
   --r:22px; --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   color-scheme:dark;
 }
@@ -44,7 +58,7 @@ header{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filt
 .logo{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em;text-decoration:none;font-size:18px}
 .logo svg{width:26px;height:26px}
 nav{display:flex;gap:4px;margin-left:auto}
-nav a{text-decoration:none;color:var(--soft);font-size:14px;padding:8px 12px;border-radius:12px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--soft);font-size:14px;padding:8px 12px;border-radius:12px}
 nav a:hover{background:var(--s2);color:var(--fg)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:14px;
   font-weight:600;font-size:15px;text-decoration:none;transition:transform .15s,background .15s;white-space:nowrap}
@@ -54,7 +68,8 @@ nav a:hover{background:var(--s2);color:var(--fg)}
 .btn.d{background:var(--s2);border:1px solid var(--line2);color:var(--fg)}
 .btn.d:hover{background:var(--s3)}
 .btn.sm{padding:9px 14px;font-size:14px;border-radius:12px}
-@media(max-width:760px){nav{display:none}.bar .btn{margin-left:auto}}
+@media(max-width:1000px){nav{display:none}.bar .btn{margin-left:auto}}
+}
 
 /* hero */
 .hero{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;padding:64px 0 30px;align-items:start}
@@ -76,24 +91,33 @@ h1 b{font-weight:650}
   border:1px solid var(--line);overflow:hidden}
 .live:after{content:"";position:absolute;inset:-1px;border-radius:30px;pointer-events:none;
   background:radial-gradient(80% 60% at 80% 0%,rgba(255,255,255,.08),transparent 60%)}
-.ltop{display:flex;align-items:center;gap:10px}
-.status{font-size:11px;letter-spacing:.14em;font-weight:650;padding:6px 12px;border-radius:999px;background:#202023;color:var(--soft)}
+.lhead{display:flex;align-items:center;gap:18px}
+.ring{position:relative;flex:none;width:132px;height:132px}
+.ring svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ring circle{fill:none;stroke-width:10}
+.ring .rt{stroke:var(--ring-track)}
+.ring .ra{stroke:var(--acc);stroke-linecap:round;transition:stroke-dasharray .6s}
+.ring .rk{fill:var(--acc);stroke:none;filter:drop-shadow(0 0 6px rgba(255,255,255,.55))}
+.ring .rin{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ring .rin b{font:600 20px/1.1 var(--rounded);font-variant-numeric:tabular-nums;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ring .rin .caps{font-size:10px;margin-top:3px;letter-spacing:.12em}
+.lcol{flex:1;min-width:0}
+.status{display:inline-block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:650;padding:6px 12px;border-radius:999px;background:#202023;color:var(--soft)}
 .status.on{color:#fff}
 .status.on:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#fff;margin-right:8px;
   vertical-align:1px;animation:pulse 2s infinite}
 @keyframes pulse{50%{opacity:.25}}
-.dots{margin-left:auto;display:flex;gap:5px}
-.dots i{width:7px;height:7px;border-radius:50%;background:#262629}
-.dots i.d{background:#5a5a60}.dots i.c{background:#fff}
-.ltitle{display:flex;align-items:center;gap:12px;margin-top:20px}
-.ltitle h2{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.15;flex:1}
+.lcol h2{font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.15;margin-top:10px;overflow-wrap:anywhere}
+.lchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.lchips:empty{display:none}
 .chip{display:inline-block;font-weight:650;font-size:14px;padding:4px 10px;border-radius:9px;background:#1b1b1e;border:1px solid var(--line2);white-space:nowrap}
 .chip.now{background:#fff;color:#000;border-color:#fff}
-.timer{text-shadow:0 0 48px rgba(255,255,255,.18);font-size:clamp(64px,13vw,92px);font-weight:200;letter-spacing:-.04em;line-height:1;margin-top:10px}
-.bar2{height:4px;border-radius:4px;background:#232326;margin-top:14px;overflow:hidden}
-.bar2 i{display:block;height:100%;background:#fff;border-radius:4px;transition:width .6s}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
-.stats b{display:block;font-size:19px;font-weight:600;margin-top:2px}
+.timer{text-shadow:0 0 48px rgba(255,255,255,.18);font:250 72px/1 var(--rounded);font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin-top:18px}
+.lmeta{display:flex;align-items:center;gap:12px;margin-top:14px;min-height:20px}
+.lmeta .caps{margin-right:6px}.lmeta b{font-weight:600;color:var(--soft)}
+.dots{display:flex;gap:4px;margin-left:auto}
+.dots i{width:10px;height:4px;border-radius:2px;background:#262629}
+.dots i.d{background:#5a5a60}.dots i.c{background:#fff;width:18px}
+@media(max-width:600px){.ring{width:112px;height:112px}.timer{font-size:64px}.lhead{gap:14px}.lcol h2{font-size:24px}}
 .lnext{border-top:1px solid var(--line);margin-top:18px;padding-top:16px}
 .lnext .row{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:nowrap}
 .lnext .row span:first-child{font-size:18px;flex:1;min-width:0}
@@ -149,6 +173,13 @@ section{padding:70px 0 10px}
 .rrow .t{width:96px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
 .rrow b{font-weight:600}
 .free{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
+.rnow{padding:12px 12px 4px;font-weight:600}
+.chip.sub{background:none;border:1px dashed var(--soft);color:var(--soft);font-weight:650;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.dnote{border:1px dashed var(--line2);border-radius:16px;padding:12px 16px;color:var(--soft);font-size:14px;margin-bottom:10px}
+.friend{margin-top:16px;padding:14px}
+.fhead{display:flex;align-items:center;gap:12px}
+.fhead .f{width:auto;margin-left:auto;padding:7px 10px}
+.fl{color:var(--soft);font-size:15px;margin-top:8px}.fl b{color:var(--fg);font-weight:600}
 
 /* конструктор */
 .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
@@ -200,7 +231,7 @@ input[type=range]{width:100%;accent-color:#fff}
   .osb b{font-size:19px}
 }
 .cloud{position:absolute;inset:0;pointer-events:none}
-.brand{position:absolute;pointer-events:auto;font-weight:650;letter-spacing:-.01em;white-space:nowrap;color:#5a5a62;
+.brand{position:absolute;pointer-events:auto;font-weight:650;letter-spacing:-.01em;white-space:nowrap;color:var(--muted);
   padding:6px 12px;border-radius:999px;transition:color .2s,background .2s;animation:float var(--d,8s) ease-in-out infinite;animation-delay:var(--dl,0s)}
 .brand:hover,.brand.on{color:#fff;background:rgba(255,255,255,.08)}
 @keyframes float{0%,100%{transform:translate(0,0)}33%{transform:translate(6px,-10px)}66%{transform:translate(-6px,6px)}}
@@ -255,15 +286,76 @@ input[type=range]{width:100%;accent-color:#fff}
 .faq summary:after{content:"+";position:absolute;right:0;top:12px;font-size:22px;font-weight:300;color:var(--muted);transition:transform .2s}
 .faq details[open] summary:after{transform:rotate(45deg)}
 .faq p{color:var(--soft);padding:0 0 18px;font-size:15px}
-footer{padding:70px 0 50px;color:var(--dim);font-size:13px}
+footer.wrap{padding:70px 18px 50px;color:var(--dim);font-size:13px}
 footer p+p{margin-top:6px}
+footer .links a{color:var(--soft);font-size:14px;text-decoration:none}footer .links a:hover{text-decoration:underline}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,40px);opacity:0;background:#fff;color:#000;
   padding:11px 18px;border-radius:14px;font-weight:600;font-size:14px;transition:.25s;z-index:50;pointer-events:none;max-width:90vw;text-align:center}
 .toast.on{transform:translate(-50%,0);opacity:1}
 [hidden]{display:none!important}
 /* запущено с экрана «Домой»: только то, что нужно каждый день */
-.app #install,.app #safe,.app #faq,.app #share,.app .lead,.app .tags,.app header .btn,.app footer p:not(#fTerm){display:none}
+.app #install,.app #safe,.app #faq,.app #share,.app .lead,.app .tags,.app header .btn,.app footer p:not(#fTerm):not(.links){display:none}
 .app .hero{padding-top:20px}
+/* iPhone: шаги с картинками и превью виджетов */
+.step.has-ill{display:grid;grid-template-columns:30px minmax(0,1fr) 200px;align-items:start}
+.ill{background:var(--s2);border-radius:14px;height:96px;overflow:hidden}
+.ill svg{display:block;width:100%;height:100%}
+@media(max-width:600px){.step.has-ill{grid-template-columns:30px minmax(0,1fr)}.step.has-ill .ill{grid-column:1/-1;order:-1}}
+.pvs{display:flex;gap:16px;margin-top:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;scrollbar-width:thin}
+.pvs>div{flex:none;width:300px;scroll-snap-align:start}
+.pvh{margin:0 0 8px 4px}
+.scr{height:420px;border-radius:36px;background:linear-gradient(160deg,#2a3350,#151a26 45%,#3a2430);position:relative;overflow:hidden;color:#fff;padding:24px 18px}
+.ldate{text-align:center;font-size:15px;font-weight:600;color:rgba(255,255,255,.8)}
+.linl{text-align:center;font-size:13px;color:rgba(255,255,255,.8);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lclock{text-align:center;font:600 84px/1 var(--rounded);letter-spacing:-2px;margin-top:4px}
+.lws{display:flex;gap:10px;justify-content:center;margin-top:18px}
+.lrect{width:160px;height:72px;display:flex;flex-direction:column}
+.lr1{display:flex;align-items:center;gap:6px;font-size:13px;height:17px}
+.lr1 b{font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr1 span{font-size:12px;font-weight:600;color:rgba(255,255,255,.7);white-space:nowrap}
+.lpl{font-style:normal;background:rgba(255,255,255,.22);color:#fff;border-radius:5px;padding:1px 5px;font:700 12px var(--rounded)}
+.lr2{display:flex;align-items:center;justify-content:space-between;height:40px}
+.lr2 b{font:700 32px/1 var(--rounded);font-variant-numeric:tabular-nums}
+.lr2 span{text-align:right;font:700 17px/1.1 var(--rounded)}.lr2 small{display:block;font:500 11px var(--font);color:rgba(255,255,255,.6)}
+.lbar{height:5px;border-radius:3px;background:rgba(255,255,255,.28);margin-top:4px;overflow:hidden}.lbar i{display:block;height:100%;background:#fff;border-radius:3px}
+.lr3{font-size:12px;font-weight:500;color:rgba(255,255,255,.7);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lcirc{position:relative;width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.14);flex:none}
+.lcirc svg,.wring svg{position:absolute;inset:0}
+.wc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.1}
+.lcirc .wc b{font:700 16px var(--rounded);font-variant-numeric:tabular-nums}.lcirc .wc small{font:600 10px var(--rounded);color:rgba(255,255,255,.7);max-width:56px;overflow:hidden;white-space:nowrap}
+.scr.home{display:flex;flex-direction:column;gap:14px;padding:22px 18px}
+.icons{display:grid;grid-template-columns:repeat(4,46px);justify-content:space-between}
+.icons i{width:46px;height:46px;border-radius:11px;background:rgba(255,255,255,.14)}
+.wwrap{position:relative}.wwrap.s{height:123px}.wwrap.m{height:123px}
+.wbox{position:absolute;left:0;top:0;transform:scale(.72);transform-origin:top left;border-radius:22px;padding:14px;font-family:var(--font);box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.ws{width:170px;height:170px;display:flex;flex-direction:column}
+.wm{width:364px;height:170px;display:flex;align-items:center;gap:16px;padding:14px 18px 14px 16px}
+.wrow{display:flex;align-items:center;gap:8px}
+.wring{position:relative;width:80px;height:80px;flex:none}.wring.big{width:128px;height:128px}
+.wring .wc b{font:600 20px var(--rounded);font-variant-numeric:tabular-nums}.wring .wc small{font:500 10px var(--rounded)}
+.wcol{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;height:80px;min-width:0}
+.wcap{font-size:10px;font-weight:600;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wchip{display:inline-block;border-radius:7px;padding:2px 7px;font-weight:700;font-family:var(--rounded);white-space:nowrap}
+.wt{font-size:16px;font-weight:600;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wn,.wn2{display:flex;justify-content:space-between;gap:6px;font-size:12px;font-weight:500;margin-top:auto;white-space:nowrap}
+.wn span:first-child,.wn2 span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.wcol2{flex:1;min-width:0;height:128px;display:flex;flex-direction:column;align-items:flex-start}
+.wcol2 .wcap{font-size:11px}
+.wt2{font-size:18px;font-weight:600;margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wsp{flex:1}.wrule{height:1px;width:100%;margin-bottom:8px}
+.wn2{font-size:15px;width:100%;margin-top:2px}.wn2 span:last-child{font:600 14px var(--rounded)}
+.pvnote{margin-top:10px}
+/* телефон 390px: всё в ширину экрана, кнопки под палец */
+@media(max-width:600px){
+  h1{font-size:52px}
+  .lead{font-size:16px}
+  .tags{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-18px;padding-right:18px}
+  .tags::-webkit-scrollbar{display:none}
+  .tag{flex:none}
+  .grade{display:grid;grid-template-columns:24px repeat(4,minmax(0,1fr));gap:8px}
+  .grade .pill{min-width:0;padding:9px 0;min-height:42px}
+  .bar .btn{padding:8px 12px;min-height:40px}
+  .btn,.seg button,.pill{min-height:40px}
 </style>
 </head>
 <body>
@@ -280,6 +372,8 @@ footer p+p{margin-top:6px}
       <a href="#make">Конструктор</a>
       <a href="#install">Установить</a>
       <a href="#faq">Вопросы</a>
+      <a href="changelog.html">Что нового</a>
+      <a href="feedback.html">Написать нам</a>
     </nav>
     <a class="btn w sm" href="#install">Скачать</a>
   </div>
@@ -298,16 +392,22 @@ footer p+p{margin-top:6px}
       </div>
     </div>
     <div class="live" aria-live="polite">
-      <div class="ltop"><span class="status" id="lStatus"></span><span class="dots" id="lDots"></span></div>
-      <div class="ltitle"><h2 id="lTitle"></h2><span class="chip now" id="lRoom" hidden></span></div>
-      <div class="timer num" id="lTimer"></div>
-      <div class="bar2" id="lBar" hidden><i id="lBarI"></i></div>
-      <div class="stats">
-        <div><span class="caps" id="lSideH"></span><b class="num" id="lSideV"></b></div>
-        <div><span class="caps" id="lStatH"></span><b class="num" id="lStatV" style="color:var(--soft);font-weight:500"></b></div>
+      <div class="lhead">
+        <div class="ring" id="lRing" aria-hidden="true">
+          <svg viewBox="0 0 132 132"><circle class="rt" cx="66" cy="66" r="58"/><circle class="ra" id="lArc" cx="66" cy="66" r="58" transform="rotate(-90 66 66)" stroke-dasharray="0 400"/><circle class="rk" id="lKnob" r="7" cx="66" cy="8"/></svg>
+          <div class="rin"><b id="lSideV"></b><span class="caps" id="lSideH"></span></div>
+        </div>
+        <div class="lcol">
+          <span class="status" id="lStatus"></span>
+          <h2 id="lTitle"></h2>
+          <div class="lchips"><span class="chip sub" id="lChg" hidden>замена</span><span class="chip now" id="lRoom" hidden></span></div>
+        </div>
       </div>
+      <div class="timer num" id="lTimer"></div>
+      <div class="lmeta"><span id="lStat"><span class="caps" id="lStatH"></span><b class="num" id="lStatV"></b></span><span class="dots" id="lDots"></span></div>
       <div class="lnext" id="lNext"><span class="caps" id="lNextH"></span><div class="row"><span id="lNextS"></span><span class="chip" id="lNextR"></span></div></div>
       <div class="foot" id="lFoot"></div>
+      <div class="foot" id="lVac" hidden></div>
     </div>
   </div>
 
@@ -317,14 +417,20 @@ footer p+p{margin-top:6px}
       <div class="seg" id="days"></div>
       <div class="seg" style="flex:none;min-width:0"><button id="vDay" class="on">День</button><button id="vWeek">Неделя</button></div>
     </div>
+    <div class="dnote" id="dayNote" hidden></div>
     <div class="card" id="dayList"></div>
     <div class="week" id="weekView" hidden></div>
+    <div class="row"><a class="btn d sm" id="report" target="_blank" rel="noopener noreferrer">Нашёл ошибку в расписании</a></div>
+    <div class="card friend" id="friend">
+      <div class="fhead"><span class="caps">Где друг</span><select class="f" id="fCls" aria-label="Класс друга"></select></div>
+      <div id="fOut"></div>
+    </div>
   </section>
 
   <section id="rooms">
     <div class="sh"><h3>Где <b>кабинет</b>?</h3><p>Кто сейчас сидит в кабинете, когда он освободится и где пусто прямо сейчас.</p></div>
     <div class="search">
-      <input id="rq" inputmode="text" placeholder="Номер кабинета, например 46 или 56" autocomplete="off" aria-label="Кабинет">
+      <input id="rq" inputmode="text" placeholder="Кабинет, например 46" autocomplete="off" aria-label="Кабинет">
       <select id="rday" aria-label="День"></select>
     </div>
     <div class="grid2">
@@ -412,7 +518,7 @@ footer p+p{margin-top:6px}
     <div class="sh"><h3>Тихо. <b>Безопасно.</b> Офлайн.</h3></div>
     <div class="facts">
       <div class="fact"><b>0</b><p>раз телефон просыпается из-за приложения. Пока экран выключен, оно ничего не делает, а таймеры тикают сами.</p></div>
-      <div class="fact"><b>0 слежки</b><p>Ни рекламы, ни аккаунтов, ни аналитики. В интернет приложение ходит, только если ты сам разрешишь: раз в сутки проверить новую версию. На сайте никаких счётчиков.</p></div>
+      <div class="fact"><b>0 слежки</b><p>Ни рекламы, ни аккаунтов, ни аналитики. В интернет приложение ходит, только если ты сам разрешишь: проверить новую версию и замены в расписании. На сайте никаких счётчиков.</p></div>
       <div class="fact"><b>~60 КБ</b><p>весит приложение. Расписание уже внутри, так что всё работает и в метро, и в подвале, и без мобильного интернета.</p></div>
       <div class="fact"><b>19</b><p>классов, с 7А по 11Г. Выбираешь свой или собираешь своё расписание сам.</p></div>
     </div>
@@ -422,27 +528,28 @@ footer p+p{margin-top:6px}
     <div class="sh"><h3>Вопросы и <b>ответы</b></h3></div>
     <div class="faq">
       <details><summary>Это официальное приложение лицея?</summary><p>Нет. «Звонок» сделал ученик лицея, просто для своих. Расписание взято из утверждённого расписания на 2 четверть. Если что-то поменяют, собери своё в конструкторе (в приложении: ⚙ → «Своё расписание»).</p></details>
-      <details><summary>Почему Android пишет «Неизвестное приложение» или «Небезопасно»?</summary><p>Android так пишет про любое приложение не из Google Play. Нажми «Подробнее», потом «Всё равно установить». В интернет «Звонок» выходит только с твоего разрешения и только чтобы узнать, есть ли новая версия. Про тебя он ничего не отправляет, а код открыт, так что проверить это может кто угодно.</p></details>
-      <details><summary>Что приложение знает обо мне?</summary><p>Только какой у тебя класс и какие настройки, и всё это лежит у тебя на телефоне. Аккаунтов, рекламы, аналитики и облачных копий нет. Если разрешишь проверку обновлений, раз в сутки приложение спросит у GitHub номер последней версии, и всё. Сайт тоже ничего не собирает, выбранный класс помнит только твой браузер.</p></details>
-      <details><summary>Сколько тратит батареи?</summary><p>Почти нисколько. Пока экран выключен, приложение спит и телефон не будит, а таймеры тикают силами самой системы. Хочешь ещё экономнее? Включи «Экономный таймер» (он без секунд), а на каникулах режим «Каникулы»: тогда вообще ничего не работает.</p></details>
+      <details><summary>Почему Android пишет «Неизвестное приложение» или «Небезопасно»?</summary><p>Android так пишет про любое приложение не из Google Play. Нажми «Подробнее», потом «Всё равно установить». В интернет «Звонок» выходит только с твоего разрешения: узнать, есть ли новая версия, и скачать замены в расписании. Про тебя он ничего не отправляет, а код открыт, так что проверить это может кто угодно.</p></details>
+      <details><summary>Что приложение знает обо мне?</summary><p>Только какой у тебя класс и какие настройки, и всё это лежит у тебя на телефоне. Аккаунтов, рекламы, аналитики и облачных копий нет. Если разрешишь проверку обновлений, раз в сутки приложение спросит у GitHub номер последней версии, а раз в 3 часа скачает с сайта файл замен. И всё. Сайт тоже ничего не собирает, выбранный класс помнит только твой браузер.</p></details>
+      <details><summary>Сколько тратит батареи?</summary><p>Почти нисколько. Пока экран выключен, приложение спит и телефон не будит, а таймеры тикают силами самой системы. Хочешь ещё экономнее? Включи «Экономный таймер» (он без секунд). Каникулы приложение знает само и в эти дни отдыхает вместе с тобой.</p></details>
       <details><summary>Уведомление пропало или перестало обновляться</summary><p>Скорее всего, телефон решил сэкономить батарею и закрыл приложение. Выбери в разделе «Установить» свою марку и сделай шаги оттуда, главное «Автозапуск» и «Без ограничений». Потом один раз открой приложение, и уведомление вернётся. На Xiaomi ещё помогает закрепить «Звонок» в недавних приложениях (значок замка).</p></details>
       <details><summary>Уведомление можно смахнуть?</summary><p>Кнопка «Очистить всё» его не трогает. На Android 14 и новее смахнуть можно любое уведомление, но «Звонок» сразу покажет его снова. Убрать его насовсем можно только в настройках приложения.</p></details>
       <details><summary>Таймер показывает минус или неверное время</summary><p>Проверь, что в телефоне включено «Время сети» и стоит правильный часовой пояс. В настройках приложения посмотри «Точное время звонков»: если там написано «Включить», нажми. Минус на пару секунд сразу после звонка это нормально, всё обновится, как только посмотришь на экран.</p></details>
       <details><summary>Виджет обрезается или не обновляется</summary><p>Зажми виджет и растяни на клетку больше, «Звонок» сам подгонит таймер под размер. А если он не обновляется, проверь «Автозапуск» и батарею для своей марки в разделе «Установить».</p></details>
       <details><summary>Как сменить класс?</summary><p>В приложении нажми на белую плашку с классом справа сверху или зайди в ⚙ → «Класс». На сайте просто выбери класс в начале страницы, он запомнится.</p></details>
       <details><summary>Как обновить приложение?</summary><p>При первом запуске приложение спросит, можно ли проверять обновления. Если разрешишь, оно раз в сутки смотрит, вышла ли новая версия, и показывает белую плашку «Вышла версия…». Проверить самому можно в ⚙ → «Обновления». Нажимаешь, браузер скачивает новый APK, открываешь его и жмёшь «Обновить». Удалять старое приложение не нужно. Если Android всё же пишет «Приложение не установлено», значит у тебя совсем старая версия: удали её один раз и поставь новую.</p></details>
-      <details><summary>Работает офлайн?</summary><p>Да. Расписание уже внутри приложения, интернет нужен, только если ты разрешил проверку обновлений. Сайт после первого раза тоже открывается без сети, а ещё его можно скачать одним файлом и скинуть в чат.</p></details>
+      <details><summary>Работает офлайн?</summary><p>Да. Расписание уже внутри приложения, интернет нужен, только если ты разрешил проверку обновлений и замен. Сайт после первого раза тоже открывается без сети, а ещё его можно скачать одним файлом и скинуть в чат.</p></details>
       <details><summary>Как отправить приложение другу без интернета?</summary><p>В приложении: ⚙ → «Отправить приложение другу». Можно по Bluetooth, через Quick Share или в мессенджер. Друг получит APK и поставит его так же, как ты.</p></details>
       <details><summary>Как поставить на iPhone?</summary><p>Через бесплатное приложение Scriptable из App Store. Скопируй на сайте скрипт своего класса, вставь его в Scriptable и добавь виджет на экран блокировки или рабочий стол. Он покажет урок, кабинет и таймер до звонка. Подробные шаги в разделе «Установить» → iPhone.</p></details>
       <details><summary>Есть ли на iPhone уведомление, как на Android?</summary><p>Нет, Apple не разрешает сайтам и скриптам держать уведомление на экране. Зато есть виджеты на экран блокировки через бесплатное приложение Scriptable (как поставить, написано в «Установить» → iPhone).</p></details>
       <details><summary>Как удалить?</summary><p>Как любое другое приложение: зажми иконку «Звонок» и нажми «Удалить». После этого на телефоне от него ничего не останется.</p></details>
     </div>
+    <div class="row" style="margin-top:16px;align-items:center"><span class="note" style="margin:0">Не нашёл ответ, есть идея или что-то сломалось?</span><a class="btn d sm" href="feedback.html">Написать нам</a></div>
   </section>
 
   <section id="share">
     <div class="sh"><h3>Расскажи <b>классу</b></h3><p>Чем больше народу знает, сколько до звонка, тем меньше опозданий.</p></div>
     <div class="share">
-      <div class="qr" aria-label="QR-код сайта">@QR@</div>
+      <div class="qr" id="qr" aria-label="QR-код сайта">@QR@</div>
       <div>
         <div class="row" style="margin-top:0">
           <button class="btn w" id="shNative">Поделиться</button>
@@ -463,6 +570,7 @@ footer p+p{margin-top:6px}
 </main>
 
 <footer class="wrap">
+  <p class="links"><a href="changelog.html">Что нового</a> · <a href="feedback.html">Написать нам</a></p>
   <p>«Звонок» сделал ученик лицея №165 для своих. Это неофициальный проект.</p>
   <p id="fTerm"></p>
   <p>Никаких аккаунтов, рекламы и слежки. Всё, что ты тут выбираешь, хранится только в твоём браузере.</p>
@@ -514,9 +622,11 @@ const BELLS = DATA.bells.map(b => [toMin(b[0]), toMin(b[1])]);
 const CLASSES = Object.keys(DATA.classes).sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b, "ru"));
 
 /* ---------- расписание ---------- */
+const CW = {};
 function classWeek(cls) {
+  if (CW[cls]) return CW[cls];
   const days = DATA.classes[cls] || [];
-  return Array.from({length: 7}, (_, d) => (days[d] || []).map((raw, i) => {
+  return CW[cls] = Array.from({length: 7}, (_, d) => (days[d] || []).map((raw, i) => {
     if (!raw || !BELLS[i]) return null;
     const sp = raw.indexOf(" "), code = sp < 0 ? raw : raw.slice(0, sp), room = sp < 0 ? "" : raw.slice(sp + 1);
     return {num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: DATA.subjects[code] || code, room: roomName(room)};
@@ -529,6 +639,42 @@ function customWeek(c) {
     return {num: i + 1, start: bells[i][0], end: bells[i][1], subject: clean(l[0]), room: roomName(clean(l[1]))};
   }).filter(Boolean));
 }
+const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const holiday = d => (DATA.holidays || []).find(x => iso(d) >= x[0] && iso(d) <= x[1]) || null;
+
+/* замены: data/changes.json (встроен при сборке, свежий подтягивается с сайта) */
+let CHANGES = /*@CHANGES@*/null || {days: {}};
+const chDay = d => (CHANGES.days || {})[iso(d)] || null;
+const NO_LESSON = v => v === null || (typeof v === "string" && /^нет/i.test(v.trim()));
+// день без уроков у всех: каникулы, праздник или «off» в заменах. [с, по, название]
+function dayOff(d) { const x = holiday(d), c = chDay(d); return x || (c && c.off ? [iso(d), iso(d), clean(c.off)] : null); }
+function dayBells(d) {
+  const c = chDay(d);
+  if (!c || !Array.isArray(c.bells)) return BELLS;
+  // звонки на этот день целиком; урока без звонка в этот день нет
+  return c.bells.map((x, i) => { const s = x ? toMin(x[0]) : -1, e = x ? toMin(x[1]) : -1; return s >= 0 && e > s ? [s, e] : BELLS[i] || null; });
+}
+// уроки класса на конкретную дату: с каникулами, заменами и сокращёнными звонками
+function dayLessons(c, d) {
+  if (dayOff(d)) return [];
+  const base = classWeek(c)[dow(d)], ch = chDay(d);
+  if (!ch) return base;
+  const bells = dayBells(d), fix = (ch.classes || {})[c] || {}, short = bells !== BELLS;
+  const nums = [...new Set(base.map(l => l.num).concat(Object.keys(fix).map(Number).filter(n => n > 0)))].sort((a, b) => a - b);
+  return nums.map(n => {
+    let l = base.find(x => x.num === n);
+    const f = fix[n];
+    if (f !== undefined && NO_LESSON(f)) return null;
+    if (f && typeof f === "object") l = {num: n, changed: true,
+      subject: f.subject ? DATA.subjects[f.subject] || clean(f.subject) : l ? l.subject : "",
+      room: f.room != null ? roomName(clean(f.room)) : l ? l.room : ""};
+    if (!l || !l.subject || !bells[n - 1]) return null;
+    return Object.assign({}, l, {start: bells[n - 1][0], end: bells[n - 1][1], short});
+  }).filter(Boolean);
+}
+// отменённые уроки класса на дату (для пометки)
+const cancelled = (c, d) => { const ch = chDay(d), fix = ch && (ch.classes || {})[c] || {}; return Object.keys(fix).filter(n => NO_LESSON(fix[n])).map(Number); };
+
 let cls = store.get("class", null);
 let pick = !DATA.classes[cls]; // новичок: сначала просим выбрать класс
 if (pick) cls = "7Б";
@@ -537,13 +683,32 @@ let useCustom = !!store.get("useCustom", false) && !!custom;
 if (useCustom) pick = false;
 let WEEK = [];
 function rebuild() { WEEK = useCustom ? customWeek(custom) : classWeek(cls); }
+
+/* ссылка на класс: …/Zvonok/#10a (принимаем и #10а) */
+const LAT = {"А": "a", "Б": "b", "В": "v", "Г": "g"}, CYR = {a: "А", b: "Б", v: "В", g: "Г", "а": "А", "б": "Б", "в": "В", "г": "Г"};
+const slugOf = c => c.replace(/[АБВГ]/g, x => LAT[x]).toLowerCase();
+function classFromHash() {
+  let t = ""; try { t = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
+  const m = /^(7|8|9|10|11)([abvgабвг])$/i.exec(t.trim());
+  const c = m ? m[1] + CYR[m[2].toLowerCase()] : null;
+  return c && DATA.classes[c] ? c : null;
+}
+// свой выбор важнее ссылки: убираем #10a из адреса, чтобы после обновления не открылся чужой класс
+function dropHash() { if (classFromHash()) try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
+function openHashClass() {
+  const c = classFromHash();
+  if (!c) return false;
+  cls = c; pick = false; useCustom = false;
+  if (!DATA.classes[store.get("class", null)]) store.set("class", c);
+  return true;
+}
+openHashClass();
 rebuild();
 const title = () => useCustom ? "своё" : cls;
 
-const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-const holiday = d => (DATA.holidays || []).find(x => iso(d) >= x[0] && iso(d) <= x[1]) || null;
-const lessonsOn = d => useCustom || !holiday(d) ? WEEK[dow(d)] : [];
+const lessonsOn = d => useCustom ? WEEK[dow(d)] : dayLessons(cls, d);
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+const dm = d => d.getDate() + " " + MONTHS[d.getMonth()];
 function at(date, min) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d.getTime() + min * 60000; }
 function compute(now) {
   const s = {}, list = lessonsOn(now), sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
@@ -563,16 +728,37 @@ function compute(now) {
       }
     }
     s.kind = "AFTER";
-  } else { s.kind = "OFF"; s.holiday = useCustom ? null : holiday(now); }
+  } else { s.kind = "OFF"; s.holiday = useCustom ? null : dayOff(now); }
   for (let d = 1; d <= 120; d++) {
     const date = new Date(now); date.setDate(date.getDate() + d);
     const l = lessonsOn(date);
     if (!l.length) continue;
-    const far = d > 6, dm = date.getDate() + " " + MONTHS[date.getMonth()];
-    Object.assign(s, {next: l[0], nCount: l.length, nEnd: hm(l[l.length - 1].end), nLabel: d === 1 ? "Завтра" : far ? dm : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : far ? dm : WHEN[dow(date)], target: at(date, l[0].start)});
+    const far = d > 6;
+    Object.assign(s, {next: l[0], nCount: l.length, nEnd: hm(l[l.length - 1].end), nLabel: d === 1 ? "Завтра" : far ? dm(date) : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : far ? dm(date) : WHEN[dow(date)], target: at(date, l[0].start)});
     break;
   }
   return s;
+}
+// сколько учебных дней до ближайших каникул (сегодня считается, если уроки ещё не кончились)
+function vacation(now) {
+  if (useCustom || holiday(now) || (DATA.term_end && iso(now) > DATA.term_end)) return null;
+  const t = iso(now), v = (DATA.holidays || []).filter(x => /каникул/i.test(x[2]) && x[0] > t).sort((a, b) => a[0] < b[0] ? -1 : 1)[0];
+  if (!v) return null;
+  const d = new Date(now), nowMin = now.getHours() * 60 + now.getMinutes();
+  let n = 0, today = false;
+  for (let i = 0; i < 400 && iso(d) < v[0]; i++, d.setDate(d.getDate() + 1)) {
+    const l = lessonsOn(d);
+    if (!l.length || (i === 0 && nowMin >= l[l.length - 1].end)) continue;
+    n++; if (i === 0) today = true;
+  }
+  return n > 60 ? null : {n, today, name: v[2], from: v[0]}; // больше 60 дней: рано считать
+}
+function daysWord(n) { const a = n % 10, b = n % 100; return n + (a === 1 && b !== 11 ? " учебный день" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? " учебных дня" : " учебных дней"); }
+function vacationText(v) {
+  if (!v) return "";
+  if (!v.n) return "Дальше " + v.name.toLowerCase();
+  if (v.n === 1 && v.today) return "Сегодня последний учебный день, потом " + v.name.toLowerCase();
+  return "До каникул " + daysWord(v.n);
 }
 function fmtTimer(ms) {
   const t = Math.max(0, Math.ceil(ms / 1000)), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), S = t % 60;
@@ -580,6 +766,15 @@ function fmtTimer(ms) {
 }
 
 /* ---------- живая карточка ---------- */
+const daysOnly = n => { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? "день" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? "дня" : "дней"; };
+// кольцо: дуга от прогресса и светящаяся точка на её конце
+function ringTo(v) {
+  const C = 2 * Math.PI * 58, on = v >= 0, x = Math.max(0.02, Math.min(1, v));
+  $("lArc").setAttribute("stroke-dasharray", on ? (x * C).toFixed(1) + " " + C.toFixed(1) : "0 " + C.toFixed(1));
+  $("lKnob").style.display = on ? "" : "none";
+  if (on) { const a = -Math.PI / 2 + 2 * Math.PI * x; $("lKnob").setAttribute("cx", (66 + 58 * Math.cos(a)).toFixed(1)); $("lKnob").setAttribute("cy", (66 + 58 * Math.sin(a)).toFixed(1)); }
+}
+const mark = l => l && l.changed ? " · замена" : l && l.short ? " · сокращённый" : "";
 let state = null, lastKey = "";
 function renderLive() {
   const now = new Date(), s = compute(now), n = s.next;
@@ -587,26 +782,29 @@ function renderLive() {
   let st = "", t = "", room = "", sideH = "", sideV = "", statH = "", statV = "", nH = "", nS = "", nR = "", foot = "", timer = null, big = "", prog = -1, live = false;
   if (s.kind === "LESSON") {
     const c = s.cur; live = true; timer = s.target; prog = (now - s.start) / (s.target - s.start);
-    st = "Урок " + (s.idx + 1) + " / " + s.count; t = c.subject; room = c.room;
-    sideH = "Звонок"; sideV = hm(c.end); statH = "Домой в"; statV = s.end;
-    if (n) { nH = "Далее · " + hm(n.start); nS = n.subject; nR = n.room; } else { nH = "Последний урок"; nS = "Домой в " + hm(c.end); }
+    st = n ? "Урок " + (s.idx + 1) + " из " + s.count : "Последний урок"; t = c.subject; room = c.room;
+    sideH = "звонок"; sideV = hm(c.end); statH = "Домой в"; statV = s.end;
+    if (n) { nH = "Дальше · " + hm(n.start) + mark(n); nS = n.subject; nR = n.room; } else { nH = "Потом"; nS = "Домой в " + hm(c.end); }
     const rest = s.count - s.idx - 1; foot = rest ? "Потом ещё " + plural(rest) + " · до " + s.end : "Последний урок, дальше домой";
   } else if (s.kind === "BREAK") {
     live = true; timer = s.target; prog = (now - s.start) / (s.target - s.start);
     const len = n.start - s.cur.end;
-    st = "Перемена · " + len + " мин"; t = len > 25 ? "Окно" : "Перемена"; sideH = "На урок"; sideV = hm(n.start); statH = "Домой в"; statV = s.end;
-    nH = "Урок " + n.num + " · " + hm(n.start); nS = n.subject; nR = n.room; foot = "Осталось " + plural(s.count - s.idx - 1) + " · до " + s.end;
+    st = (len > 25 ? "Окно · " : "Перемена · ") + len + " мин"; t = len > 25 ? "Окно" : "Перемена"; sideH = "урок в"; sideV = hm(n.start); statH = "Домой в"; statV = s.end;
+    nH = "Иди в" + mark(n); nS = n.subject; nR = n.room; foot = "Осталось " + plural(s.count - s.idx - 1) + " · до " + s.end;
   } else if (s.kind === "BEFORE") {
-    live = s.soon; st = s.soon ? "До уроков" : "Сегодня"; t = s.soon ? "Скоро уроки" : "Сегодня " + plural(s.count);
-    if (s.soon) timer = s.target; else big = hm(n.start);
-    sideH = s.soon ? "Звонок" : "День"; sideV = s.soon ? hm(n.start) : "Сегодня"; statH = "Уроков"; statV = s.count + " · до " + s.end;
-    nH = "Первый урок · " + hm(n.start); nS = n.subject; nR = n.room; foot = "Сегодня " + plural(s.count) + " · " + hm(n.start) + "–" + s.end;
+    live = s.soon; st = s.soon ? "Скоро уроки" : "Сегодня " + plural(s.count); t = s.soon ? "До уроков" : "Уроки с " + hm(n.start);
+    if (s.soon) { timer = s.target; prog = (now - s.start) / (s.target - s.start); } else big = hm(n.start);
+    sideH = s.soon ? "уроки в" : "домой в"; sideV = s.soon ? hm(n.start) : s.end; statH = "Уроков"; statV = s.count + " · до " + s.end;
+    nH = "Первый · " + hm(n.start) + mark(n); nS = n.subject; nR = n.room; foot = "Сегодня " + plural(s.count) + " · " + hm(n.start) + "–" + s.end;
   } else {
-    st = s.kind === "AFTER" ? "Уроки закончились" : s.holiday ? s.holiday[2] : "Выходной"; t = s.kind === "AFTER" ? "Свободен" : s.holiday ? "Каникулы" : "Отдыхай";
+    st = s.kind === "AFTER" ? "Уроки закончились" : s.holiday ? s.holiday[2] : "Выходной"; t = s.kind === "AFTER" ? "Свободен" : s.holiday && /каникул/i.test(s.holiday[2]) ? "Каникулы" : "Отдыхай";
     if (n) {
-      big = hm(n.start); sideH = "День"; sideV = s.nLabel; statH = "Уроков"; statV = s.nCount + " · до " + s.nEnd;
-      nH = s.nLabel + " · " + hm(n.start); nS = n.subject; nR = n.room; foot = s.nLabel + ": " + plural(s.nCount) + ", " + hm(n.start) + "–" + s.nEnd;
-      if (s.holiday) { sideH = "Уроки с"; foot = "Уроки с " + s.nWhen + ", " + hm(n.start); }
+      big = hm(n.start); sideH = "уроки до"; sideV = s.nEnd; statH = s.nLabel; statV = plural(s.nCount) + " · до " + s.nEnd;
+      nH = s.nLabel + " · " + hm(n.start) + mark(n); nS = n.subject; nR = n.room; foot = s.nLabel + ": " + plural(s.nCount) + ", " + hm(n.start) + "–" + s.nEnd;
+      if (s.holiday) {
+        const days = Math.round((at(new Date(s.target), 0) - at(now, 0)) / 864e5);
+        sideV = String(days); sideH = daysOnly(days) + " до уроков"; foot = "Уроки с " + s.nWhen + ", " + hm(n.start);
+      }
     } else big = "нет";
   }
   if (!useCustom && DATA.term_end && iso(now) > DATA.term_end && !s.holiday) foot = "Четверть закончилась, расписание могло измениться. Новое появится здесь, как только его утвердят.";
@@ -615,14 +813,18 @@ function renderLive() {
     foot = "Нажми на свой класс, и здесь появится таймер до звонка, урок и кабинет.";
   }
   $("lStatus").textContent = st; $("lStatus").classList.toggle("on", live);
-  document.querySelector(".live .stats").hidden = !sideH;
+  $("lStat").hidden = !statH;
   $("lTitle").textContent = t;
   $("lRoom").textContent = room; $("lRoom").hidden = !room;
+  const chg = !pick && s.kind === "LESSON" ? mark(s.cur).slice(3) : "";
+  $("lChg").textContent = chg; $("lChg").hidden = !chg;
+  const vac = pick ? "" : vacationText(vacation(now));
+  $("lVac").textContent = vac; $("lVac").hidden = !vac;
   $("lSideH").textContent = sideH; $("lSideV").textContent = sideV;
   $("lStatH").textContent = statH; $("lStatV").textContent = statV;
   $("lNext").hidden = !nS; $("lNextH").textContent = nH; $("lNextS").textContent = nS; $("lNextR").textContent = nR; $("lNextR").hidden = !nR;
   $("lFoot").textContent = foot;
-  $("lBar").hidden = prog < 0; if (prog >= 0) $("lBarI").style.width = Math.round(Math.min(1, Math.max(0, prog)) * 100) + "%";
+  ringTo(prog);
   $("lTimer").textContent = timer ? fmtTimer(timer - now) : big;
   const pg = document.querySelector(".lesson.cur .pg"); if (pg) pg.style.width = Math.round(prog * 100) + "%";
   const dots = $("lDots"); dots.textContent = "";
@@ -632,7 +834,7 @@ function renderLive() {
   document.title = (timer ? fmtTimer(timer - now) + " · " : "") + "Звонок · " + title();
 }
 let tickT;
-function tick() { clearTimeout(tickT); if (document.hidden) return; renderLive(); tickT = setTimeout(tick, 1000 - Date.now() % 1000 + 20); }
+function tick() { clearTimeout(tickT); if (document.hidden) return; renderLive(); if (pvOn) renderPreview(); tickT = setTimeout(tick, 1000 - Date.now() % 1000 + 20); }
 document.addEventListener("visibilitychange", tick);
 
 /* ---------- выбор класса ---------- */
@@ -643,11 +845,13 @@ function renderClasses() {
   for (const g in grades) box.append(h("div", {class: "grade"}, h("span", {class: "g", text: g}),
     grades[g].map(c => h("button", {class: "pill" + (!pick && !useCustom && c === cls ? " on" : ""), text: c, onclick: () => {
       pick = false; cls = c; useCustom = false; store.set("class", c); store.set("useCustom", false); $("cUse").checked = false;
+      dropHash();
       rebuild(); selDay = null; renderClasses(); lastKey = ""; renderLive();
     }}))));
   if (custom) box.append(h("div", {class: "grade"}, h("span", {class: "g", text: "★"}),
     h("button", {class: "pill" + (useCustom ? " on" : ""), text: "Своё", onclick: () => setUseCustom(true)})));
   $("kicker").textContent = DATA.school + " · " + DATA.term;
+  renderShare();
 }
 
 /* ---------- день / неделя ---------- */
@@ -658,30 +862,43 @@ function defaultDay() {
   for (let i = 1; i <= 7; i++) { const x = (d + i) % 7; if (WEEK[x].length) return x; }
   return 0;
 }
+// дата выбранного дня недели: сегодня или ближайший такой день впереди
+function dateOf(d) { const n = new Date(); n.setHours(12, 0, 0, 0); n.setDate(n.getDate() + (d - dow(n) + 7) % 7); return n; }
 function renderDay() {
   if (selDay == null) selDay = defaultDay();
   const now = new Date(), today = dow(now), s = state || compute(now), nowMin = now.getHours() * 60 + now.getMinutes();
   const sat = WEEK[5].length > 0, days = $("days"); days.textContent = "";
   for (let d = 0; d < (sat ? 6 : 5); d++) days.append(h("button", {class: (d === selDay ? "on " : "") + (d === today ? "today" : ""), text: DAYS[d], onclick: () => { selDay = d; renderDay(); }}));
   $("sTitle").textContent = useCustom ? "своё" : cls;
-  const list = WEEK[selDay];
-  $("sMeta").textContent = (selDay === today ? "Сегодня, " : DAYN[selDay] + ", ") + (list.length ? plural(list.length) + " · " + hm(list[0].start) + "–" + hm(list[list.length - 1].end) : "уроков нет");
+  const date = dateOf(selDay), off = useCustom ? null : dayOff(date), ch = useCustom ? null : chDay(date);
+  const list = off ? WEEK[selDay] : lessonsOn(date), isT = selDay === today && !off;
+  $("sMeta").textContent = (selDay === today ? "Сегодня, " : DAYN[selDay] + ", ") + dm(date) + ", " + (list.length ? plural(list.length) + " · " + hm(list[0].start) + "–" + hm(list[list.length - 1].end) : "уроков нет");
+  // пометка: каникулы или замены на эту дату
+  let note = "";
+  if (off) note = dm(date) + ": " + off[2] + ". Уроков не будет, ниже обычное расписание этого дня.";
+  else if (ch) {
+    const gone = cancelled(cls, date);
+    note = [clean(ch.note) || (list.some(l => l.changed || l.short) || gone.length ? "Есть изменения в расписании" : ""),
+      gone.length ? (gone.length > 1 ? "Отменены уроки " : "Отменён урок ") + gone.join(", ") : ""].filter(Boolean).join(". ");
+  }
+  $("dayNote").textContent = note; $("dayNote").hidden = !note;
   const box = $("dayList"); box.textContent = "";
   if (!list.length) box.append(h("div", {class: "empty", text: "Уроков нет. Отдыхай."}));
   list.forEach((l, i) => {
-    const isT = selDay === today;
     if (i) {
-      const len = l.start - list[i - 1].end, on = isT && s.kind === "BREAK" && s.next === l;
+      const len = l.start - list[i - 1].end, on = isT && s.kind === "BREAK" && s.next && s.next.num === l.num;
       box.append(h("div", {class: "brk" + (on ? " on" : ""), text: on ? "● перемена сейчас · до " + hm(l.start) : (len > 25 ? "окно " : "перемена ") + len + " мин"}));
     }
-    const cur = isT && s.kind === "LESSON" && s.cur === l, nx = isT && (s.kind === "BREAK" || s.kind === "BEFORE") && s.next === l, past = isT && !cur && l.end <= nowMin;
+    const cur = isT && s.kind === "LESSON" && s.cur.num === l.num, nx = isT && (s.kind === "BREAK" || s.kind === "BEFORE") && s.next && s.next.num === l.num, past = isT && !cur && l.end <= nowMin;
     box.append(h("div", {class: "lesson" + (cur ? " cur" : nx ? " nx" : past ? " past" : "")},
       h("div", {class: "t"}, h("b", {text: hm(l.start)}), h("small", {text: hm(l.end)})),
       h("div", {class: "bar"}),
-      h("div", {class: "m"}, h("b", {text: l.subject}), h("small", {text: cur ? "Сейчас · урок " + l.num : nx ? "Следующий · урок " + l.num : "Урок " + l.num + " · " + (l.end - l.start) + " мин"})),
+      h("div", {class: "m"}, h("b", {text: l.subject}), h("small", {text: (cur ? "Сейчас · урок " + l.num : nx ? "Следующий · урок " + l.num : "Урок " + l.num + " · " + (l.end - l.start) + " мин") + mark(l)})),
       l.room ? h("span", {class: "chip" + (cur ? " now" : ""), text: l.room}) : null, cur ? h("i", {class: "pg"}) : null));
   });
+  $("report").href = reportUrl();
   renderWeek();
+  renderFriend();
 }
 function renderWeek() {
   const box = $("weekView"); box.textContent = "";
@@ -699,11 +916,31 @@ $("vDay").onclick = () => { view = "day"; $("vDay").classList.add("on"); $("vWee
 $("vWeek").onclick = () => { view = "week"; $("vWeek").classList.add("on"); $("vDay").classList.remove("on"); $("dayList").hidden = true; $("days").hidden = true; $("weekView").hidden = false; };
 
 /* ---------- кабинеты ---------- */
-const ROOM_USE = {}; // "46" -> [{day, num, cls, subject}]
+const ROOM_USE = {}; // все кабинеты из расписания: "46" -> [{day, num, cls, subject}]
 CLASSES.forEach(c => classWeek(c).forEach((list, d) => list.forEach(l => {
   (l.room || "").split("/").map(x => x.trim()).filter(Boolean).forEach(r => (ROOM_USE[r] = ROOM_USE[r] || []).push({day: d, num: l.num, cls: c, subject: l.subject}));
 })));
 const ROOMS = Object.keys(ROOM_USE).sort((a, b) => (parseInt(a) || 999) - (parseInt(b) || 999) || a.localeCompare(b));
+// кто где сидит в эту дату (с заменами); в каникулы показываем обычный день недели
+function roomDay(date) {
+  const off = dayOff(date), d = dow(date), use = {};
+  CLASSES.forEach(c => (off ? classWeek(c)[d] : dayLessons(c, date)).forEach(l => (l.room || "").split("/").map(x => x.trim()).filter(Boolean)
+    .forEach(r => (use[r] = use[r] || []).push({num: l.num, cls: c, subject: l.subject, start: l.start, end: l.end}))));
+  return use;
+}
+const lowFirst = t => /^[А-ЯЁ][а-яё]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t;
+// короткий ответ: кто сейчас в кабинете и когда освободится
+function roomNow(room, use, nowMin) {
+  const u = (use[room] || []).slice().sort((a, b) => a.num - b.num), cur = u.filter(x => nowMin >= x.start && nowMin < x.end);
+  const who = list => [...new Set(list.map(x => x.cls))].join(", ") + ", " + lowFirst(list[0].subject);
+  if (cur.length) {
+    let n = cur[0].num, end = cur[0].end;
+    for (let x; (x = u.find(y => y.num === n + 1)); n++) end = x.end; // уроки подряд: кабинет занят до конца цепочки
+    return "Сейчас: " + who(cur) + ", освободится в " + hm(end);
+  }
+  const nx = u.find(x => x.start >= nowMin);
+  return "Сейчас свободен" + (nx ? ", следующий урок " + who(u.filter(x => x.num === nx.num)) + " в " + hm(nx.start) : " до конца дня");
+}
 (function initRooms() {
   const sel = $("rday"), today = dow(new Date());
   for (let d = 0; d < 5; d++) sel.append(h("option", {value: d, text: d === today ? "Сегодня" : DAYN[d]}));
@@ -712,34 +949,91 @@ const ROOMS = Object.keys(ROOM_USE).sort((a, b) => (parseInt(a) || 999) - (parse
 })();
 function renderRooms() {
   const q = $("rq").value.trim().toLowerCase().replace(/^каб\.?\s*/, ""), d = +$("rday").value, now = new Date(), today = dow(now) === d;
-  const nowMin = now.getHours() * 60 + now.getMinutes(), used = n => Object.values(ROOM_USE).some(us => us.some(u => u.day === d && u.num === n));
-  const lastSlot = BELLS.reduce((m, b, i) => used(i + 1) ? i + 1 : m, 0), off = today && !!holiday(now);
-  let slotNow = today && !off ? BELLS.findIndex(b => b && nowMin >= b[0] && nowMin < b[1]) + 1 : 0;
+  const date = dateOf(d), use = roomDay(date), bells = dayBells(date), off = today ? dayOff(now) : null;
+  const nowMin = now.getHours() * 60 + now.getMinutes(), used = n => Object.values(use).some(us => us.some(u => u.num === n));
+  const lastSlot = bells.reduce((m, b, i) => used(i + 1) ? i + 1 : m, 0);
+  let slotNow = today && !off ? bells.findIndex(b => b && nowMin >= b[0] && nowMin < b[1]) + 1 : 0;
   if (slotNow && !used(slotNow)) slotNow = 0;
-  const over = today && (off || !lastSlot || nowMin >= BELLS[lastSlot - 1][1]);
+  const over = today && (!!off || !lastSlot || nowMin >= bells[lastSlot - 1][1]);
+  // перемена или утро: какой урок будет следующим
+  const slotNext = today && !off && !slotNow && !over ? bells.findIndex((b, i) => b && b[0] > nowMin && used(i + 1)) + 1 : 0;
   const res = $("rres"); res.textContent = "";
   const room = ROOMS.find(r => r.toLowerCase() === q) || (q ? ROOMS.find(r => r.toLowerCase().startsWith(q)) : null);
   if (!room) {
     res.append(h("div", {class: "empty", text: q ? "Такого кабинета в расписании нет" : "Введи номер, и я покажу, кто там на каждом уроке"}));
   } else {
+    if (today && !over) res.append(h("div", {class: "rnow", id: "rnow", text: roomNow(room, use, nowMin)}));
     res.append(h("div", {class: "caps", style: "padding:12px 12px 6px", text: "Кабинет " + room + " · " + (today ? "сегодня" : DAYN[d].toLowerCase())}));
-    BELLS.forEach((b, i) => {
+    bells.forEach((b, i) => {
       if (!b) return;
-      const use = ROOM_USE[room].filter(u => u.day === d && u.num === i + 1);
-      if (!use.length && i >= 8) return;
+      const u = (use[room] || []).filter(x => x.num === i + 1);
+      if (!u.length && i >= 8) return;
       res.append(h("div", {class: "rrow" + (slotNow === i + 1 ? " now" : "")}, h("span", {class: "t", text: (i + 1) + " · " + hm(b[0]) + "–" + hm(b[1])}),
-        use.length ? h("span", null, use.map((u, k) => [k ? ", " : "", h("b", {text: u.cls}), " " + u.subject])) : h("span", {style: "color:var(--dim)", text: "свободен"})));
+        u.length ? h("span", null, u.map((x, k) => [k ? ", " : "", h("b", {text: x.cls}), " " + x.subject])) : h("span", {style: "color:var(--dim)", text: "свободен"})));
     });
   }
   const free = $("free"); free.textContent = "";
+  const chips = slot => ROOMS.filter(r => r !== "спортзал" && !(use[r] || []).some(u => u.num === slot)).forEach(r => free.append(h("button", {class: "chip", text: r, onclick: () => { $("rq").value = r; renderRooms(); }})));
   if (slotNow) {
     $("freeH").textContent = "Свободны сейчас · " + slotNow + " урок";
-    ROOMS.filter(r => r !== "спортзал" && !ROOM_USE[r].some(u => u.day === d && u.num === slotNow)).forEach(r => free.append(h("button", {class: "chip", text: r, onclick: () => { $("rq").value = r; renderRooms(); }})));
+    chips(slotNow);
+  } else if (slotNext) {
+    $("freeH").textContent = "Свободны на следующем уроке · " + hm(bells[slotNext - 1][0]);
+    chips(slotNext);
   } else {
-    $("freeH").textContent = over ? (off ? "Каникулы" : "Уроки закончились") : "Свободные кабинеты";
+    $("freeH").textContent = over ? (off ? off[2] : "Уроки закончились") : "Свободные кабинеты";
     free.append(h("div", {class: "note", style: "padding:4px 6px", text: over ? "Сейчас все кабинеты свободны. Нажми на кабинет, чтобы увидеть его день." : "Покажем во время уроков. Нажми на кабинет ниже, чтобы увидеть его день."}));
     ROOMS.slice(0, 40).forEach(r => free.append(h("button", {class: "chip", text: r, onclick: () => { $("rq").value = r; renderRooms(); }})));
   }
+}
+
+/* ---------- где друг ---------- */
+function gaps(list) { const g = []; for (let i = 1; i < list.length; i++) if (list[i].start > list[i - 1].end) g.push([list[i - 1].end, list[i].start]); return g; }
+function renderFriend() {
+  const sel = $("fCls"), out = $("fOut");
+  $("friend").hidden = pick;
+  if (!sel.options.length) {
+    CLASSES.forEach(c => sel.append(h("option", {value: c, text: c})));
+    sel.value = store.get("friend", null) || CLASSES.find(c => c !== cls);
+    sel.onchange = () => { store.set("friend", sel.value); renderFriend(); };
+  }
+  const fc = sel.value, now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), me = useCustom ? "у тебя" : "у " + cls;
+  // сегодня, пока у кого-то идут уроки, иначе ближайший учебный день
+  const date = new Date(now); let label = "Сегодня", A, B;
+  for (let i = 0; i < 60; i++) {
+    A = lessonsOn(date); B = dayLessons(fc, date);
+    const end = Math.max(A.length ? A[A.length - 1].end : 0, B.length ? B[B.length - 1].end : 0);
+    if (end && (i > 0 || end > nowMin)) break;
+    date.setDate(date.getDate() + 1);
+    label = i === 0 ? "Завтра" : i < 6 ? DAYN[dow(date)] : dm(date);
+  }
+  const isT = iso(date) === iso(now), lines = [];
+  if (!B.length) lines.push([label + " у " + fc + " уроков нет"]);
+  else if (isT) {
+    const cur = B.find(l => nowMin >= l.start && nowMin < l.end), nx = B.find(l => l.start > nowMin), wr = l => l.subject + (l.room ? ", " + roomText(l.room) : "");
+    if (cur) lines.push(["Сейчас у " + fc + ": ", wr(cur), ", до " + hm(cur.end)]);
+    else if (nx && nowMin < B[0].start) lines.push(["У " + fc + " уроки с " + hm(nx.start) + ": ", wr(nx)]);
+    else if (nx) lines.push(["У " + fc + " перемена до " + hm(nx.start) + ", дальше ", wr(nx)]);
+    else lines.push(["У " + fc + " уроки уже закончились"]);
+  } else lines.push([label + " у " + fc + ": ", plural(B.length) + ", " + hm(B[0].start) + "–" + hm(B[B.length - 1].end)]);
+  if (A.length && B.length) {
+    const ga = gaps(A), common = [];
+    gaps(B).forEach(b => ga.forEach(a => { const s = Math.max(a[0], b[0]), e = Math.min(a[1], b[1]); if (e - s >= 5 && (!isT || e > nowMin)) common.push(hm(s) + "–" + hm(e)); }));
+    lines.push(common.length ? ["Общие перемены: ", common.join(", ")] : ["Общих перемен " + (isT ? "больше " : "") + "нет"]);
+    const ea = A[A.length - 1].end, eb = B[B.length - 1].end;
+    lines.push(ea === eb ? ["Заканчиваете вместе, в ", hm(ea)] : ["Домой: " + me + " в " + hm(ea) + ", у " + fc + " в ", hm(eb)]);
+  }
+  out.textContent = "";
+  lines.forEach(l => out.append(h("p", {class: "fl"}, l[0], l[1] ? h("b", {text: l[1]}) : null, l[2] || null)));
+}
+
+/* ---------- нашёл ошибку ---------- */
+const REPO = "https://github.com/Danick-Dack/Zvonok";
+function reportUrl() {
+  const c = useCustom ? "своё расписание" : cls, d = selDay == null ? 0 : selDay;
+  const now = (WEEK[d] || []).map(l => l.num + ". " + l.subject + (l.room ? ", " + l.room : "")).join("\n");
+  const body = "Класс: " + c + "\nДень: " + DAYN[d] + "\nНомер урока: \nЧто не так: \nКак правильно: \n\nСейчас на сайте:\n" + now + "\n";
+  return REPO + "/issues/new?title=" + encodeURIComponent("Ошибка в расписании: " + c + ", " + DAYN[d].toLowerCase()) + "&body=" + encodeURIComponent(body);
 }
 
 /* ---------- конструктор: своё расписание ---------- */
@@ -788,7 +1082,7 @@ function saveEd() {
   if (useCustom) { rebuild(); lastKey = ""; renderLive(); }
 }
 function setUseCustom(on) {
-  if (on) { custom = edJson(); store.set("custom", custom); }
+  if (on) { custom = edJson(); store.set("custom", custom); dropHash(); }
   useCustom = on && !!custom; store.set("useCustom", useCustom); $("cUse").checked = useCustom;
   rebuild(); selDay = null; renderClasses(); lastKey = ""; renderLive();
   if (on) toast("На сайте теперь своё расписание");
@@ -944,20 +1238,123 @@ function renderGuide(key) {
     const sel = h("select", {class: "f", style: "flex:1;min-width:140px", "aria-label": "Класс для скрипта"}, CLASSES.map(c => h("option", {value: c, text: "Класс " + c})));
     sel.value = cls;
     g.append(
+      h("div", {class: "bhead"}, h("span", {class: "caps", text: "Так это будет выглядеть"})),
+      h("div", {id: "iosPv"}),
+      h("p", {class: "note pvnote", text: "Цвета виджетов на рабочем столе берутся из конструктора, раздел «Виджеты и уведомление». На экране блокировки iPhone красит виджеты сам."}),
       h("div", {class: "bhead"}, h("span", {class: "caps", text: "Виджет на экран блокировки · 3 минуты · iOS 16+"})),
       h("div", {class: "steps"},
-        step("Поставь Scriptable", "Это бесплатное приложение для виджетов. Найди «Scriptable» в App Store (разработчик Simon B. Støvring) и открой его один раз.",
+        istep(0, "Поставь Scriptable", "Это бесплатное приложение для виджетов. Найди «Scriptable» в App Store (разработчик Simon B. Støvring) и открой его один раз.",
           h("a", {class: "btn d", href: "https://apps.apple.com/app/id1405459188", target: "_blank", rel: "noopener noreferrer", text: "Открыть в App Store"})),
-        step("Скопируй скрипт своего класса", "Выбери класс и нажми «Скопировать скрипт».",
+        istep(1, "Скопируй скрипт своего класса", "Выбери класс и нажми «Скопировать скрипт».",
           sel, h("button", {class: "btn w", text: "Скопировать скрипт", onclick: () => copy(scriptFor(sel.value), "Скрипт для " + sel.value + " скопирован")})),
-        step("Вставь его в Scriptable", "В Scriptable нажми «+» справа сверху, нажми в пустое поле и выбери «Вставить». Потом нажми на «Untitled Script» сверху, назови «Звонок» и нажми «Готово»."),
-        step("Добавь виджет на экран блокировки", "Зажми экран блокировки → «Настроить» → «Экран блокировки» → нажми на поле под часами → Scriptable → прямоугольный виджет. Нажми на него → Script → «Звонок»."),
-        step("Или на рабочий стол", "Зажми пустое место → «+» слева сверху (или «Изменить» → «Добавить виджет») → Scriptable → размер. Нажми на виджет → Script → «Звонок».")),
+        istep(2, "Вставь его в Scriptable", "В Scriptable нажми «+» справа сверху, нажми в пустое поле и выбери «Вставить». Потом нажми на «Untitled Script» сверху, назови «Звонок» и нажми «Готово»."),
+        istep(3, "Добавь виджет на экран блокировки", "Зажми экран блокировки → «Настроить» → «Экран блокировки» → нажми на поле под часами → Scriptable → прямоугольный виджет. Нажми на него → Script → «Звонок»."),
+        istep(4, "Или на рабочий стол", "Зажми пустое место → «+» слева сверху (или «Изменить» → «Добавить виджет») → Scriptable → размер. Нажми на виджет → Script → «Звонок».")),
       h("div", {class: "warn", text: "Не хочешь копировать? Нажми «Скачать файл», открой его в «Файлах» и перенеси в папку Scriptable (iCloud Drive или «На iPhone»). Скрипт сразу появится в приложении."},
         h("div", {class: "row"}, h("button", {class: "btn d sm", text: "Скачать файл", onclick: () => download("Звонок.js", scriptFor(sel.value))}))),
       h("div", {class: "warn", text: "Постоянного уведомления, как на Android, на iPhone не будет: Apple не даёт его делать сайтам и скриптам. Зато виджет на экране блокировки показывает таймер до звонка и кабинет."}));
+    const cal = h("a", {class: "btn w", id: "calSub"});
+    const setCal = () => { cal.href = calUrl(sel.value); cal.textContent = "Подписаться: " + sel.value; };
+    sel.onchange = setCal; setCal();
+    g.append(h("div", {class: "bhead"}, h("span", {class: "caps", text: "Уведомления перед уроком через Календарь"})),
+      h("div", {class: "steps"},
+        step("Подпишись на календарь класса", "Нажми кнопку и согласись на подписку. Уроки появятся в приложении «Календарь», а за 3 минуты до каждого придёт напоминание вроде «Через 3 мин: Алгебра, каб. 24/35». Класс берётся из списка выше.", cal),
+        step("Проверь, что напоминания не выключены", "При подписке iPhone может сам убрать напоминания из чужого календаря. Открой Настройки → Календарь (в новых iOS: Настройки → Приложения → Календарь) → Учётные записи → Подписные календари → «Звонок …» и выключи переключатель про удаление напоминаний (по-английски Remove Alerts). В разных версиях iOS он может называться чуть по-разному."),
+        step("Каникулы уже учтены", "В каникулы и праздники уроков в календаре нет. Когда расписание или замены меняются, iPhone подтянет новую версию сам, но не сразу, а в течение нескольких часов.")));
+    renderPreview();
   }
 }
+/* ---------- iPhone: иллюстрации к шагам и живые превью виджетов ---------- */
+const ILL = [
+  // 1. значок приложения и «Загрузить»
+  '<rect x="58" y="22" width="52" height="52" rx="13" fill="#1c1c20" stroke="#3a3a40"/><text x="84" y="55" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">{ }</text>'
+  + '<rect x="124" y="36" width="76" height="26" rx="13" fill="#fff"/><text x="162" y="53.5" text-anchor="middle" font-size="12" font-weight="700" fill="#000">Загрузить</text>',
+  // 2. код и кнопка «Скопировать»
+  '<rect x="26" y="16" width="112" height="64" rx="10" fill="#0b0b0c" stroke="#3a3a40"/><rect x="38" y="30" width="70" height="6" rx="3" fill="#3a3a40"/>'
+  + '<rect x="38" y="44" width="88" height="6" rx="3" fill="#3a3a40"/><rect x="38" y="58" width="52" height="6" rx="3" fill="#3a3a40"/>'
+  + '<rect x="148" y="35" width="76" height="26" rx="13" fill="#fff"/><text x="186" y="52.5" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Скопировать</text>'
+  + '<circle cx="206" cy="66" r="9" fill="none" stroke="#fff" stroke-width="2" opacity=".7"/><circle cx="206" cy="66" r="3" fill="#fff"/>',
+  // 3. список скриптов и «+»
+  '<rect x="64" y="8" width="112" height="80" rx="14" fill="#0b0b0c" stroke="#3a3a40"/><circle cx="160" cy="24" r="9" fill="#fff"/>'
+  + '<path d="M160 19.5v9M155.5 24h9" stroke="#000" stroke-width="2" stroke-linecap="round"/><rect x="76" y="40" width="88" height="20" rx="7" fill="#1c1c20" stroke="#3a3a40"/>'
+  + '<text x="86" y="54" font-size="11" font-weight="600" fill="#fff">Звонок 7Б</text><rect x="76" y="66" width="60" height="6" rx="3" fill="#3a3a40"/>',
+  // 4. экран блокировки: часы и поле виджетов
+  '<rect x="60" y="4" width="120" height="88" rx="16" fill="#151a26" stroke="#3a3a40"/><text x="120" y="40" text-anchor="middle" font-size="26" font-weight="600" fill="#fff">9:41</text>'
+  + '<rect x="72" y="50" width="96" height="32" rx="8" fill="none" stroke="#8a8a91" stroke-dasharray="3 3"/><rect x="78" y="56" width="40" height="5" rx="2.5" fill="#fff"/>'
+  + '<rect x="78" y="65" width="26" height="9" rx="3" fill="#fff" opacity=".85"/><circle cx="152" cy="66" r="10" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="40 63" transform="rotate(-90 152 66)"/>',
+  // 5. рабочий стол: значки и виджет с кольцом
+  [0, 1].map(r => [0, 1].map(c => '<rect x="' + (126 + c * 30) + '" y="' + (14 + r * 36) + '" width="22" height="22" rx="6" fill="#2a2a30"/>').join("")).join("")
+  + [0, 1].map(r => '<rect x="186" y="' + (14 + r * 36) + '" width="22" height="22" rx="6" fill="#2a2a30"/>').join("")
+  + '<rect x="40" y="10" width="76" height="76" rx="16" fill="#0b0b0c" stroke="#3a3a40"/><circle cx="68" cy="44" r="16" fill="none" stroke="#2a2a30" stroke-width="5"/>'
+  + '<circle cx="68" cy="44" r="16" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="60 101" transform="rotate(-90 68 44)"/>'
+  + '<rect x="90" y="36" width="18" height="6" rx="3" fill="#fff"/><rect x="50" y="70" width="50" height="5" rx="2.5" fill="#3a3a40"/>',
+];
+const ill = i => { const d = h("div", {class: "ill", "aria-hidden": "true"}); d.innerHTML = '<svg viewBox="0 0 240 96" font-family="-apple-system,Segoe UI,sans-serif">' + ILL[i] + "</svg>"; return d; };
+function istep(i, t, p, ...extra) { const s = step(t, p, ...extra); s.classList.add("has-ill"); s.append(ill(i)); return s; }
+
+// модель для превью: те же тексты, что у виджетов в скрипте iPhone
+function wmodel(now) {
+  const s = compute(now), n = s.next, c = s.cur, m = {kind: s.kind, timer: false, prog: -1, target: s.target, room: "", go: "", home: false, big: "", sub: ""};
+  if (s.kind === "LESSON") Object.assign(m, {timer: true, prog: (now - s.start) / (s.target - s.start), tag: n ? "УРОК " + (s.idx + 1) + "/" + s.count : "ПОСЛЕДНИЙ",
+    title: c.subject, room: c.room, capW: "звонок", capV: hm(c.end), go: n ? n.room : "", home: !n, next: n ? n.subject : "Домой в " + hm(c.end), nextR: n ? n.room : "",
+    nextH: n ? "ДАЛЬШЕ · " + hm(n.start) : "ПОТОМ", inline: n ? "До " + hm(c.end) + " → " + n.room : "До " + hm(c.end) + ", потом домой"});
+  else if (s.kind === "BREAK") { const a = s.list[s.idx + 2]; Object.assign(m, {timer: true, prog: (now - s.start) / (s.target - s.start), tag: "ПЕРЕМЕНА", title: n.subject, room: n.room,
+    capW: "урок в", capV: hm(n.start), go: n.room, next: a ? a.subject : "Домой в " + hm(n.end), nextR: a ? a.room : "", nextH: a ? "ПОТОМ · " + hm(a.start) : "ПОТОМ",
+    inline: "Урок в " + hm(n.start) + (n.room ? " · " + n.room : "")}); }
+  else if (s.kind === "BEFORE") Object.assign(m, {timer: s.soon, prog: s.soon ? (now - s.start) / (s.target - s.start) : -1, tag: s.soon ? "СКОРО УРОКИ" : "СЕГОДНЯ",
+    title: s.soon ? n.subject : "Уроки с " + hm(n.start), room: n.room, capW: s.soon ? "уроки в" : "до", capV: s.soon ? hm(n.start) : s.end, go: n.room, big: hm(n.start), sub: "сегодня",
+    next: s.soon ? plural(s.count) + " · до " + s.end : n.subject, nextR: s.soon ? "" : n.room, nextH: s.soon ? "СЕГОДНЯ" : "ПЕРВЫЙ · " + hm(n.start), inline: "Уроки в " + hm(n.start) + (n.room ? " · " + n.room : "")});
+  else {
+    const vac = s.holiday && /каникул/i.test(s.holiday[2]), title = s.kind === "AFTER" ? "Свободен" : vac ? "Каникулы" : "Отдыхай";
+    Object.assign(m, {tag: s.kind === "AFTER" ? (n ? s.nLabel.toUpperCase() : "ВСЁ") : vac ? "КАНИКУЛЫ" : "ВЫХОДНОЙ", title,
+      big: n ? hm(n.start) : "нет", sub: n ? s.nWhen : "", capW: "до", capV: s.nEnd || "", next: n ? n.subject : "", nextR: n ? n.room : "", go: n ? n.room : "",
+      nextH: n ? s.nLabel.toUpperCase() + " · " + plural(s.nCount).toUpperCase() : "", inline: n ? (s.nLabel === "Завтра" ? "Завтра" : s.nWhen[0].toUpperCase() + s.nWhen.slice(1)) + " в " + hm(n.start) : title});
+  }
+  m.when = m.timer ? "до " + m.capV : m.sub;
+  return m;
+}
+const ringSvg = (size, line, v, track, arc) => {
+  const r = size / 2 - line / 2 - 0.5, C = 2 * Math.PI * r, x = Math.max(0.03, Math.min(1, v));
+  return '<svg viewBox="0 0 ' + size + " " + size + '" width="' + size + '" height="' + size + '" aria-hidden="true"><circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="' + track + '" stroke-width="' + line + '"/>'
+    + (v >= 0 ? '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="' + arc + '" stroke-width="' + line + '" stroke-linecap="round" stroke-dasharray="' + (x * C).toFixed(1) + " " + C.toFixed(1) + '" transform="rotate(-90 ' + size / 2 + " " + size / 2 + ')"/>' : "") + "</svg>";
+};
+// короткие названия там, где мало места (как в скрипте iPhone)
+const SHORTS = {"Казахский яз. и лит.": "Казахский", "Английский язык": "Английский", "Русский язык": "Русский", "Русская литература": "Литература",
+  "История Казахстана": "Ист. Казахстана", "Всемирная история": "Всем. история", "Программирование": "Программир.", "Практ. физика": "Пр. физика"};
+const shortS = t => SHORTS[t] || t;
+const esc = t => String(t).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[ch]);
+let pvOn = false;
+function renderPreview() {
+  const box = $("iosPv");
+  if (!box) return;
+  const now = new Date(), m = wmodel(now), t = m.timer ? fmtTimer(m.target - now) : m.big;
+  // тема из конструктора: фон и акцент как у виджетов в скрипте
+  const light = lum(th.bg) > .5, fg = light ? "#111111" : "#ffffff", ac = "#" + (Math.abs(lum(th.ac) - lum(th.bg)) < .25 ? (light ? "111111" : "FFFFFF") : th.ac);
+  const a = x => fg + Math.round(x * 255).toString(16).padStart(2, "0"), aa = x => ac + Math.round(x * 255).toString(16).padStart(2, "0");
+  const bg = th.bg === "000000" ? "linear-gradient(#1c1c21,#0a0a0c 55%,#000)" : "#" + th.bg;
+  const d = now.getDate() + " " + MONTHS[now.getMonth()], day = DAYN[dow(now)];
+  const chip = (r, size) => r ? '<span class="wchip" style="background:' + aa(.22) + ";color:" + ac + ";font-size:" + size + 'px">' + esc(r) + "</span>" : "";
+  const small = '<div class="wbox ws" style="background:' + bg + ";color:" + fg + '"><div class="wrow"><div class="wring">' + ringSvg(80, 8, m.prog, a(.16), ac)
+    + '<div class="wc"><b style="font-size:' + (m.timer ? 20 : 21) + 'px">' + esc(t) + '</b><small style="color:' + a(.55) + '">' + esc(m.when) + "</small></div></div>"
+    + '<div class="wcol"><span class="wcap" style="color:' + a(.42) + '">' + esc(m.tag) + "</span>" + (m.room && m.kind !== "AFTER" && m.kind !== "OFF" ? chip(m.room, 15) : "") + "</div></div>"
+    + '<div class="wt">' + esc(shortS(m.title)) + '</div><div class="wn" style="color:' + a(.62) + '"><span>' + (m.next ? "→ " + esc(shortS(m.next)) : "") + "</span><span>" + esc(m.nextR || "") + "</span></div></div>";
+  const medium = '<div class="wbox wm" style="background:' + bg + ";color:" + fg + '"><div class="wring big">' + ringSvg(128, 10, m.prog, a(.16), ac)
+    + '<div class="wc"><b style="font-size:30px">' + esc(t) + '</b><small style="color:' + a(.55) + ';font-size:13px">' + esc(m.when) + "</small></div></div>"
+    + '<div class="wcol2"><span class="wcap" style="color:' + a(.42) + '">' + esc(m.tag) + '</span><div class="wt2">' + esc(m.title) + "</div>"
+    + (m.room && m.kind !== "AFTER" && m.kind !== "OFF" ? chip(m.room, 14) : "") + '<div class="wsp"></div><div class="wrule" style="background:' + a(.10) + '"></div>'
+    + '<span class="wcap" style="color:' + a(.42) + '">' + esc(m.nextH || "") + '</span><div class="wn2"><span style="color:' + a(.8) + '">' + esc(m.next || "") + '</span><span style="color:' + a(.62) + '">' + esc(m.nextR || "") + "</span></div></div></div>";
+  const rect = '<div class="lrect"><div class="lr1"><b>' + esc(m.kind === "BREAK" || (m.kind === "BEFORE" && m.timer) ? "→ " + shortS(m.title) : shortS(m.title)) + "</b>"
+    + "<span>" + (m.kind === "LESSON" ? (m.home ? "домой" : "→ " + esc(m.go)) : m.go && m.kind !== "AFTER" && m.kind !== "OFF" ? '<i class="lpl">' + esc(m.go) + "</i>" : "") + "</span></div>"
+    + '<div class="lr2"><b>' + esc(t) + '</b><span><small>' + esc(m.capW) + "</small>" + esc(m.capV) + "</span></div>"
+    + (m.prog >= 0 ? '<div class="lbar"><i style="width:' + Math.round(Math.max(.03, Math.min(1, m.prog)) * 100) + '%"></i></div>' : '<div class="lr3">' + (m.next ? "→ " + esc(shortS(m.next)) + (m.nextR ? " · " + esc(m.nextR) : "") : "") + "</div>") + "</div>";
+  const circ = '<div class="lcirc">' + ringSvg(72, 5, m.timer ? m.prog : -1, "rgba(255,255,255,.28)", "#fff")
+    + '<div class="wc"><small>' + esc(m.timer ? m.capV : m.sub.split(" ")[0] || "") + "</small><b>" + esc(t) + "</b><small>" + esc(m.home ? "домой" : m.go === "спортзал" ? "с/з" : m.go) + "</small></div></div>";
+  box.innerHTML = '<div class="pvs"><div><div class="caps pvh">Экран блокировки</div><div class="scr"><div class="ldate">' + esc(day + ", " + d) + '</div><div class="linl">' + esc(m.inline || "") + '</div><div class="lclock">' + hm(now.getHours() * 60 + now.getMinutes()) + '</div><div class="lws">' + rect + circ + "</div></div></div>"
+    + '<div><div class="caps pvh">Рабочий стол</div><div class="scr home"><div class="icons">' + "<i></i>".repeat(4) + '</div><div class="wwrap s">' + small + '</div><div class="icons">' + "<i></i>".repeat(4) + '</div><div class="wwrap m">' + medium + "</div></div></div></div>";
+}
+if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => { pvOn = e.isIntersecting; if (pvOn) renderPreview(); })).observe($("guide"));
+else pvOn = true;
+const calUrl = c => SITE.replace(/^https?:/, "webcal:") + "cal/" + c.replace(/[АБВГ]/g, x => LAT[x].toUpperCase()) + ".ics";
 function scriptFor(c) {
   const w = classWeek(c), week = {};
   for (let d = 0; d < 6; d++) {
@@ -965,8 +1362,10 @@ function scriptFor(c) {
     for (let i = 0; i < arr.length; i++) if (!arr[i]) arr[i] = ["", ""];
     if (arr.length) week[d + 1] = arr;
   }
-  return SCRIPTABLE.replace("__BELLS__", JSON.stringify(BELLS)).replace("__WEEK__", JSON.stringify(week))
-    .split("__TITLE__").join("Звонок " + c).split("__CLASS__").join(c);
+  // тема из конструктора; по умолчанию пусто, скрипт и так чёрный
+  const theme = ["bg", "ac", "p", "n", "d"].every(k => th[k] === TH0[k]) ? "" : thCode();
+  return SCRIPTABLE.split("__BELLS__").join(JSON.stringify(BELLS)).split("__WEEK__").join(JSON.stringify(week))
+    .split("__THEME__").join(theme).split("__CLASS__").join(c);
 }
 function download(name, text) {
   const a = h("a", {href: URL.createObjectURL(new Blob([text], {type: "text/javascript"})), download: name});
@@ -974,14 +1373,28 @@ function download(name, text) {
 }
 
 /* ---------- поделиться ---------- */
-const MSG = "Нашёл «Звонок», это расписание всех классов нашего лицея: сколько до звонка, какой урок следующий и в каком кабинете. Работает офлайн, есть приложение для Android и виджеты для iPhone.\n" + SITE;
+const QRS = /*@QRS@*/null; // QR-коды: "" это сайт, остальное ссылки на классы
+const shareUrl = () => pick || useCustom ? SITE : SITE + "#" + slugOf(cls);
+const shareMsg = () => "Нашёл «Звонок», это расписание всех классов нашего лицея: сколько до звонка, какой урок следующий и в каком кабинете. Работает офлайн, есть приложение для Android и виджеты для iPhone.\n"
+  + (pick || useCustom ? "" : "Ссылка сразу на " + cls + ":\n") + shareUrl();
+function qrSvg(code) {
+  const [n, hex] = code.split(":"), N = +n;
+  let bits = "", p = "";
+  for (const ch of hex) bits += parseInt(ch, 16).toString(2).padStart(4, "0");
+  for (let i = 0; i < N * N; i++) if (bits[i] === "1") p += "M" + i % N + " " + Math.floor(i / N) + "h1v1h-1z";
+  return '<svg viewBox="0 0 ' + N + " " + N + '" width="100%" height="100%" shape-rendering="crispEdges" aria-hidden="true"><path d="' + p + '" fill="#000"/></svg>';
+}
 function shareText(t) { if (navigator.share) navigator.share({text: t}).catch(() => {}); else copy(t); }
-$("shMsg").textContent = MSG;
-$("shMsgCopy").onclick = () => copy(MSG, "Сообщение скопировано");
-$("shNative").onclick = () => navigator.share ? navigator.share({title: "Звонок", text: MSG.split("\n")[0], url: SITE}).catch(() => {}) : copy(SITE, "Ссылка скопирована");
-$("shCopy").onclick = () => copy(SITE, "Ссылка скопирована");
-$("shTg").href = "https://t.me/share/url?url=" + encodeURIComponent(SITE) + "&text=" + encodeURIComponent(MSG.split("\n")[0]);
-$("shWa").href = "https://wa.me/?text=" + encodeURIComponent(MSG);
+function renderShare() {
+  const url = shareUrl(), msg = shareMsg(), code = QRS && QRS[pick || useCustom ? "" : cls];
+  $("shMsg").textContent = msg;
+  $("shTg").href = "https://t.me/share/url?url=" + encodeURIComponent(url) + "&text=" + encodeURIComponent(msg.split("\n")[0]);
+  $("shWa").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+  if (code) { $("qr").innerHTML = qrSvg(code); $("qr").setAttribute("aria-label", "QR-код: " + url); }
+}
+$("shMsgCopy").onclick = () => copy(shareMsg(), "Сообщение скопировано");
+$("shNative").onclick = () => navigator.share ? navigator.share({title: "Звонок", text: shareMsg().split("\n")[0], url: shareUrl()}).catch(() => {}) : copy(shareUrl(), "Ссылка скопирована");
+$("shCopy").onclick = () => copy(shareUrl(), "Ссылка скопирована");
 $("fTerm").textContent = "Расписание: " + DATA.term + ", утверждено " + DATA.updated.split("-").reverse().join(".") + ". Если в лицее что-то поменяли, собери своё расписание в конструкторе.";
 
 /* ---------- старт ---------- */
@@ -994,7 +1407,20 @@ renderCloud();
 // iPhone сразу видит свою инструкцию; с экрана «Домой» сайт выглядит как приложение
 if (STANDALONE) document.documentElement.classList.add("app");
 if (IOS) { os = "ios"; renderOs(); renderGuide("ios"); }
+addEventListener("hashchange", () => { if (openHashClass()) { rebuild(); selDay = null; renderClasses(); lastKey = ""; renderLive(); } });
+// свежие замены с сайта (в файле сайта уже есть копия на момент сборки)
+let chAt = 0;
+function loadChanges() {
+  if (!/^https?:$/.test(location.protocol) || Date.now() - chAt < 600000) return;
+  chAt = Date.now();
+  fetch("changes.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(j => {
+    if (!j || typeof j.days !== "object" || JSON.stringify(j) === JSON.stringify(CHANGES)) return;
+    CHANGES = j; lastKey = ""; renderLive();
+  }).catch(() => {});
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadChanges(); });
 tick();
+loadChanges();
 if (/^https?:$/.test(location.protocol) && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>

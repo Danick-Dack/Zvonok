@@ -25,6 +25,8 @@ final class Updates {
     private static final String KEY_BUILD = "update_latest_build";
     private static final String KEY_NAME = "update_latest_name";
     private static final String API = "https://api.github.com/repos/Danick-Dack/Zvonok/releases/latest";
+    private static final String CHANGES = SettingsActivity.SITE + "changes.json";
+    private static final String KEY_CH_LAST = "changes_last_check";
 
     interface Done { void done(boolean ok); }
 
@@ -59,6 +61,54 @@ final class Updates {
         return p.getString(KEY_NAME, "?") + " (сборка " + p.getLong(KEY_BUILD, 0) + ")";
     }
 
+    /** Пора ли спросить замены (раз в 3 часа, только если пользователь разрешил выход в интернет). */
+    static boolean changesDue(Context ctx) {
+        SharedPreferences p = Updater.prefs(ctx);
+        return p.getBoolean(KEY_AUTO, false)
+                && System.currentTimeMillis() - p.getLong(KEY_CH_LAST, 0) > 3 * 3600_000L;
+    }
+
+    /** Скачать замены с сайта в фоне; если что-то поменялось, обновить уведомление и виджеты. */
+    static void checkChanges(Context ctx, Runnable done) {
+        Context app = ctx.getApplicationContext();
+        Handler main = new Handler(Looper.getMainLooper());
+        new Thread(() -> {
+            boolean changed = fetchChanges(app);
+            main.post(() -> {
+                if (changed) Updater.update(app);
+                if (done != null) done.run();
+            });
+        }).start();
+    }
+
+    /** @return true, если файл замен изменился. Вызывать не в главном потоке. */
+    private static boolean fetchChanges(Context app) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(CHANGES).openConnection();
+            c.setConnectTimeout(6000);
+            c.setReadTimeout(6000);
+            c.setUseCaches(false);
+            try (InputStream in = c.getInputStream()) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) > 0 && out.size() < 512_000) out.write(buf, 0, n);
+                String text = new String(out.toByteArray(), StandardCharsets.UTF_8);
+                if (new JSONObject(text).optJSONObject("days") == null) return false; // не файл замен
+                SharedPreferences p = Updater.prefs(app);
+                boolean changed = !text.equals(p.getString(Schedule.KEY_CHANGES, null));
+                p.edit().putString(Schedule.KEY_CHANGES, text).putLong(KEY_CH_LAST, System.currentTimeMillis()).apply();
+                if (changed) Schedule.invalidate();
+                return changed;
+            }
+        } catch (Exception ignored) {
+            return false; // нет сети: работаем по сохранённым заменам
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
     static boolean due(Context ctx) {
         SharedPreferences p = Updater.prefs(ctx);
         return p.getBoolean(KEY_AUTO, false)
@@ -72,8 +122,8 @@ final class Updates {
         p.edit().putBoolean(KEY_ASKED, true).apply();
         new android.app.AlertDialog.Builder(a, android.R.style.Theme_Material_Dialog_Alert)
                 .setTitle("Проверять обновления?")
-                .setMessage("Раз в сутки, когда приложение открыто, оно будет спрашивать GitHub, вышла ли новая версия. "
-                        + "О тебе ничего не отправляется. Это можно изменить в настройках.")
+                .setMessage("Когда приложение открыто, оно раз в сутки спросит GitHub, вышла ли новая версия, "
+                        + "и раз в 3 часа скачает с сайта замены в расписании. О тебе ничего не отправляется. Это можно изменить в настройках.")
                 .setPositiveButton("Разрешить", (d, w) -> {
                     p.edit().putBoolean(KEY_AUTO, true).apply();
                     allowed.run();
@@ -110,12 +160,17 @@ final class Updates {
                     }
                 }
             } catch (Exception ignored) {
-                // нет сети — не страшно, проверим в другой раз
+                // нет сети: не страшно, проверим в другой раз
             } finally {
                 if (c != null) c.disconnect();
             }
+            // заодно свежие замены (тот же разрешённый выход в интернет)
+            boolean changed = fetchChanges(app);
             final boolean r = ok;
-            main.post(() -> cb.done(r));
+            main.post(() -> {
+                if (changed) Updater.update(app);
+                cb.done(r);
+            });
         }).start();
     }
 }

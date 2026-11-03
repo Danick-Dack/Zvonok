@@ -50,23 +50,23 @@
                     android:id="@+id/m_chrono"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-thin"
+                    android:fontFamily="sans-serif-light"
                     android:fontFeatureSettings="tnum"
                     android:includeFontPadding="false"
                     android:maxLines="1"
                     android:text="24:16"
                     android:textColor="#FFFFFF"
-                    android:textSize="26sp" />
+                    android:textSize="28sp" />
 
                 <TextView
                     android:id="@+id/m_big"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-thin"
+                    android:fontFamily="sans-serif-light"
                     android:includeFontPadding="false"
                     android:maxLines="1"
                     android:textColor="#FFFFFF"
-                    android:textSize="26sp"
+                    android:textSize="28sp"
                     android:visibility="gone" />
             </LinearLayout>
 

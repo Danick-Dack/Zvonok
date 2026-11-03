@@ -9,12 +9,13 @@ import android.graphics.RectF;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
-/** Кольцо-таймер: тёмная дорожка, белая дуга прогресса и точка на её конце. */
+/** Кольцо-таймер: тёмная дорожка с рисками, белая дуга прогресса и светящаяся точка на её конце. */
 final class RingView extends View {
 
     private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint arc = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint knob = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tick = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF box = new RectF();
     private final float stroke;
     private float value = -1; // 0..1, -1 — без прогресса
@@ -22,15 +23,18 @@ final class RingView extends View {
 
     RingView(Context c) {
         super(c);
-        stroke = Ui.dp(c, 9);
+        stroke = Ui.dp(c, 12);
         track.setStyle(Paint.Style.STROKE);
         track.setStrokeWidth(stroke);
-        track.setColor(Color.parseColor("#1A1A1C"));
+        track.setColor(Color.parseColor("#18181B"));
+        tick.setStrokeWidth(Ui.dp(c, 1));
+        tick.setColor(Color.parseColor("#2A2A2E"));
         arc.setStyle(Paint.Style.STROKE);
         arc.setStrokeWidth(stroke);
         arc.setStrokeCap(Paint.Cap.ROUND);
         arc.setColor(Color.WHITE);
         knob.setColor(Color.WHITE);
+        knob.setShadowLayer(Ui.dp(c, 8), 0, 0, 0x99FFFFFF); // свечение (на старых Android может не рисоваться)
     }
 
     /** Плавно перейти к новому значению (0..1) или убрать дугу (-1). */
@@ -55,6 +59,14 @@ final class RingView extends View {
         float pad = stroke / 2 + Ui.dp(getContext(), 4);
         box.set(pad, pad, getWidth() - pad, getHeight() - pad);
         c.drawOval(box, track);
+        // 60 рисок внутри дорожки, каждая пятая длиннее
+        float cx = box.centerX(), cy = box.centerY(), rIn = box.width() / 2 - stroke / 2 - Ui.dp(getContext(), 3);
+        for (int i = 0; i < 60; i++) {
+            double a = Math.toRadians(i * 6 - 90);
+            float len = Ui.dp(getContext(), i % 5 == 0 ? 6 : 3);
+            float cos = (float) Math.cos(a), sin = (float) Math.sin(a);
+            c.drawLine(cx + rIn * cos, cy + rIn * sin, cx + (rIn - len) * cos, cy + (rIn - len) * sin, tick);
+        }
         if (value < 0) return;
         float sweep = Math.max(0.5f, value * 360f);
         c.drawArc(box, -90, sweep, false, arc);
