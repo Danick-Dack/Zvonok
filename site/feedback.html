@@ -114,14 +114,11 @@ textarea.f{min-height:160px;resize:vertical;line-height:1.45}
 </footer>
 <script>
 "use strict";
-// Google Форма: ID и номера полей подставляет сборка (tools/build_site.py). Пока пусто, отправляем через GitHub.
-const FORM_ID = "";
-const ENTRIES = {"type":"","text":"","class":""};
+// анонимные сообщения уходят письмом через FormSubmit (без аккаунтов). Шлём только тип, текст и класс
+const ENDPOINT = "https://formsubmit.co/ajax/danickdack13@gmail.com";
 const CLASSES = ["7А","7Б","7В","8А","8Б","8В","8Г","9А","9Б","9В","9Г","10А","10Б","10В","10Г","11А","11Б","11В","11Г"];
-const REPO = "https://github.com/Danick-Dack/Zvonok";
 const MAX = 1000, PAUSE = 30000;
 const KINDS = ["Идея", "Ошибка", "Другое"];
-const GOOGLE = !!FORM_ID && !!ENTRIES.type && !!ENTRIES.text;
 const $ = id => document.getElementById(id);
 const store = {
   get(k, d) { try { const v = localStorage.getItem("zv." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -129,13 +126,6 @@ const store = {
 };
 let kind = KINDS[0], waitT;
 
-if (!GOOGLE) {
-  // через GitHub не анонимно: честно говорим об этом
-  $("pTitle").textContent = "Через GitHub";
-  $("promise").querySelector("svg").innerHTML = '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>';
-  $("pText").textContent = "Для этого нужен аккаунт GitHub, и твоё сообщение будет видно всем. Не пиши туда ничего личного.";
-  $("send").innerHTML = 'Отправить через GitHub <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"/></svg>';
-}
 function renderKind() {
   const box = $("kind"); box.textContent = "";
   KINDS.forEach(k => { const b = document.createElement("button"); b.textContent = k; b.className = k === kind ? "on" : ""; b.onclick = () => { kind = k; renderKind(); }; box.append(b); });
@@ -150,7 +140,7 @@ function update() {
   $("cnt").textContent = n + " / " + MAX; $("cnt").classList.toggle("hi", n >= 950);
   $("send").disabled = txt.value.trim().length < 3 || w > 0;
   if (w > 0) { $("send").textContent = "Ещё " + Math.ceil(w / 1000) + " с"; clearTimeout(waitT); waitT = setTimeout(update, 1000 - w % 1000 + 20); }
-  else if (/^Ещё/.test($("send").textContent)) $("send").textContent = GOOGLE ? "Отправить" : "Отправить через GitHub";
+  else if (/^Ещё/.test($("send").textContent)) $("send").textContent = "Отправить";
 }
 txt.oninput = () => { store.set("fbDraft", txt.value); $("err").hidden = true; update(); };
 function fail(t) { $("err").textContent = t; $("err").hidden = false; }
@@ -158,25 +148,16 @@ async function send() {
   const text = txt.value.trim().slice(0, MAX);
   if (text.length < 3) return;
   if (left() > 0) { fail("Подожди полминуты и отправь ещё раз."); update(); return; }
-  if (!GOOGLE) {
-    const body = text + (sel.value ? "\n\nКласс: " + sel.value : "");
-    window.open(REPO + "/issues/new?title=" + encodeURIComponent(kind + ": " + text.split("\n")[0].slice(0, 60)) + "&body=" + encodeURIComponent(body), "_blank", "noopener");
-    store.set("fbLast", Date.now()); update();
-    return;
-  }
   if (navigator.onLine === false) { fail("Не получилось отправить, нет интернета. Текст сохранён, попробуй позже."); return; }
-  // в форму уходят только тип, текст и класс. Ни устройства, ни времени, ни идентификаторов
-  const data = new URLSearchParams();
-  data.append(ENTRIES.type, kind);
-  data.append(ENTRIES.text, text);
-  if (sel.value && ENTRIES.class) data.append(ENTRIES.class, sel.value);
+  const data = {"Тип": kind, "Сообщение": text, "Класс": sel.value || "не указан", _subject: "Звонок: " + kind, _template: "box", _captcha: "false"};
   $("send").disabled = true;
   try {
-    await fetch("https://docs.google.com/forms/d/e/" + encodeURIComponent(FORM_ID) + "/formResponse", {method: "POST", mode: "no-cors", body: data, credentials: "omit", referrerPolicy: "no-referrer"});
+    const r = await fetch(ENDPOINT, {method: "POST", headers: {"Content-Type": "application/json", Accept: "application/json"}, body: JSON.stringify(data), credentials: "omit", referrerPolicy: "no-referrer"});
+    if (!r.ok) throw new Error(r.status);
     store.set("fbLast", Date.now()); store.set("fbDraft", ""); txt.value = "";
     $("form").hidden = true; $("done").hidden = false;
   } catch (e) {
-    fail("Не получилось отправить, нет интернета. Текст сохранён, попробуй позже.");
+    fail("Не получилось отправить. Текст сохранён, попробуй чуть позже.");
   }
   update();
 }

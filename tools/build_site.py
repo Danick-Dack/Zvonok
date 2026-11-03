@@ -10,7 +10,7 @@
   site/changes.json        : замены и сокращённые уроки (копия data/changes.json)
   site/og.png              : картинка для превью ссылки в мессенджерах
   site/changelog.html      : «Что нового» из data/changelog.json
-  site/feedback.html       : «Написать нам» (Google Форма или запасной путь через GitHub)
+  site/feedback.html       : «Написать нам» (анонимно, письмом через FormSubmit)
   site/manifest.webmanifest, site/sw.js, иконки: чтобы сайт ставился «как приложение»
 Нужны пакеты: qrcode, pillow (pip install qrcode pillow).
 """
@@ -29,10 +29,6 @@ SITE_URL = "https://danick-dack.github.io/Zvonok/"
 APK_URL = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk"
 OUT = os.path.join(ROOT, "site")
 
-# Обратная связь через Google Форму: ID из ссылки .../forms/d/e/<ID>/viewform и номера полей entry.NNN
-# (тип, текст, класс). Пока пусто, страница предлагает отправить через GitHub и честно пишет, что это не анонимно.
-FEEDBACK_FORM_ID = ""
-FEEDBACK_ENTRIES = {"type": "", "text": "", "class": ""}
 
 LOGO = ('<svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="54" cy="54" r="24" fill="none" stroke="#2a2a2a" stroke-width="6"/>'
         '<path d="M54 30A24 24 0 1 1 30 54" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>'
@@ -355,9 +351,7 @@ def main():
     css = read("site", "src", "common.css")
     classes = sorted(data["classes"], key=lambda c: (int(re.match(r"\d+", c)[0]), c))
     for name, extra in (("changelog.html", {"/*@CHANGELOG@*/[]": js_literal(json.loads(read("data", "changelog.json")))}),
-                        ("feedback.html", {"@FEEDBACK_FORM_ID@": re.sub(r"[^\w-]", "", FEEDBACK_FORM_ID),
-                                           "/*@FEEDBACK_ENTRIES@*/{}": js_literal(FEEDBACK_ENTRIES),
-                                           "/*@CLASSES@*/[]": js_literal(classes)}),
+                        ("feedback.html", {"/*@CLASSES@*/[]": js_literal(classes)}),
                         ("iphone.html", {})):
         t = read("site", "src", name).replace("@COMMON_CSS@", css).replace("@HEADER@", header(name)).replace("@FAVICON@", favicon)
         for k, v in extra.items():

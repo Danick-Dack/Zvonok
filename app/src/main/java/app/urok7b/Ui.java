@@ -37,6 +37,10 @@ final class Ui {
 
     /** Экран со стрелкой «назад», заголовком и подзаголовком. Возвращает колонку для содержимого. */
     static LinearLayout screen(Activity a, String title, String sub) {
+        // экран пересобирается целиком (после «Проверить обновления», выбора класса и т.п.): сохраняем прокрутку
+        android.view.ViewGroup content = a.findViewById(android.R.id.content);
+        android.view.View prev = content != null && content.getChildCount() > 0 ? content.getChildAt(0) : null;
+        final int keepY = prev instanceof ScrollView ? prev.getScrollY() : 0;
         ScrollView sv = new ScrollView(a);
         sv.setBackgroundColor(BG);
         sv.setFillViewport(true);
@@ -57,6 +61,7 @@ final class Ui {
             root.addView(s);
         }
         a.setContentView(sv);
+        if (keepY > 0) sv.post(() -> sv.scrollTo(0, keepY));
         return root;
     }
 
