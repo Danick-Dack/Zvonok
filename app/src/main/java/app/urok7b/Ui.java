@@ -61,7 +61,16 @@ final class Ui {
             root.addView(s);
         }
         a.setContentView(sv);
-        if (keepY > 0) sv.post(() -> sv.scrollTo(0, keepY));
+        if (keepY > 0) {
+            // прокрутить до первого кадра, иначе на миг видно верх экрана
+            sv.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+                @Override public boolean onPreDraw() {
+                    sv.getViewTreeObserver().removeOnPreDrawListener(this);
+                    sv.scrollTo(0, keepY);
+                    return false; // этот кадр пропускаем, следующий уже на месте
+                }
+            });
+        }
         return root;
     }
 
