@@ -49,7 +49,6 @@ public class SettingsActivity extends Activity {
                     Updater.update(this);
                 }));
         notif.addView(flag("Вибрация перед уроком", "Тихо вибрирует за 2 минуты до звонка на урок", Updater.KEY_BUZZ, false));
-        notif.addView(flag("Каникулы", "Всё на паузе: ни уведомления, ни будильников. Каникулы из расписания приложение знает и само", Updater.KEY_VACATION, false));
 
         LinearLayout upd = section("ОБНОВЛЕНИЯ");
         boolean avail = Updates.available(this);

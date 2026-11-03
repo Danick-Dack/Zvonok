@@ -31,7 +31,7 @@ import java.time.ZonedDateTime;
  *  • пока экран выключен, поминутных обновлений нет совсем — только на звонках;
  *  • при включении экрана служба сразу обновляет всё одним вызовом;
  *  • таймеры тикают сами (Chronometer), а в экономном режиме их нет вовсе;
- *  • на каникулах не работает ничего: ни службы, ни будильников.
+ *  • на каникулах и в праздники будильник один раз в сутки (в полночь), поминутных обновлений нет.
  */
 public final class Updater {
 
@@ -42,7 +42,6 @@ public final class Updater {
     public static final String PREFS = "settings";
     public static final String KEY_NOTIF = "notif_enabled";
     public static final String KEY_SCHOOL_ONLY = "school_only";
-    public static final String KEY_VACATION = "vacation";
     public static final String KEY_BUZZ = "buzz_before_lesson";   // вибрация за 2 мин до урока
     static final String ACTION_BUZZ = "app.urok7b.BUZZ";
     static final String CHANNEL_BUZZ = "lesson_buzz";
@@ -101,12 +100,12 @@ public final class Updater {
         ZonedDateTime now = ZonedDateTime.now();
         long nowMs = now.toInstant().toEpochMilli();
         Schedule.Status s = Schedule.compute(now);
-        boolean vacation = prefs(ctx).getBoolean(KEY_VACATION, false);
-        Display d = vacation ? vacation() : describe(s, nowMs);
+        // каникулы, праздники, отменённые дни и выходные приложение знает само (расписание + замены с сайта)
+        Display d = describe(s, nowMs);
         boolean screenOn = isScreenOn(ctx);
         Theme t = Theme.load(ctx);
 
-        boolean notif = !vacation && notifWanted(ctx, d);
+        boolean notif = notifWanted(ctx, d);
         boolean widgets = widgetIds(ctx, LessonWidget.class).length > 0
                 || widgetIds(ctx, MiniWidget.class).length > 0
                 || widgetIds(ctx, DayWidget.class).length > 0;
@@ -118,11 +117,7 @@ public final class Updater {
             MiniWidget.updateAll(ctx, d, t);
             DayWidget.updateAll(ctx, d, t, s);
         }
-        scheduleBuzz(ctx, now, !vacation && prefs(ctx).getBoolean(KEY_BUZZ, false));
-        if (vacation) {
-            cancelAlarm(ctx);
-            return;
-        }
+        scheduleBuzz(ctx, now, prefs(ctx).getBoolean(KEY_BUZZ, false));
         // без секунд таймер — это текст, и его надо обновлять раз в минуту, пока экран включён
         scheduleNext(ctx, s, d, nowMs, screenOn, notif || widgets);
     }
@@ -139,18 +134,6 @@ public final class Updater {
     }
 
     // ---------- тексты ----------
-
-    static Display vacation() {
-        Display d = new Display();
-        d.kind = Schedule.Kind.DAY_OFF;
-        d.label = "КАНИКУЛЫ";
-        d.title = "Отдыхай";
-        d.big = "☼";
-        d.notifTitle = d.compactTitle = "Каникулы";
-        d.miniLabel = "КАНИКУЛЫ";
-        d.sig = "vacation";
-        return d;
-    }
 
     public static Display describe(Schedule.Status s, long now) {
         Display d = new Display();
@@ -536,11 +519,6 @@ public final class Updater {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    private static void cancelAlarm(Context ctx) {
-        AlarmManager am = ctx.getSystemService(AlarmManager.class);
-        if (am != null) am.cancel(tickIntent(ctx));
-    }
-
     private static void scheduleNext(Context ctx, Schedule.Status s, Display d, long nowMs,
                                      boolean screenOn, boolean active) {
         AlarmManager am = ctx.getSystemService(AlarmManager.class);
@@ -631,7 +609,7 @@ public final class Updater {
     /** Сработало напоминание: тихо вибрируем, если урок правда вот-вот начнётся. */
     static void buzz(Context ctx) {
         SharedPreferences p = prefs(ctx);
-        if (!p.getBoolean(KEY_BUZZ, false) || p.getBoolean(KEY_VACATION, false)) return;
+        if (!p.getBoolean(KEY_BUZZ, false)) return;
         Schedule.load(ctx);
         ZonedDateTime now = ZonedDateTime.now();
         long nowMs = now.toInstant().toEpochMilli();

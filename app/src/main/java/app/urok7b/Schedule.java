@@ -103,6 +103,7 @@ public final class Schedule {
     static final String KEY_CUSTOM = "custom_json";
     static final String KEY_USE_CUSTOM = "use_custom";
     static final String KEY_CHANGES = "changes_json"; // замены, скачанные с сайта
+    static final String KEY_SCHEDULE = "schedule_json"; // всё расписание, скачанное с сайта
 
     // ---- исходные данные (читаются один раз) ----
     private static String school = "Лицей №165";
@@ -161,10 +162,36 @@ public final class Schedule {
         loadedKey = null;
     }
 
+    /** Скачали новое расписание: при следующем обращении перечитать его. */
+    public static synchronized void resetBase() {
+        baseBells = null;
+        HOLIDAYS.clear();
+        SUBJECTS.clear();
+        CLASSES.clear();
+        CLASS_ORDER.clear();
+        loadedKey = null;
+    }
+
+    /** Расписание из APK или скачанное с сайта: берём более свежее (по полю updated). */
+    private static JSONObject pickSchedule(Context ctx) throws Exception {
+        JSONObject best = new JSONObject(readAsset(ctx, "schedule.json"));
+        String saved = Updater.prefs(ctx).getString(KEY_SCHEDULE, null);
+        if (saved != null) {
+            try {
+                JSONObject o = new JSONObject(saved);
+                if (o.optJSONObject("classes") != null && o.optJSONArray("bells") != null
+                        && o.optString("updated", "").compareTo(best.optString("updated", "")) >= 0) best = o;
+            } catch (Exception ignored) {
+                // испорченный файл пропускаем
+            }
+        }
+        return best;
+    }
+
     private static void ensureBase(Context ctx) {
         if (baseBells != null) return;
         try {
-            JSONObject root = new JSONObject(readAsset(ctx, "schedule.json"));
+            JSONObject root = pickSchedule(ctx);
             school = root.optString("school", school);
             term = root.optString("term", "");
             termEnd = root.optString("term_end", "");

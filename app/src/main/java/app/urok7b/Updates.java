@@ -26,6 +26,7 @@ final class Updates {
     private static final String KEY_NAME = "update_latest_name";
     private static final String API = "https://api.github.com/repos/Danick-Dack/Zvonok/releases/latest";
     private static final String CHANGES = SettingsActivity.SITE + "changes.json";
+    private static final String SCHEDULE = SettingsActivity.SITE + "schedule.json";
     private static final String KEY_CH_LAST = "changes_last_check";
 
     interface Done { void done(boolean ok); }
@@ -73,12 +74,43 @@ final class Updates {
         Context app = ctx.getApplicationContext();
         Handler main = new Handler(Looper.getMainLooper());
         new Thread(() -> {
-            boolean changed = fetchChanges(app);
+            boolean changed = fetchSchedule(app) | fetchChanges(app);
             main.post(() -> {
                 if (changed) Updater.update(app);
                 if (done != null) done.run();
             });
         }).start();
+    }
+
+    /** Всё расписание с сайта (data/schedule.json). @return true, если оно изменилось. Не в главном потоке. */
+    private static boolean fetchSchedule(Context app) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(SCHEDULE).openConnection();
+            c.setConnectTimeout(6000);
+            c.setReadTimeout(8000);
+            c.setUseCaches(false);
+            try (InputStream in = c.getInputStream()) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) > 0 && out.size() < 2_000_000) out.write(buf, 0, n);
+                String text = new String(out.toByteArray(), StandardCharsets.UTF_8);
+                JSONObject o = new JSONObject(text);
+                if (o.optJSONObject("classes") == null || o.optJSONArray("bells") == null) return false; // не расписание
+                SharedPreferences p = Updater.prefs(app);
+                boolean changed = !text.equals(p.getString(Schedule.KEY_SCHEDULE, null));
+                if (changed) {
+                    p.edit().putString(Schedule.KEY_SCHEDULE, text).apply();
+                    Schedule.resetBase();
+                }
+                return changed;
+            }
+        } catch (Exception ignored) {
+            return false; // нет сети: работаем по сохранённому расписанию
+        } finally {
+            if (c != null) c.disconnect();
+        }
     }
 
     /** @return true, если файл замен изменился. Вызывать не в главном потоке. */
@@ -164,8 +196,8 @@ final class Updates {
             } finally {
                 if (c != null) c.disconnect();
             }
-            // заодно свежие замены (тот же разрешённый выход в интернет)
-            boolean changed = fetchChanges(app);
+            // заодно свежее расписание и замены (тот же разрешённый выход в интернет)
+            boolean changed = fetchSchedule(app) | fetchChanges(app);
             final boolean r = ok;
             main.post(() -> {
                 if (changed) Updater.update(app);

@@ -7,6 +7,9 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      - 'data/**'
+      - 'ios/**'
+      - 'tools/build_site.py'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -28,6 +31,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # сайт собирается из data/schedule.json: поменял расписание на GitHub — сайт обновился сам
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Собрать сайт из расписания
+        run: |
+          pip install qrcode pillow
+          python tools/build_site.py
       - uses: actions/configure-pages@v5
         with:
           enablement: true

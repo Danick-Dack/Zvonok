@@ -8,6 +8,7 @@
   site/poster.html         : плакат A4 с QR-кодом для класса
   site/cal/*.ics           : календарь каждого класса с напоминанием за 3 минуты до урока
   site/changes.json        : замены и сокращённые уроки (копия data/changes.json)
+  site/schedule.json       : всё расписание (копия data/schedule.json) для приложения
   site/og.png              : картинка для превью ссылки в мессенджерах
   site/changelog.html      : «Что нового» из data/changelog.json
   site/feedback.html       : «Написать нам» (анонимно, письмом через FormSubmit)
@@ -365,7 +366,11 @@ def main():
         with open(os.path.join(OUT, "cal", slug(c) + ".ics"), "w", encoding="utf-8", newline="") as f:
             f.write(calendar(data, changes, c))
     write("changes.json", json.dumps(changes, ensure_ascii=False, indent=1))
-    og_image().save(os.path.join(OUT, "og.png"), optimize=True)
+    # расписание целиком: приложение скачивает его отсюда, чтобы новое расписание пришло без обновления APK
+    write("schedule.json", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    # в GitHub Actions другие шрифты: картинку превью не перерисовываем, берём закоммиченную
+    if not os.environ.get("CI") or not os.path.exists(os.path.join(OUT, "og.png")):
+        og_image().save(os.path.join(OUT, "og.png"), optimize=True)
     print("site/index.html", len(page) // 1024, "KB")
 
 
