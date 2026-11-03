@@ -1328,12 +1328,13 @@ function renderPreview() {
     + (m.prog >= 0 ? '<div class="lbar"><i style="width:' + Math.round(Math.max(.03, Math.min(1, m.prog)) * 100) + '%"></i></div>' : '<div class="lr3">' + (m.next ? "→ " + esc(shortS(m.next)) + (m.nextR ? " · " + esc(m.nextR) : "") : "") + "</div>") + "</div>";
   const circ = '<div class="lcirc">' + ringSvg(72, 5, m.timer ? m.prog : -1, "rgba(255,255,255,.28)", "#fff")
     + '<div class="wc"><small>' + esc(m.timer ? m.capV : m.sub.split(" ")[0] || "") + "</small><b>" + esc(t) + "</b><small>" + esc(m.home ? "домой" : m.go === "спортзал" ? "с/з" : m.go) + "</small></div></div>";
-  const sx = box.firstChild && box.firstChild.scrollLeft || 0;
-  const html = '<div class="pvs"><div><div class="caps pvh">Экран блокировки</div><div class="scr"><div class="ldate">' + esc(day + ", " + d) + '</div><div class="linl">' + esc(m.inline || "") + '</div><div class="lclock">' + hm(now.getHours() * 60 + now.getMinutes()) + '</div><div class="lws">' + rect + circ + "</div></div></div>"
-    + '<div><div class="caps pvh">Рабочий стол</div><div class="scr home"><div class="icons">' + "<i></i>".repeat(4) + '</div><div class="wwrap s">' + small + '</div><div class="icons">' + "<i></i>".repeat(4) + '</div><div class="wwrap m">' + medium + "</div></div></div></div>";
+  const html = '<div><div class="caps pvh">Экран блокировки</div><div class="scr"><div class="ldate">' + esc(day + ", " + d) + '</div><div class="linl">' + esc(m.inline || "") + '</div><div class="lclock">' + hm(now.getHours() * 60 + now.getMinutes()) + '</div><div class="lws">' + rect + circ + "</div></div></div>"
+    + '<div><div class="caps pvh">Рабочий стол</div><div class="scr home"><div class="icons">' + "<i></i>".repeat(4) + '</div><div class="wwrap s">' + small + '</div><div class="icons">' + "<i></i>".repeat(4) + '</div><div class="wwrap m">' + medium + "</div></div></div>";
+  // лента создаётся один раз и не пересоздаётся: иначе прокрутка сбрасывается на первое фото
+  let pvs = box.querySelector(".pvs");
+  if (!pvs) { box.innerHTML = '<div class="pvs"></div>'; pvs = box.firstChild; box._h = ""; }
   if (html === box._h || box._t) return; // пока листают пальцем, не перерисовываем
-  box._h = html; box.innerHTML = html;
-  if (sx && box.firstChild) box.firstChild.scrollLeft = sx;
+  box._h = html; pvs.innerHTML = html;
 }
 // пока листают превью пальцем, не перерисовываем его (иначе прокрутка сбрасывается)
 let pvTouchT;
