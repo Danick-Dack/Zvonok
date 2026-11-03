@@ -357,7 +357,8 @@ def main():
     for name, extra in (("changelog.html", {"/*@CHANGELOG@*/[]": js_literal(json.loads(read("data", "changelog.json")))}),
                         ("feedback.html", {"@FEEDBACK_FORM_ID@": re.sub(r"[^\w-]", "", FEEDBACK_FORM_ID),
                                            "/*@FEEDBACK_ENTRIES@*/{}": js_literal(FEEDBACK_ENTRIES),
-                                           "/*@CLASSES@*/[]": js_literal(classes)})):
+                                           "/*@CLASSES@*/[]": js_literal(classes)}),
+                        ("iphone.html", {})):
         t = read("site", "src", name).replace("@COMMON_CSS@", css).replace("@HEADER@", header(name)).replace("@FAVICON@", favicon)
         for k, v in extra.items():
             assert k in t, k

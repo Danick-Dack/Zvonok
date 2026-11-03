@@ -1,0 +1,1485 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="description" content="Как поставить виджет «Звонок» с таймером до звонка на экран блокировки iPhone. Пошаговая анимация.">
+<meta name="theme-color" content="#09090a">
+<title>Звонок на iPhone</title>
+<link rel="icon" href="@FAVICON@">
+<style>
+/* Layout: phone-as-stage on the left, step script on the right; stacks to one column on phones.
+   Deliberately single-theme dark, like the «Звонок» site itself: black ground, white type, one brass «bell» signal. */
+:root{
+  color-scheme: dark;
+  --bg:#09090a;
+  --surface:#121214;
+  --raise:#1a1a1d;
+  --line:#2a2a2f;
+  --fg:#f3f3f1;
+  --muted:#93939a;
+  --dim:#5f5f66;
+  --signal:#ffcf4a;
+  --signal-ink:#1a1405;
+  --ios-blue:#0a84ff;
+  --ios-red:#ff453a;
+  --font-display:"Onest", "SF Pro Display", system-ui, sans-serif;
+  --font-body:"Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-ios:-apple-system, "SF Pro Text", "Onest", system-ui, sans-serif;
+  --font-mono:"JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--font-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 64px}
+
+/* ---------- header ---------- */
+.top{display:flex;flex-direction:column;gap:12px;margin-bottom:36px;max-width:720px}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:10px}
+.eyebrow .bell{width:8px;height:8px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 4px color-mix(in srgb, var(--signal) 18%, transparent)}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(36px, 6vw, 64px);line-height:1;letter-spacing:-.035em;margin:0;text-wrap:balance}
+h1 em{font-style:normal;color:var(--muted);font-weight:500}
+.lead{color:var(--muted);font-size:18px;margin:0;max-width:60ch}
+.lead b{color:var(--fg);font-weight:600}
+
+/* ---------- stage ---------- */
+.stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:56px;align-items:start}
+.phone-col{display:flex;flex-direction:column;align-items:center;gap:18px;position:sticky;top:calc(env(safe-area-inset-top, 0px) + 16px)}
+.phone-wrap{position:relative}
+.phone{position:absolute;left:0;top:0;width:316px;height:666px;transform-origin:0 0;border-radius:58px;
+  background:linear-gradient(145deg,#4a4a4f 0%,#1e1e21 22%,#2c2c30 50%,#18181a 78%,#3c3c41 100%);
+  padding:8px;box-shadow:0 40px 80px -30px rgba(0,0,0,.9), 0 0 0 1px #000, inset 0 0 0 1px rgba(255,255,255,.08)}
+.phone::before,.phone::after{content:"";position:absolute;width:3px;border-radius:2px;background:#2a2a2e}
+.phone::before{left:-3px;top:120px;height:58px;box-shadow:0 70px 0 #2a2a2e}
+.phone::after{right:-3px;top:170px;height:86px}
+
+.cap{min-height:52px;max-width:330px;width:100%;display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.cap-num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--signal);color:var(--signal-ink);font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
+.cap-text{font-weight:500;font-size:15px;line-height:1.3;transition:opacity .25s, transform .25s}
+.cap-text.swap{opacity:0;transform:translateY(4px)}
+
+.ctrl{display:flex;align-items:center;gap:10px}
+.cbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;transition:background .2s, transform .15s}
+.cbtn:hover{background:var(--raise)}
+.cbtn:active{transform:scale(.94)}
+.cbtn svg{width:18px;height:18px}
+.cbtn.main{width:56px;height:56px;background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.cbtn.main:hover{background:#fff}
+.cbtn:focus-visible,.chip:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.bar{width:100%;max-width:330px;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--signal);transition:width .5s ease}
+
+/* ---------- panel ---------- */
+.panel{min-width:0;padding-top:6px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:28px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:flex;align-items:center;gap:8px;padding:7px 12px 7px 8px;border-radius:999px;border:1px solid var(--line);background:transparent;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;white-space:nowrap;transition:all .25s}
+.chip b{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--raise);color:var(--fg);font-size:11px;font-variant-numeric:tabular-nums}
+.chip:hover{color:var(--fg)}
+.chip.done b{background:#2c2c31;color:var(--signal)}
+.chip.on{color:var(--bg);background:var(--fg);border-color:var(--fg)}
+.chip.on b{background:var(--bg);color:var(--fg)}
+
+.step{transition:opacity .35s, transform .35s}
+.step.swap{opacity:0;transform:translateY(8px)}
+.step-of{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 10px}
+.step h2{font-family:var(--font-display);font-size:clamp(28px, 3.6vw, 40px);line-height:1.05;letter-spacing:-.025em;margin:0 0 14px;text-wrap:balance;font-weight:700}
+.step .txt{font-size:18px;color:#cfcfd2;margin:0 0 26px;max-width:56ch}
+.step .txt q{quotes:"«" "»";color:var(--fg);font-weight:600}
+.beats{list-style:none;margin:0 0 24px;padding:0;display:flex;flex-direction:column;gap:2px;max-width:520px}
+.beats li{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:14px;color:var(--dim);font-weight:500;transition:background .3s, color .3s}
+.beats li .dot{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;font-variant-numeric:tabular-nums;transition:all .3s}
+.beats li .dot svg{width:12px;height:12px;display:none}
+.beats li.now{background:var(--surface);color:var(--fg)}
+.beats li.now .dot{border-color:var(--signal);color:var(--signal);box-shadow:0 0 0 4px color-mix(in srgb, var(--signal) 15%, transparent)}
+.beats li.ok{color:var(--muted)}
+.beats li.ok .dot{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.beats li.ok .dot span{display:none}
+.beats li.ok .dot svg{display:block}
+.tip{display:flex;gap:12px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:15px;max-width:520px}
+.tip svg{flex:none;width:18px;height:18px;margin-top:2px;color:var(--signal)}
+.tip:empty{display:none}
+
+.chip i{font-style:normal;font-size:11px;color:var(--signal);margin-left:-2px}
+.chip.on i{color:#7a5a00}
+.opt-badge{display:inline-block;margin-left:10px;padding:1px 9px;border-radius:999px;border:1px solid color-mix(in srgb, var(--signal) 55%, transparent);color:var(--signal);letter-spacing:.04em;text-transform:none;font-size:12px}
+
+/* ---------- widget showcase ---------- */
+.looks{margin-top:72px;border-top:1px solid var(--line);padding-top:40px}
+.looks h3{font-family:var(--font-display);font-size:26px;letter-spacing:-.02em;margin:0 0 8px}
+.looks > p{color:var(--muted);margin:0 0 22px;max-width:60ch}
+.lk-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(min(100%, 380px),1fr));gap:12px}
+.lk{border-radius:20px;overflow:hidden;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column}
+.lk-stage{position:relative;height:320px;display:flex;align-items:center;justify-content:center;font-family:var(--font-ios);color:#fff;overflow:hidden}
+.lk-stage > *:not(.wall){position:relative}
+.lk-cap{padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px}
+.lk-cap b{font-weight:600;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.lk-cap b .opt-badge{margin-left:0;font-size:11px;font-weight:500}
+.lk-cap span{color:var(--muted);font-size:14px}
+.lk-lock{flex-direction:column;justify-content:flex-start;padding-top:40px;gap:0}
+.lk-lock .li{font-size:13px;font-weight:600;opacity:.92}
+.lk-lock .ck{font-size:72px;font-weight:600;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums;font-family:-apple-system, "SF Pro Rounded", "Onest", system-ui, sans-serif}
+.lk-lock .rowl{display:flex;gap:10px;align-items:center;margin-top:12px}
+.lk-lock .lw{background:rgba(255,255,255,.1)}
+.lc{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
+.lc small{font-size:9px;opacity:.85}
+.lc b{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.lc span{font-size:9px;opacity:.8}
+.sw{width:150px;height:150px;border-radius:24px;background:#000;padding:13px 14px;display:flex;flex-direction:column;box-shadow:0 0 0 .5px rgba(255,255,255,.12), 0 14px 30px rgba(0,0,0,.4)}
+.sw b{font-size:16px;font-weight:500;margin-top:5px;line-height:1.1}
+.sw small{font-size:10px;color:#7a7a7a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw .tmr{font-size:32px;font-weight:200;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.sw .pbar{margin-top:4px}
+.sw .nx{margin-top:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:#e6e6e6;white-space:nowrap;overflow:hidden}
+.sw .nx span:first-child{overflow:hidden;text-overflow:ellipsis}
+.rc2{flex:none;font-size:9px;padding:1px 5px;border-radius:6px;background:#161616;border:1px solid #2a2a2a}
+.lk .mw{transform:scale(1.05)}
+.lgw{width:268px;height:288px;border-radius:24px;background:#000;padding:13px 15px;display:flex;flex-direction:column;box-shadow:0 0 0 .5px rgba(255,255,255,.12), 0 14px 30px rgba(0,0,0,.4)}
+.lgw .mw-mid b{font-size:18px}
+.lgw .mw-mid .tmr{font-size:34px}
+.lgw .list{margin-top:9px;display:flex;flex-direction:column;gap:1px}
+.lr{display:flex;align-items:center;gap:8px;padding:3px 7px;border-radius:8px;font-size:11.5px;color:#fff}
+.lr .n{width:8px;font-size:10px;color:#7a7a7a}
+.lr .t{width:30px;font-size:10px;color:#7a7a7a;font-variant-numeric:tabular-nums}
+.lr .r{margin-left:auto;font-size:10px;color:#7a7a7a}
+.lr.past, .lr.past .n, .lr.past .t, .lr.past .r{color:#3c3c3c}
+.lr.cur{background:#1a1a1a;font-weight:600}
+.lr.cur .r{color:#fff}
+.lr.nxt{background:#0e0e0e}
+
+/* ---------- help ---------- */
+.help{margin-top:72px;border-top:1px solid var(--line);padding-top:40px}
+.help h3{font-family:var(--font-display);font-size:26px;letter-spacing:-.02em;margin:0 0 22px}
+.qa{display:grid;grid-template-columns:repeat(auto-fit, minmax(260px,1fr));gap:12px}
+.qa div{padding:18px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.qa b{display:block;margin-bottom:6px;font-weight:600}
+.qa p{margin:0;color:var(--muted);font-size:15px}
+.fine{margin-top:28px;color:var(--dim);font-size:13px;max-width:70ch}
+
+@media (max-width: 860px){
+  .stage{grid-template-columns:minmax(0,1fr);gap:28px}
+  .phone-col{position:static}
+  .wrap{padding-block:28px 48px}
+  .top{margin-bottom:24px}
+  .chips{margin-bottom:20px}
+}
+
+/* =========================================================
+   iPhone internals: 300 × 650 design pixels
+   ========================================================= */
+.display{position:relative;width:300px;height:650px;border-radius:50px;overflow:hidden;background:#000;font-family:var(--font-ios);color:#fff;isolation:isolate;-webkit-user-select:none;user-select:none}
+.island{position:absolute;left:50%;top:11px;width:92px;height:27px;margin-left:-46px;border-radius:20px;background:#000;z-index:90}
+.sb{position:absolute;inset:0 0 auto;height:48px;z-index:80;display:flex;align-items:center;justify-content:space-between;padding:6px 28px 0 34px;font-size:14px;font-weight:600;pointer-events:none}
+.sb .sb-r{display:flex;gap:5px;align-items:center}
+.sb .sb-r svg{height:11px}
+.display.x-lockmode .sb-time{opacity:0}
+.homeind{position:absolute;left:50%;bottom:7px;width:110px;height:4px;margin-left:-55px;border-radius:3px;background:#fff;opacity:.9;z-index:85;pointer-events:none}
+
+.scr{position:absolute;inset:0;opacity:0;visibility:hidden;transform:scale(1.04);transition:opacity .42s cubic-bezier(.2,.8,.2,1), transform .5s cubic-bezier(.2,.8,.2,1), visibility 0s linear .5s;background:#000;overflow:hidden}
+.scr.x-on{opacity:1;visibility:visible;transform:none;transition:opacity .42s cubic-bezier(.2,.8,.2,1), transform .5s cubic-bezier(.2,.8,.2,1), visibility 0s}
+.scr[data-enter="zoom"]:not(.x-on){transform:scale(.18);opacity:0}
+.scr[data-enter="up"]:not(.x-on){transform:translateY(100%);opacity:1}
+.scr[data-enter="shrink"]:not(.x-on){transform:scale(1.4)}
+.scr[data-enter="grow"]:not(.x-on){transform:scale(.7)}
+.display.noanim *, .display.noanim *::before, .display.noanim *::after{transition:none!important;animation:none!important}
+.display.is-paused *, .display.is-paused *::before{animation-play-state:paused!important}
+
+.wall{position:absolute;inset:0;background:
+  radial-gradient(70% 45% at 18% 12%, #3e6b78 0%, transparent 70%),
+  radial-gradient(80% 50% at 95% 70%, #7a4a2d 0%, transparent 70%),
+  radial-gradient(60% 40% at 30% 95%, #24414d 0%, transparent 70%),
+  linear-gradient(170deg,#132027 0%,#1b1714 55%,#0e0c0b 100%)}
+
+/* finger */
+.finger{position:absolute;left:0;top:0;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;z-index:100;pointer-events:none;
+  background:rgba(255,255,255,.3);border:1.5px solid rgba(255,255,255,.85);box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.45);
+  opacity:0;transition:opacity .3s ease}
+.finger.x-show{opacity:1}
+.finger .fi{position:absolute;inset:0;border-radius:50%;transition:transform .14s, background .14s}
+.finger.x-press .fi{transform:scale(.78);background:rgba(255,255,255,.45)}
+.finger svg{position:absolute;left:-9px;top:-9px;width:56px;height:56px;transform:rotate(-90deg);opacity:0}
+.finger.x-hold svg{opacity:1}
+.finger svg circle{fill:none;stroke:var(--signal);stroke-width:3;stroke-linecap:round;stroke-dasharray:163;stroke-dashoffset:163}
+.finger.x-hold svg circle{animation:ring var(--hold,1s) linear forwards}
+@keyframes ring{to{stroke-dashoffset:0}}
+.rip{position:absolute;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:2px solid var(--signal);z-index:99;pointer-events:none;animation:rip .55s ease-out forwards}
+@keyframes rip{from{transform:scale(.3);opacity:1}to{transform:scale(1.25);opacity:0}}
+
+/* app icons */
+.ic{width:50px;height:50px;border-radius:12px;display:grid;place-items:center;overflow:hidden;position:relative;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.ic svg{width:30px;height:30px}
+.ic-appstore{background:linear-gradient(180deg,#1ec8ff,#1068f0)}
+.ic-safari{background:linear-gradient(180deg,#fff,#dfe9f5)}
+.ic-scriptable{background:linear-gradient(160deg,#33415e,#121826)}
+.ic-cal{background:#fff;color:#111;display:flex;flex-direction:column;gap:0;line-height:1}
+.ic-cal small{color:#ff3b30;font-size:8px;font-weight:600;margin-top:6px}
+.ic-cal b{font-size:26px;font-weight:300;margin-top:1px}
+.ic-photos{background:#fff}
+.ic-photos i{width:30px;height:30px;border-radius:50%;background:conic-gradient(#f7b500,#ff6b2c,#ff3b6b,#b44fe0,#3d7bff,#2fc4d8,#57d158,#f7b500);-webkit-mask:radial-gradient(circle, transparent 5px, #000 5.5px);mask:radial-gradient(circle, transparent 5px, #000 5.5px)}
+.ic-cam{background:linear-gradient(180deg,#e8e8ea,#9c9ca2)}
+.ic-clock{background:#000}
+.ic-weather{background:linear-gradient(180deg,#3aa0ff,#1d63d8)}
+.ic-notes{background:linear-gradient(180deg,#ffd43b 0 26%, #fff 26%)}
+.ic-settings{background:linear-gradient(180deg,#a6a6ac,#6c6c72)}
+.ic-phone{background:linear-gradient(180deg,#5af07a,#20c440)}
+.ic-msg{background:linear-gradient(180deg,#5af07a,#20c440)}
+.ic-music{background:linear-gradient(180deg,#ff5a7a,#f2243f)}
+
+/* ---------- home ---------- */
+.h-top{position:absolute;top:44px;left:14px;right:14px;display:flex;justify-content:space-between;z-index:8;opacity:0;transition:opacity .3s}
+#s-home.x-jiggle .h-top{opacity:1}
+.pillbtn{padding:5px 12px;border-radius:999px;background:rgba(120,120,128,.45);backdrop-filter:blur(10px);font-size:13px;font-weight:600;color:#fff}
+.h-body{position:absolute;top:70px;left:0;right:0;padding:0 20px}
+.hwidget{height:0;overflow:visible;transition:height .55s cubic-bezier(.2,.8,.2,1);position:relative;z-index:6}
+#s-home.x-widget .hwidget{height:154px}
+.hwidget .mwbox{opacity:0;transform:scale(.6);transition:opacity .4s .15s, transform .55s .1s cubic-bezier(.3,1.4,.4,1)}
+#s-home.x-widget .hwidget .mwbox{opacity:1;transform:none}
+.mwbox{display:flex;flex-direction:column;align-items:center;gap:5px}
+.mwbox > span{font-size:10.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.grid{display:grid;grid-template-columns:repeat(4,50px);justify-content:space-between;row-gap:16px}
+.app{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:9.5px;letter-spacing:-.01em;text-shadow:0 1px 2px rgba(0,0,0,.4);white-space:nowrap;width:50px;overflow:visible;text-align:center}
+.app.opt{opacity:0;transform:scale(.3);transition:opacity .4s, transform .5s cubic-bezier(.3,1.5,.4,1)}
+#s-home.x-has .app.opt{opacity:1;transform:none}
+#s-home.x-jiggle .app .ic, #s-home.x-jiggle .dock .ic, #s-home.x-jiggle .mw{animation:jig .26s ease-in-out infinite alternate}
+#s-home.x-jiggle .app:nth-child(2n) .ic, #s-home.x-jiggle .dock .ic:nth-child(2n){animation-delay:-.13s}
+@keyframes jig{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}
+.pager{position:absolute;bottom:104px;left:0;right:0;display:flex;justify-content:center;gap:7px}
+.pager i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4)}
+.pager i:first-child{background:#fff}
+.dock{position:absolute;left:10px;right:10px;bottom:12px;height:78px;border-radius:32px;background:rgba(255,255,255,.16);backdrop-filter:blur(18px);display:flex;justify-content:space-around;align-items:center;padding:0 8px}
+.h-empty{position:absolute;left:190px;top:420px;width:10px;height:10px}
+
+.hmenu{position:absolute;top:76px;left:14px;width:190px;border-radius:14px;background:rgba(40,40,44,.92);backdrop-filter:blur(20px);overflow:hidden;z-index:9;transform-origin:20px 0;transform:scale(.5);opacity:0;transition:transform .3s cubic-bezier(.3,1.3,.4,1), opacity .2s;pointer-events:none}
+.hmenu.x-on{transform:none;opacity:1}
+.hmenu div{padding:11px 14px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.hmenu div + div{border-top:.5px solid rgba(255,255,255,.12)}
+.hmenu svg{width:16px;height:16px;opacity:.85}
+
+.ctx-back{position:absolute;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);opacity:0;transition:opacity .3s;z-index:5;pointer-events:none}
+#s-home.x-ctx .ctx-back{opacity:1}
+.ctx{position:absolute;top:236px;left:20px;width:220px;border-radius:14px;background:rgba(44,44,48,.94);overflow:hidden;z-index:7;transform-origin:30px 0;transform:scale(.6);opacity:0;transition:transform .3s cubic-bezier(.3,1.3,.4,1), opacity .2s}
+#s-home.x-ctx .ctx{transform:none;opacity:1}
+#s-home.x-ctx .hwidget .mw{transform:scale(1.04);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.ctx div{padding:11px 14px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.ctx div + div{border-top:.5px solid rgba(255,255,255,.12)}
+.ctx .red{color:var(--ios-red)}
+.ctx svg{width:16px;height:16px}
+
+/* widget gallery (home) */
+.wgal{position:absolute;left:0;right:0;bottom:0;top:58px;border-radius:24px 24px 0 0;background:rgba(28,28,30,.97);z-index:10;transform:translateY(102%);transition:transform .5s cubic-bezier(.2,.85,.25,1);overflow:hidden}
+.wgal.x-on{transform:none}
+.grab{width:36px;height:5px;border-radius:3px;background:rgba(255,255,255,.3);margin:7px auto 0}
+.track2{display:flex;width:200%;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.track2 > *{width:50%;flex:none}
+.wgal.x-app .track2{transform:translateX(-50%)}
+.wg-pane{padding:12px 16px}
+.search{display:flex;align-items:center;gap:6px;height:34px;border-radius:10px;background:rgba(118,118,128,.24);padding:0 10px;color:rgba(235,235,245,.55);font-size:14px}
+.search svg{width:14px;height:14px}
+.list{margin-top:14px}
+.row{display:flex;align-items:center;gap:12px;padding:9px 0;font-size:15px;border-bottom:.5px solid rgba(255,255,255,.1)}
+.row .ic{width:30px;height:30px;border-radius:7px}
+.row .ic svg{width:18px;height:18px}
+.row .ic-cal b{font-size:14px}
+.row .ic-cal small{font-size:5px;margin-top:3px}
+.row .ic-photos i{width:18px;height:18px}
+.wg-title{text-align:center;padding-top:4px}
+.wg-title b{display:block;font-size:20px}
+.wg-title span{font-size:13px;color:rgba(235,235,245,.6)}
+.wg-back{position:absolute;margin-top:-2px;font-size:22px;color:#fff;opacity:.8}
+.wg-view{overflow:hidden;margin:22px -16px 0;height:190px}
+.wg-track{display:flex;transition:transform .5s cubic-bezier(.2,.8,.2,1);transform:translateX(0)}
+.wgal.x-medium .wg-track{transform:translateX(-268px)}
+.wg-slide{flex:none;width:268px;display:grid;place-items:center;height:190px}
+.wg-slide:first-child{margin-left:16px}
+.blankw{border-radius:20px;background:#1f2a3c;display:grid;place-items:center;text-align:center;font-size:11px;color:rgba(255,255,255,.75);padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.wg-dots{display:flex;justify-content:center;gap:7px;margin-top:6px}
+.wg-dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .3s}
+.wg-dots i:first-child{background:#fff}
+.wgal.x-medium .wg-dots i:first-child{background:rgba(255,255,255,.3)}
+.wgal.x-medium .wg-dots i:nth-child(2){background:#fff}
+.wg-add{margin:30px auto 0;display:flex;justify-content:center;align-items:center;gap:6px;width:200px;height:46px;border-radius:999px;background:#fff;color:#000;font-weight:600;font-size:15px}
+
+/* home medium widget */
+.mw{width:260px;height:122px;border-radius:20px;background:#000;position:relative;overflow:hidden;box-shadow:0 0 0 .5px rgba(255,255,255,.12);transition:transform .3s, box-shadow .3s}
+.mw .blank{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;font-size:11px;color:rgba(255,255,255,.7);background:#1f2a3c}
+.mw .real{position:absolute;inset:0;padding:12px 16px;display:none;flex-direction:column}
+[data-hw="real"] .mw .real{display:flex}
+[data-hw="real"] .mw .blank{display:none}
+.mw-h{display:flex;justify-content:space-between;align-items:center;font-size:8.5px;font-weight:600;color:#8a8a8a;letter-spacing:.04em}
+.dots{display:flex;gap:3px}
+.dots i{width:4px;height:4px;border-radius:2px;background:#2e2e2e}
+.dots i.d{background:#6e6e6e}
+.dots i.c{background:#fff}
+.mw-mid{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.mw-mid b{display:block;font-size:17px;font-weight:500}
+.mw-mid small{display:block;font-size:10px;color:#7a7a7a}
+.mw-mid .tmr{font-size:32px;font-weight:200;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.pbar{height:2px;background:#262626;margin-top:7px}
+.pbar i{display:block;height:2px;background:#fff;width:50%}
+.mw-next{display:flex;align-items:center;gap:8px;margin-top:auto;font-size:11px;color:#e6e6e6}
+.mw-next em{font-style:normal;font-size:7.5px;font-weight:600;color:#5c5c5c;letter-spacing:.06em}
+.mw-next .rc{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:6px;background:#161616;border:1px solid #2a2a2a}
+
+/* ---------- App Store ---------- */
+#s-appstore{background:#000}
+.as-head{position:absolute;top:52px;left:16px;right:16px}
+.as-head h4{margin:0 0 8px;font-size:28px;font-weight:700;letter-spacing:-.01em}
+.field{display:flex;align-items:center;gap:6px;height:36px;border-radius:10px;background:rgba(118,118,128,.24);padding:0 10px;font-size:15px;color:rgba(235,235,245,.6)}
+.field svg{width:15px;height:15px;flex:none}
+.field .q{color:#fff}
+.field .ph{white-space:nowrap}
+.field.x-focus .ph{display:none}
+.field .q:empty + .ph{display:inline}
+.caret{display:inline-block;width:2px;height:18px;background:var(--ios-blue);margin-left:1px;vertical-align:middle;animation:blink 1s steps(1) infinite;opacity:0}
+.x-focus .caret{opacity:1}
+@keyframes blink{50%{visibility:hidden}}
+.as-res{position:absolute;top:150px;left:16px;right:16px;opacity:0;transform:translateY(10px);transition:opacity .35s, transform .35s}
+#s-appstore.x-results .as-res{opacity:1;transform:none}
+.as-app{display:flex;align-items:center;gap:12px}
+.as-app .ic{width:58px;height:58px;border-radius:14px}
+.as-app .ic svg{width:34px;height:34px}
+.as-meta{flex:1;min-width:0}
+.as-meta b{display:block;font-size:15px;font-weight:600}
+.as-meta span{display:block;font-size:12px;color:rgba(235,235,245,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.get{position:relative;min-width:76px;height:28px;border-radius:999px;background:rgba(118,118,128,.24);color:var(--ios-blue);font-weight:700;font-size:13px;display:grid;place-items:center;padding:0 12px;transition:all .3s}
+.get .t2,.get svg{display:none}
+.get.x-loading{min-width:28px;width:28px;padding:0;background:transparent}
+.get.x-loading .t1{display:none}
+.get.x-loading svg{display:block;width:28px;height:28px}
+.get.x-loading svg .arc{animation:dl 2s linear forwards}
+.get.x-done .t1, .get.x-done svg{display:none}
+.get.x-done{min-width:76px;width:auto;padding:0 12px;background:rgba(118,118,128,.24)}
+.get.x-done .t2{display:block}
+@keyframes dl{from{stroke-dashoffset:75}to{stroke-dashoffset:0}}
+.as-rate{display:flex;justify-content:space-between;margin:12px 0 12px;font-size:11px;color:rgba(235,235,245,.55)}
+.as-shots{display:flex;gap:8px}
+.as-shots div{flex:1;height:190px;border-radius:14px;background:linear-gradient(180deg,#1a2233,#0d1119);padding:12px 8px;display:flex;flex-direction:column;gap:6px}
+.as-shots i{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.18)}
+.as-shots i:nth-child(3n){width:60%}
+.as-shots i:nth-child(3n+1){width:85%;background:rgba(120,170,255,.4)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:78px;background:rgba(22,22,24,.94);border-top:.5px solid rgba(255,255,255,.12);display:flex;justify-content:space-around;padding-top:7px;font-size:9.5px;color:#8d8d93}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar svg{width:22px;height:22px}
+.tabbar .on{color:var(--ios-blue)}
+
+/* keyboard */
+.kb{position:absolute;left:0;right:0;bottom:0;height:226px;background:rgba(43,43,46,.98);z-index:60;padding:8px 3px 0;transform:translateY(100%);transition:transform .38s cubic-bezier(.2,.85,.25,1)}
+.kb.x-on{transform:none}
+.kb-l{display:none;flex-direction:column;gap:10px}
+.kb[data-l="en"] .kb-l[data-l="en"], .kb[data-l="ru"] .kb-l[data-l="ru"]{display:flex}
+.kr{display:flex;gap:4px;justify-content:center}
+.k{flex:1;max-width:26px;height:38px;border-radius:5px;background:#6b6b70;display:grid;place-items:center;font-size:17px;font-weight:400;box-shadow:0 1px 0 rgba(0,0,0,.5);transition:background .08s, transform .08s}
+.kb-l[data-l="ru"] .k{max-width:23px;font-size:16px}
+.kb-l .k.sp{background:#46464a;max-width:36px;font-size:12px}
+.kb-l .k.wide{max-width:none;flex:4.5;font-size:13px}
+.kb-l .k.ret{max-width:none;flex:2.2;font-size:13px;background:#46464a}
+.k.ret.blue{background:var(--ios-blue)}
+.k.x-hit{background:#a8a8ad;transform:scale(1.12) translateY(-3px)}
+.k svg{width:18px;height:18px}
+
+/* ---------- Safari / site ---------- */
+#s-safari{background:#000}
+.sf-view{position:absolute;top:48px;left:0;right:0;bottom:84px;overflow:hidden}
+.sf-page{padding:6px 14px 30px;transition:transform .7s cubic-bezier(.3,.8,.25,1)}
+#s-safari.x-ios .sf-page{transform:translateY(-176px)}
+.sf-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;font-size:13px;font-weight:600}
+.sf-nav span:first-child{display:flex;align-items:center;gap:6px}
+.sf-nav span:first-child i{width:12px;height:12px;border-radius:50%;background:linear-gradient(90deg,#fff 50%,#444 50%)}
+.sf-nav .dl{background:#fff;color:#000;padding:4px 10px;border-radius:999px;font-size:11px}
+.sf-h{font-size:30px;font-weight:700;letter-spacing:-.03em;margin:0 0 6px}
+.sf-p{font-size:12px;color:#9a9a9a;margin:0 0 14px;line-height:1.4}
+.sf-os{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sf-os div{border-radius:16px;border:1px solid #262626;background:#0d0d0d;padding:12px;transition:background .35s, color .35s}
+.sf-os b{display:block;font-size:14px;margin-top:8px}
+.sf-os small{display:block;font-size:9.5px;color:#8a8a8a;line-height:1.3}
+.sf-os svg{width:16px;height:16px}
+#s-safari.x-ios #sf-ios{background:#fff;color:#000}
+#s-safari.x-ios #sf-ios small{color:#555}
+.sf-steps{opacity:0;transform:translateY(12px);transition:opacity .5s .15s, transform .5s .15s}
+#s-safari.x-ios .sf-steps{opacity:1;transform:none}
+.sf-eb{font-size:8.5px;letter-spacing:.12em;color:#8a8a8a;font-weight:600;margin:18px 0 8px}
+.sf-card{border-radius:14px;border:1px solid #222;background:#0d0d0d;padding:11px 12px;margin-bottom:7px;display:flex;gap:10px}
+.sf-card .n{flex:none;width:20px;height:20px;border-radius:50%;background:#fff;color:#000;font-size:10px;font-weight:700;display:grid;place-items:center}
+.sf-card b{display:block;font-size:12.5px;margin-bottom:2px}
+.sf-card p{margin:0;font-size:10px;color:#8f8f8f;line-height:1.35}
+.sf-row{display:flex;gap:6px;margin-top:8px}
+.sf-sel{flex:1;height:32px;border-radius:10px;border:1px solid #2c2c2c;background:#151515;display:flex;align-items:center;justify-content:space-between;padding:0 9px;font-size:11.5px}
+.sf-sel svg{width:10px;height:10px;opacity:.7}
+.sf-copy{height:32px;border-radius:10px;background:#fff;color:#000;font-weight:600;font-size:11px;display:grid;place-items:center;padding:0 10px;white-space:nowrap;transition:background .3s}
+.sf-copy.x-ok{background:#d9ffd9}
+.sf-menu{position:absolute;left:28px;top:250px;width:170px;border-radius:14px;background:rgba(48,48,52,.96);backdrop-filter:blur(20px);overflow:hidden;z-index:20;transform-origin:30px 100%;transform:scale(.5);opacity:0;transition:transform .3s cubic-bezier(.3,1.3,.4,1), opacity .2s;box-shadow:0 20px 40px rgba(0,0,0,.6)}
+.sf-menu.x-on{transform:none;opacity:1}
+.sf-menu div{padding:9px 12px 9px 30px;font-size:13.5px;position:relative;border-top:.5px solid rgba(255,255,255,.1)}
+.sf-menu div:first-child{border-top:0}
+.sf-menu div.ck::before{content:"✓";position:absolute;left:11px;font-weight:600}
+.toast{position:absolute;left:50%;bottom:100px;transform:translate(-50%,20px);padding:9px 16px;border-radius:999px;background:#fff;color:#000;font-size:12.5px;font-weight:600;opacity:0;transition:all .35s cubic-bezier(.3,1.3,.4,1);z-index:30;white-space:nowrap}
+.toast.x-on{opacity:1;transform:translate(-50%,0)}
+.sf-bar{position:absolute;left:0;right:0;bottom:0;height:84px;background:rgba(28,28,30,.96);border-top:.5px solid rgba(255,255,255,.1);padding:8px 12px 0}
+.sf-addr{height:36px;border-radius:12px;background:#2c2c2e;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:13px}
+.sf-addr span{display:flex;align-items:center;gap:5px}
+.sf-addr svg{width:12px;height:12px;opacity:.75}
+.sf-tools{display:flex;justify-content:space-between;padding:8px 10px 0;color:var(--ios-blue)}
+.sf-tools svg{width:18px;height:18px}
+
+/* ---------- Scriptable ---------- */
+#s-scr{background:#000}
+.sc-top{position:absolute;top:48px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:center;color:#4fa3ff}
+.sc-top svg{width:22px;height:22px}
+.sc-top .plus{width:32px;height:32px;display:grid;place-items:center}
+.sc-top .plus svg{width:24px;height:24px}
+.sc-title{position:absolute;top:84px;left:16px;font-size:30px;font-weight:700;letter-spacing:-.01em}
+.sc-search{position:absolute;top:128px;left:16px;right:16px}
+.sc-grid{position:absolute;top:178px;left:16px;right:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{height:96px;border-radius:16px;background:linear-gradient(150deg,#e8a33c,#c4651d);padding:11px;display:flex;flex-direction:column;justify-content:space-between;opacity:0;transform:scale(.5);transition:opacity .35s, transform .55s cubic-bezier(.3,1.5,.4,1)}
+#s-scr.x-tile .tile{opacity:1;transform:none}
+.tile svg{width:22px;height:22px}
+.tile b{font-size:14px}
+
+.ed-top{position:absolute;top:44px;left:0;right:0;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:.5px solid rgba(255,255,255,.08);background:#111}
+.ed-top .done{color:#4fa3ff;font-size:15px;font-weight:600}
+.ed-top .ttl{font-size:14px;font-weight:600;padding:4px 8px;border-radius:8px;transition:background .25s;max-width:150px;white-space:nowrap;display:flex;align-items:center}
+#s-editor.x-rename .ttl{background:#2c2c2e}
+#s-editor.x-rename .ttl .t{background:rgba(10,132,255,.45);border-radius:2px}
+#s-editor.x-rename.x-typing .ttl .t{background:none}
+.ttl .caret{height:15px}
+#s-editor.x-rename .ttl .caret{opacity:1}
+.ed-top .icons{display:flex;gap:14px;color:#4fa3ff}
+.ed-top .icons svg{width:19px;height:19px}
+#s-editor{background:#111}
+.ed-area{position:absolute;top:88px;left:0;right:0;bottom:0;overflow:hidden;padding:10px 0}
+.ed-code{font-family:var(--font-mono);font-size:8.6px;line-height:14px;transition:transform 1.1s cubic-bezier(.4,0,.2,1)}
+.ed-code.x-scrolled{transform:translateY(-150px)}
+.ln{display:flex;white-space:pre;opacity:1}
+.ln .no{width:26px;text-align:right;padding-right:8px;color:#4a4a50;flex:none}
+.ed-code.x-paste .ln{animation:lnin .35s both}
+@keyframes lnin{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.tk{color:#ff7ab2}.ts{color:#ff9f5a}.tc{color:#6c7986}.tn{color:#d9c97c}.tf{color:#67b7ff}
+.ed-caret{position:absolute;left:34px;top:12px;opacity:0}
+#s-editor.x-focus .ed-caret{opacity:1}
+.ed-code:not(:empty) ~ .ed-caret{display:none}
+.callout{position:absolute;left:18px;top:94px;z-index:20;display:flex;flex-direction:column;align-items:flex-start;transform:scale(.6);transform-origin:20px 100%;opacity:0;transition:transform .25s cubic-bezier(.3,1.4,.4,1), opacity .15s}
+.callout.x-on{transform:none;opacity:1}
+.callout div{background:#3a3a3e;border-radius:9px;display:flex;font-size:13px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.5)}
+.callout span{padding:8px 13px}
+.callout span + span{border-left:.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.75)}
+.callout::after{content:"";margin-left:16px;border:7px solid transparent;border-top-color:#3a3a3e;border-bottom:0}
+.play{position:absolute;right:16px;bottom:30px;width:44px;height:44px;border-radius:50%;background:#2c2c2e;display:grid;place-items:center;color:#4fa3ff;z-index:5}
+.play svg{width:16px;height:16px}
+
+/* ---------- lock screen family ---------- */
+.lockface{position:absolute;inset:0}
+.l-lock{position:absolute;top:50px;left:50%;width:24px;height:30px;margin-left:-12px;display:grid;place-items:center}
+.l-lock svg{width:18px;height:22px;overflow:visible}
+.l-lock .shackle{transition:transform .4s cubic-bezier(.3,1.5,.4,1);transform-origin:13px 9px}
+#s-lock.x-unlocked .l-lock .shackle{transform:translate(4px,-3px) rotate(28deg)}
+.faceid{position:absolute;top:44px;left:50%;width:34px;height:34px;margin-left:-17px;opacity:0;transform:scale(.6);transition:opacity .3s, transform .3s}
+#s-lock.x-faceid .faceid{opacity:1;transform:none;animation:fid 1s ease-in-out infinite}
+#s-lock.x-faceid .l-lock, #s-lock.x-unlocked.x-faceid .faceid{opacity:0}
+#s-lock.x-unlocked .l-lock{opacity:1}
+@keyframes fid{50%{transform:scale(1.08)}}
+.l-date{position:absolute;top:80px;left:0;right:0;text-align:center;font-size:15px;font-weight:600;opacity:.9}
+.l-clock{position:absolute;top:102px;left:0;right:0;text-align:center;font-size:84px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05;font-family:-apple-system, "SF Pro Rounded", "Onest", system-ui, sans-serif}
+.l-wrow{position:absolute;top:204px;left:24px;right:24px;height:64px;display:flex;align-items:center;border-radius:16px;transition:background .3s, border-color .3s;border:1.5px solid transparent;padding:0 4px}
+.l-hint{position:absolute;bottom:40px;left:0;right:0;text-align:center;font-size:12.5px;opacity:0;transition:opacity .3s}
+#s-lock.x-unlocked .l-hint{opacity:.8}
+.l-btns{position:absolute;bottom:42px;left:38px;right:38px;display:flex;justify-content:space-between}
+.l-btns span{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.35);backdrop-filter:blur(10px);display:grid;place-items:center}
+.l-btns svg{width:20px;height:20px}
+#s-lock{transition:opacity .42s, transform .5s cubic-bezier(.2,.8,.2,1), visibility 0s linear .5s, filter .3s}
+#s-lock.x-on{transition:opacity .42s, transform .5s cubic-bezier(.2,.8,.2,1), visibility 0s, filter .3s}
+#s-lock.x-press{transform:scale(.97);filter:brightness(.85)}
+.l-center{position:absolute;left:150px;top:400px;width:4px;height:4px}
+
+/* lock widgets */
+.lw{display:none;width:126px;height:58px;border-radius:12px;padding:5px 6px;flex-direction:column;justify-content:center;color:#fff;position:relative;transition:box-shadow .4s}
+[data-lw="blank"] .lw, [data-lw="real"] .lw{display:flex}
+.lw .blank{font-size:9.5px;line-height:1.25;opacity:.85}
+.lw .real{display:none;flex-direction:column;gap:0;line-height:1.15}
+[data-lw="real"] .lw .real{display:flex}
+[data-lw="real"] .lw .blank{display:none}
+.lw .real b{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lw .real .tmr{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.lw .real small{font-size:10.5px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.x-glow{animation:glow 1.6s ease-in-out 2}
+@keyframes glow{50%{box-shadow:0 0 0 2px var(--signal), 0 0 24px color-mix(in srgb, var(--signal) 50%, transparent)}}
+.x-pop{animation:pop .55s cubic-bezier(.3,1.5,.4,1)}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+
+/* gallery + chooser */
+#s-gallery,#s-choose{background:#0b0b0c}
+.mini{position:absolute;overflow:hidden;border-radius:28px}
+.mini .inner{position:absolute;left:0;top:0;width:300px;height:650px;transform-origin:0 0}
+.g-card{left:45px;top:64px;width:210px;height:455px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.g-card .inner{transform:scale(.7)}
+.g-label{position:absolute;top:44px;left:0;right:0;text-align:center;font-size:12px;color:rgba(255,255,255,.6)}
+.g-btns{position:absolute;top:538px;left:0;right:0;display:flex;justify-content:center;gap:12px;align-items:center}
+.g-btns .pillbtn{padding:9px 22px;font-size:14px}
+.g-btns .addc{width:38px;height:38px;border-radius:50%;background:var(--ios-blue);display:grid;place-items:center;font-size:24px;font-weight:300;line-height:1}
+.ch-title{position:absolute;top:70px;left:0;right:0;text-align:center;font-size:17px;font-weight:600}
+.ch-cards{position:absolute;top:150px;left:18px;right:18px;display:flex;justify-content:space-between}
+.ch-card{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:12px;font-weight:500}
+.ch-card .mini{position:relative;width:126px;height:273px;border-radius:18px;box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 14px 30px rgba(0,0,0,.6)}
+.ch-card .mini .inner{transform:scale(.42)}
+.homemini .wall{position:absolute;inset:0}
+.homemini .hg{position:absolute;top:70px;left:20px;right:20px;display:grid;grid-template-columns:repeat(4,50px);justify-content:space-between;row-gap:30px}
+.homemini .hg i{width:50px;height:50px;border-radius:12px;background:rgba(255,255,255,.22)}
+
+/* lock edit */
+#s-ledit{background:#000}
+#s-ledit .lockface{transform:none}
+.le-bar{position:absolute;top:46px;left:14px;right:14px;display:flex;justify-content:space-between;z-index:5}
+.le-bar .pillbtn{padding:6px 14px;font-size:14px}
+.le-bar .done{background:var(--ios-blue)}
+#s-ledit .l-lock, #s-ledit .faceid{display:none}
+#s-ledit .l-clock{outline:1.5px solid rgba(255,255,255,.55);outline-offset:-2px;border-radius:14px;left:26px;right:26px;background:rgba(255,255,255,.07)}
+#s-ledit .l-date{left:70px;right:70px;border-radius:8px;background:rgba(255,255,255,.07);outline:1.5px solid rgba(255,255,255,.45);top:76px;padding:1px 0}
+#s-ledit .l-wrow{border-color:rgba(255,255,255,.55);background:rgba(255,255,255,.08)}
+.le-plus{display:none;margin:0 auto;align-items:center;gap:6px;font-size:13px;font-weight:600}
+[data-lw="none"] #s-ledit .le-plus{display:flex}
+.le-plus i{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.3);display:grid;place-items:center;font-style:normal;font-size:17px;line-height:1}
+#s-ledit .lw{background:rgba(255,255,255,.1)}
+.le-minus{position:absolute;top:-6px;left:-6px;width:18px;height:18px;border-radius:50%;background:#8e8e93;color:#000;font-size:13px;font-weight:700;display:grid;place-items:center;line-height:1}
+#s-lock .le-minus, .mini .le-minus{display:none}
+.le-empty{position:absolute;left:150px;top:470px;width:4px;height:4px}
+
+.wsheet{position:absolute;left:0;right:0;bottom:0;height:380px;border-radius:24px 24px 0 0;background:rgba(30,30,32,.97);z-index:10;transform:translateY(102%);transition:transform .5s cubic-bezier(.2,.85,.25,1);overflow:hidden}
+.wsheet.x-on{transform:none}
+.wsheet .track2{height:100%}
+.wsheet.x-app .track2{transform:translateX(-50%)}
+.ws-pane{padding:12px 16px;position:relative}
+.ws-head{display:flex;justify-content:center;align-items:center;font-size:15px;font-weight:600;height:30px;position:relative}
+.ws-x{position:absolute;right:0;top:2px;width:26px;height:26px;border-radius:50%;background:rgba(118,118,128,.3);display:grid;place-items:center}
+.ws-x svg{width:10px;height:10px}
+.ws-back{position:absolute;left:0;top:0;font-size:22px;line-height:1;opacity:.8}
+.ws-sugg{display:flex;gap:8px;margin-top:12px}
+.ws-sugg div{height:56px;border-radius:12px;background:rgba(255,255,255,.08);flex:1}
+.ws-sugg div:first-child{flex:none;width:56px;border-radius:50%}
+.ws-listwrap{height:240px;overflow:hidden;margin-top:6px}
+.ws-list{transition:transform .6s cubic-bezier(.3,.8,.25,1)}
+.wsheet.x-scroll .ws-list{transform:translateY(-84px)}
+.ws-opts{display:flex;gap:14px;align-items:center;justify-content:center;margin-top:26px}
+.ws-opts .c{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:8.5px;text-align:center;color:rgba(255,255,255,.75);padding:6px}
+.ws-opts .r{width:126px;height:58px;border-radius:12px;background:rgba(255,255,255,.1);padding:7px;font-size:9.5px;color:rgba(255,255,255,.75);display:flex;align-items:center}
+.ws-desc{text-align:center;margin-top:14px;font-size:12px;color:rgba(235,235,245,.55)}
+.ws-name{text-align:center;margin-top:16px}
+.ws-name b{display:block;font-size:20px}
+
+/* «по желанию» interlude between lock screen and home screen */
+.promo{position:absolute;inset:0;z-index:65;display:flex;align-items:center;justify-content:center;padding:0 14px;pointer-events:none;visibility:hidden;transition:visibility 0s linear .5s}
+.promo.x-on{visibility:visible;transition:visibility 0s}
+.promo-back{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;transition:opacity .45s}
+.promo.x-on .promo-back{opacity:1}
+.promo-card{position:relative;width:100%;border-radius:24px;background:rgba(28,28,30,.97);border:.5px solid rgba(255,255,255,.14);padding:16px 14px 12px;box-shadow:0 30px 60px rgba(0,0,0,.6);transform:translateY(26px) scale(.94);opacity:0;transition:transform .6s cubic-bezier(.2,1.25,.3,1), opacity .35s}
+.promo.x-on .promo-card{transform:none;opacity:1}
+.promo-tag{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--signal);background:rgba(255,207,74,.12);padding:4px 9px;border-radius:999px}
+.promo-tag i{width:6px;height:6px;border-radius:50%;background:var(--signal);animation:blinkdot 1.2s ease-in-out infinite}
+@keyframes blinkdot{50%{opacity:.25}}
+.promo-card h6{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:10px 0 4px}
+.promo-card p{font-size:12px;line-height:1.38;color:rgba(235,235,245,.66);margin:0 0 12px}
+.promo-prev{position:relative;height:178px;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.promo-prev .wall{border-radius:16px}
+.promo-prev .mwbox{position:relative;transform:scale(.88) translateY(14px);opacity:0;transition:transform .7s .35s cubic-bezier(.3,1.4,.4,1), opacity .4s .35s}
+.promo.x-on .promo-prev .mwbox{transform:scale(.88);opacity:1}
+.promo-prev .icons{position:relative;display:flex;gap:16px;opacity:.9}
+.promo-prev .icons i{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.22)}
+.promo-btns{display:flex;flex-direction:column;gap:2px;margin-top:12px}
+.promo-go{height:40px;border-radius:12px;background:#fff;color:#000;font-weight:600;font-size:14px;display:grid;place-items:center}
+.promo-skip{height:30px;font-size:13px;color:rgba(235,235,245,.55);display:grid;place-items:center}
+
+/* config card (shared) */
+.config{position:absolute;inset:0;z-index:70;pointer-events:none}
+.cfg-back{position:absolute;inset:0;background:rgba(0,0,0,.25);opacity:0;transition:opacity .3s}
+.config.x-on .cfg-back{opacity:1}
+.config.x-home .cfg-back{background:rgba(0,0,0,.45);backdrop-filter:blur(10px)}
+.cfg-card{position:absolute;left:24px;right:24px;top:280px;border-radius:18px;background:rgba(48,48,52,.97);overflow:hidden;transform:scale(.6);opacity:0;transform-origin:50% 0;transition:transform .35s cubic-bezier(.3,1.3,.4,1), opacity .2s;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.config.x-on .cfg-card{transform:none;opacity:1}
+.config.x-home .cfg-card{top:250px}
+.cfg-card .track2{transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+.config.x-list .cfg-card .track2{transform:translateX(-50%)}
+.cfg-pane{padding:12px 14px 6px}
+.cfg-h{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin-bottom:8px}
+.cfg-h .ic{width:22px;height:22px;border-radius:6px}
+.cfg-h .ic svg{width:13px;height:13px}
+.cfg-r{display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13.5px;border-top:.5px solid rgba(255,255,255,.12)}
+.cfg-r .v{color:var(--ios-blue)}
+.cfg-r .g{color:rgba(235,235,245,.45)}
+.cfg-r .v.set{color:#fff;font-weight:600}
+.cfg-list .search{height:30px;font-size:13px;margin:4px 0 8px}
+.cfg-item{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;border-top:.5px solid rgba(255,255,255,.12)}
+.cfg-item i{width:22px;height:22px;border-radius:6px;background:linear-gradient(150deg,#e8a33c,#c4651d);display:grid;place-items:center}
+.cfg-item i svg{width:13px;height:13px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <a class="eyebrow" href="./#install" style="text-decoration:none"><span class="bell"></span>Звонок · Лицей №165 · на сайт</a>
+    <h1>Звонок на iPhone <em>за 3 минуты</em></h1>
+    <p class="lead">Виджет с таймером до звонка на экране блокировки. Смотри, куда нажимает палец, и повторяй на своём телефоне. Нужен <b>iOS 16 или новее</b>.</p>
+  </header>
+
+  <main class="stage">
+    <div class="phone-col">
+      <div class="phone-wrap" id="pwrap">
+        <div class="phone" id="phone">
+          <div class="display" id="display" data-lw="none" data-hw="none" aria-hidden="true">
+
+            <!-- HOME -->
+            <section class="scr" id="s-home">
+              <div class="wall"></div>
+              <div class="h-top"><span class="pillbtn" id="h-edit">Изменить</span><span class="pillbtn" id="h-done">Готово</span></div>
+              <div class="ctx-back"></div>
+              <div class="h-body">
+                <div class="hwidget" id="h-widget">
+                  <div class="mwbox">
+                    <div class="mw" id="h-mw">
+                      <div class="blank">Select script in widget configurator</div>
+                      <div class="real">
+                        <div class="mw-h"><span>УРОК 4 / 7</span><span class="dots"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i></span></div>
+                        <div class="mw-mid"><div><b>Физика</b><small>каб. 48/49 · звонок 11:35</small></div><span class="tmr" data-timer>23:00</span></div>
+                        <div class="pbar"><i data-prog></i></div>
+                        <div class="mw-next"><em>ДАЛЬШЕ</em><span>Программирование</span><span class="rc">56/57</span></div>
+                      </div>
+                    </div>
+                    <span>Scriptable</span>
+                  </div>
+                </div>
+                <div class="grid">
+                  <div class="app"><div class="ic ic-cal"><small>ВТ</small><b>3</b></div>Календарь</div>
+                  <div class="app"><div class="ic ic-photos"><i></i></div>Фото</div>
+                  <div class="app"><div class="ic ic-cam"><svg viewBox="0 0 30 30"><rect x="4" y="9" width="22" height="15" rx="3" fill="#2b2b2e"/><rect x="11" y="6" width="8" height="4" rx="1.5" fill="#2b2b2e"/><circle cx="15" cy="16.5" r="5" fill="#6b6b70" stroke="#e8e8ea" stroke-width="1.5"/></svg></div>Камера</div>
+                  <div class="app"><div class="ic ic-clock"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="#fff"/><path d="M15 7v8l5 3" stroke="#000" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M15 15l-6 4" stroke="#ff9500" stroke-width="1" stroke-linecap="round"/></svg></div>Часы</div>
+                  <div class="app"><div class="ic ic-weather"><svg viewBox="0 0 30 30"><circle cx="12" cy="11" r="5" fill="#ffd43b"/><path d="M9 23h13a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.5 1.5A3.3 3.3 0 0 0 9 23z" fill="#fff"/></svg></div>Погода</div>
+                  <div class="app"><div class="ic ic-notes"><svg viewBox="0 0 30 30"><path d="M5 15h20M5 20h20M5 25h14" stroke="#d6d6d6" stroke-width="1.2"/></svg></div>Заметки</div>
+                  <div class="app" id="a-appstore"><div class="ic ic-appstore"><svg viewBox="0 0 30 30" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M15.5 7 9 19M13 7l6.5 12M7 19h16"/></svg></div>App Store</div>
+                  <div class="app"><div class="ic ic-settings"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="9" fill="none" stroke="#3a3a3e" stroke-width="4" stroke-dasharray="3 2.6"/><circle cx="15" cy="15" r="6.5" fill="#8d8d93" stroke="#3a3a3e" stroke-width="1.6"/><circle cx="15" cy="15" r="2.4" fill="#3a3a3e"/></svg></div>Настройки</div>
+                  <div class="app opt" id="a-scriptable"><div class="ic ic-scriptable"><svg viewBox="0 0 30 30" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 9 5 15l6 6M19 9l6 6-6 6"/></svg></div>Scriptable</div>
+                </div>
+              </div>
+              <div class="h-empty" id="h-empty"></div>
+              <div class="pager"><i></i><i></i></div>
+              <div class="dock">
+                <div class="ic ic-phone"><svg viewBox="0 0 30 30"><path d="M10.5 6.5c.8-.5 1.8-.3 2.3.5l1.6 2.8c.4.8.2 1.7-.5 2.2l-1.3 1c.8 2 2.3 3.6 4.3 4.5l1-1.3c.5-.7 1.5-.9 2.2-.5l2.8 1.6c.8.5 1 1.5.5 2.3l-1 1.6c-.7 1-2 1.5-3.2 1.1C13.8 20.6 9.4 16.2 7.7 10.8c-.4-1.2.1-2.5 1.1-3.2z" fill="#fff"/></svg></div>
+                <div class="ic ic-safari" id="d-safari"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="11" fill="#fff" stroke="#1a7cf5" stroke-width="2"/><path d="M15 15l5.5-5.5L17 17z" fill="#ff3b30"/><path d="M15 15l-5.5 5.5L13 13z" fill="#c9cfd8"/></svg></div>
+                <div class="ic ic-msg"><svg viewBox="0 0 30 30"><ellipse cx="15" cy="14" rx="10" ry="8" fill="#fff"/><path d="M8 19l-2 5 6-3z" fill="#fff"/></svg></div>
+                <div class="ic ic-music"><svg viewBox="0 0 30 30" fill="#fff"><path d="M12 8l10-2v12.5a2.8 2.3 0 1 1-1.8-2.2V9.6L13.8 11v9.5a2.8 2.3 0 1 1-1.8-2.2z"/></svg></div>
+              </div>
+              <div class="hmenu" id="h-menu">
+                <div id="hm-add">Добавить виджет <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.4"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><path d="M11.5 9v5M9 11.5h5"/></svg></div>
+                <div>Настроить <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.4"><path d="M3 13l7-7 2 2-7 7H3zM10 6l1.5-1.5 2 2L12 8"/></svg></div>
+              </div>
+              <div class="ctx" id="ctx">
+                <div id="ctx-edit">Изменить виджет <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.4"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg></div>
+                <div>Изменить экран «Домой» <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.4"><rect x="3" y="2" width="10" height="12" rx="2"/></svg></div>
+                <div class="red">Удалить виджет <svg viewBox="0 0 16 16" fill="none" stroke="#ff453a" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M5 8h6"/></svg></div>
+              </div>
+              <div class="wgal" id="wgal">
+                <div class="grab"></div>
+                <div class="track2">
+                  <div class="wg-pane">
+                    <div class="search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>Поиск виджетов</div>
+                    <div class="list">
+                      <div class="row"><div class="ic ic-weather"><svg viewBox="0 0 30 30"><circle cx="12" cy="11" r="5" fill="#ffd43b"/><path d="M9 23h13a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.5 1.5A3.3 3.3 0 0 0 9 23z" fill="#fff"/></svg></div>Погода</div>
+                      <div class="row"><div class="ic ic-clock"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="#fff"/><path d="M15 7v8l5 3" stroke="#000" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div>Часы</div>
+                      <div class="row"><div class="ic ic-cal"><small>ВТ</small><b>3</b></div>Календарь</div>
+                      <div class="row"><div class="ic ic-photos"><i></i></div>Фото</div>
+                      <div class="row" id="wg-scriptable"><div class="ic ic-scriptable"><svg viewBox="0 0 30 30" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 9 5 15l6 6M19 9l6 6-6 6"/></svg></div>Scriptable</div>
+                      <div class="row"><div class="ic ic-notes"></div>Заметки</div>
+                    </div>
+                  </div>
+                  <div class="wg-pane">
+                    <div class="wg-title"><span class="wg-back">‹</span><b>Scriptable</b></div>
+                    <div class="wg-view">
+                      <div class="wg-track" id="wg-track">
+                        <div class="wg-slide"><div class="blankw" style="width:120px;height:120px">Select script in widget configurator</div></div>
+                        <div class="wg-slide"><div class="blankw" style="width:250px;height:118px">Select script in widget configurator</div></div>
+                        <div class="wg-slide"><div class="blankw" style="width:250px;height:180px">Select script in widget configurator</div></div>
+                      </div>
+                    </div>
+                    <div class="wg-dots"><i></i><i></i><i></i></div>
+                    <div class="wg-add" id="wg-add"><span style="font-size:20px;font-weight:400;line-height:1">+</span> Добавить виджет</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- APP STORE -->
+            <section class="scr" id="s-appstore">
+              <div class="as-head">
+                <h4>Поиск</h4>
+                <div class="field" id="as-field"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg><span class="q" id="as-q"></span><span class="caret"></span><span class="ph">Игры, приложения и т. д.</span></div>
+              </div>
+              <div class="as-res">
+                <div class="as-app">
+                  <div class="ic ic-scriptable"><svg viewBox="0 0 30 30" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 9 5 15l6 6M19 9l6 6-6 6"/></svg></div>
+                  <div class="as-meta"><b>Scriptable</b><span>Автоматизация на JavaScript</span></div>
+                  <div class="get" id="as-get"><span class="t1">Загрузить</span><span class="t2">Открыть</span><svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="none" stroke="rgba(118,118,128,.4)" stroke-width="2.5"/><circle class="arc" cx="14" cy="14" r="12" fill="none" stroke="#0a84ff" stroke-width="2.5" stroke-dasharray="75" stroke-dashoffset="75" transform="rotate(-90 14 14)"/><rect x="10.5" y="10.5" width="7" height="7" rx="1" fill="#0a84ff"/></svg></div>
+                </div>
+                <div class="as-rate"><span>★★★★★ 4,7</span><span>Simon B. Støvring</span><span>Утилиты</span></div>
+                <div class="as-shots"><div><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div><i></i><i></i><i></i><i></i><i></i></div><div><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+              </div>
+              <div class="tabbar">
+                <div><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="3" width="16" height="18" rx="3" opacity=".9"/></svg>Сегодня</div>
+                <div><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z" opacity=".9"/></svg>Игры</div>
+                <div><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>Приложения</div>
+                <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>Поиск</div>
+              </div>
+            </section>
+
+            <!-- SAFARI -->
+            <section class="scr" id="s-safari">
+              <div class="sf-view">
+                <div class="sf-page">
+                  <div class="sf-nav"><span><i></i>Звонок</span><span class="dl">Скачать</span></div>
+                  <h5 class="sf-h">Установить</h5>
+                  <p class="sf-p">Выбери систему, а потом марку телефона. Покажу, что включить именно у тебя.</p>
+                  <div class="sf-os">
+                    <div><svg viewBox="0 0 16 16" fill="#9be15d"><path d="M3 7a5 5 0 0 1 10 0v1H3zM5 3.5 4 2M11 3.5l1-1.5" stroke="#9be15d" stroke-width="1"/></svg><b>Android</b><small>Приложение, уведомление и виджеты</small></div>
+                    <div id="sf-ios"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 8.4c0-1.6 1.3-2.3 1.4-2.4-.8-1.1-1.9-1.3-2.3-1.3-1-.1-1.9.6-2.4.6s-1.3-.6-2.1-.5A3.1 3.1 0 0 0 3 6.4c-1.1 1.9-.3 4.8.8 6.3.5.8 1.1 1.6 1.9 1.6s1-.5 2-.5 1.2.5 2 .5 1.3-.8 1.8-1.5c.6-.8.8-1.6.8-1.7-.1 0-1.4-.6-1.3-2.7zM9.4 3.6c.4-.5.7-1.2.6-1.9-.6 0-1.3.4-1.7.9-.4.4-.7 1.1-.6 1.8.7.1 1.3-.3 1.7-.8z"/></svg><b>iPhone</b><small>Виджет с таймером на экран блокировки</small></div>
+                  </div>
+                  <div class="sf-steps">
+                    <div class="sf-eb">ВИДЖЕТ НА ЭКРАН БЛОКИРОВКИ · 3 МИНУТЫ · IOS 16+</div>
+                    <div class="sf-card"><span class="n">1</span><div><b>Поставь Scriptable</b><p>Это бесплатное приложение для виджетов. Найди «Scriptable» в App Store.</p></div></div>
+                    <div class="sf-card"><span class="n">2</span><div style="flex:1;min-width:0"><b>Скопируй скрипт своего класса</b><p>Выбери класс и нажми «Скопировать скрипт».</p>
+                      <div class="sf-row"><div class="sf-sel" id="sf-sel"><span id="sf-sel-v">Класс 7А</span><svg viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="1.5"><path d="M2 4l3 3 3-3"/></svg></div><div class="sf-copy" id="sf-copy">Скопировать скрипт</div></div>
+                    </div></div>
+                    <div class="sf-card"><span class="n">3</span><div><b>Вставь его в Scriptable</b><p>В Scriptable нажми «+» справа сверху, нажми в пустое поле и выбери «Вставить».</p></div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="sf-menu" id="sf-menu">
+                <div class="ck">Класс 7А</div>
+                <div id="sf-opt">Класс 7Б</div>
+                <div>Класс 7В</div>
+                <div>Класс 8А</div>
+                <div>Класс 8Б</div>
+                <div>Класс 8В</div>
+              </div>
+              <div class="toast" id="toast">Скопировано</div>
+              <div class="sf-bar">
+                <div class="sf-addr"><span style="opacity:.8">аА</span><span><svg viewBox="0 0 12 12" fill="currentColor"><rect x="2.5" y="5.5" width="7" height="5.5" rx="1"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>danick-dack.github.io</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M10 6a4 4 0 1 1-1.2-2.8M10 1.5v2.5H7.5"/></svg></div>
+                <div class="sf-tools">
+                  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 3 5 9l6 6"/></svg>
+                  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".4"><path d="M7 3l6 6-6 6"/></svg>
+                  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2v9M6 5l3-3 3 3M4 8v7h10V8"/></svg>
+                  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4c3-1 5-1 7 1 2-2 4-2 7-1v10c-3-1-5-1-7 1-2-2-4-2-7-1z"/></svg>
+                  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="10" height="10" rx="2"/><path d="M3 12V5a2 2 0 0 1 2-2h7"/></svg>
+                </div>
+              </div>
+            </section>
+
+            <!-- SCRIPTABLE: list -->
+            <section class="scr" id="s-scr">
+              <div class="sc-top">
+                <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="3"/><path d="M11 2.5v2.5M11 17v2.5M2.5 11H5M17 11h2.5M5 5l1.8 1.8M15.2 15.2 17 17M5 17l1.8-1.8M15.2 6.8 17 5"/></svg>
+                <span class="plus" id="sc-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg></span>
+              </div>
+              <div class="sc-title">Scripts</div>
+              <div class="sc-search search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>Search</div>
+              <div class="sc-grid"><div class="tile" id="sc-tile"><svg viewBox="0 0 22 22" fill="#fff"><path d="M11 2.5a5.5 5.5 0 0 0-5.5 5.5v3.6L3.8 15h14.4l-1.7-3.4V8A5.5 5.5 0 0 0 11 2.5zM8.6 16.5a2.4 2.4 0 0 0 4.8 0z"/></svg><b>Звонок</b></div></div>
+            </section>
+
+            <!-- SCRIPTABLE: editor -->
+            <section class="scr" id="s-editor">
+              <div class="ed-top">
+                <span class="done" id="ed-done">Done</span>
+                <span class="ttl" id="ed-title-wrap"><span class="t" id="ed-title">Untitled Script</span><span class="caret"></span></span>
+                <span class="icons"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h14M3 14h14"/><circle cx="7" cy="6" r="2" fill="#111"/><circle cx="13" cy="14" r="2" fill="#111"/></svg></span>
+              </div>
+              <div class="ed-area" id="ed-area">
+                <div class="ed-code" id="ed-code"></div>
+                <span class="caret ed-caret"></span>
+              </div>
+              <div class="callout" id="callout"><div><span id="callout-paste">Вставить</span><span>Автозаполнение</span></div></div>
+              <div class="play"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg></div>
+            </section>
+
+            <!-- LOCK -->
+            <section class="scr" id="s-lock" data-nosbtime>
+              <div class="lockface">
+                <div class="wall"></div>
+                <div class="l-lock"><svg viewBox="0 0 18 22"><g class="shackle"><path d="M4.5 10V6.5a4.5 4.5 0 0 1 9 0V10" fill="none" stroke="#fff" stroke-width="2"/></g><rect x="2" y="9.5" width="14" height="11" rx="2.5" fill="#fff"/></svg></div>
+                <svg class="faceid" viewBox="0 0 34 34" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M3 11V7a4 4 0 0 1 4-4h4M23 3h4a4 4 0 0 1 4 4v4M31 23v4a4 4 0 0 1-4 4h-4M11 31H7a4 4 0 0 1-4-4v-4M12 12v2M22 12v2M17 12v6h-1.5M12 23a7 7 0 0 0 10 0"/></svg>
+                <div class="l-date">Вторник, 3 ноября</div>
+                <div class="l-clock" data-clock>11:12</div>
+                <div class="l-wrow" id="l-wrow">
+                  <div class="le-plus"><i>+</i>Добавить виджеты</div>
+                  <div class="lw" id="lw">
+                    <span class="le-minus">−</span>
+                    <div class="blank">Select script in widget configurator</div>
+                    <div class="real"><b>Физика · до 11:35</b><span class="tmr" data-timer>23:00</span><small>→ 56/57 · Программирование</small></div>
+                  </div>
+                </div>
+              </div>
+              <div class="l-hint">Смахните вверх, чтобы открыть</div>
+              <div class="l-btns" style="bottom:70px"><span><svg viewBox="0 0 20 20" fill="#fff"><path d="M7 2h6v3l-1.5 3v9.5h-3V8L7 5z"/></svg></span><span><svg viewBox="0 0 20 20" fill="#fff"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H7l1.3-2h3.4L13 5h2.5A1.5 1.5 0 0 1 17 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z"/><circle cx="10" cy="10.5" r="3" fill="#333"/></svg></span></div>
+              <div class="l-center" id="l-center"></div>
+            </section>
+
+            <!-- WALLPAPER GALLERY -->
+            <section class="scr" id="s-gallery">
+              <div class="mini g-card" id="g-card"><div class="inner" data-clone="lock"></div></div>
+              <div class="g-btns"><span class="pillbtn" id="g-custom">Настроить</span><span class="addc">+</span></div>
+            </section>
+
+            <!-- CUSTOMIZE CHOOSER -->
+            <section class="scr" id="s-choose">
+              <div class="ch-title">Настроить</div>
+              <div class="ch-cards">
+                <div class="ch-card" id="ch-lock"><div class="mini"><div class="inner" data-clone="lock"></div></div>Экран блокировки</div>
+                <div class="ch-card"><div class="mini homemini"><div class="inner"><div class="wall"></div><div class="hg"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>Домой</div>
+              </div>
+            </section>
+
+            <!-- LOCK EDIT -->
+            <section class="scr" id="s-ledit" data-nosbtime>
+              <div class="lockface" data-clone="lock-live"></div>
+              <div class="le-bar"><span class="pillbtn">Отменить</span><span class="pillbtn done" id="le-done">Готово</span></div>
+              <div class="le-empty" id="le-empty"></div>
+              <div class="wsheet" id="wsheet">
+                <div class="track2">
+                  <div class="ws-pane">
+                    <div class="ws-head">Добавить виджеты<span class="ws-x" id="ws-close"><svg viewBox="0 0 10 10" stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M2 2l6 6M8 2 2 8"/></svg></span></div>
+                    <div class="ws-sugg"><div></div><div></div><div></div></div>
+                    <div class="ws-listwrap"><div class="ws-list">
+                      <div class="row"><div class="ic" style="background:#30d158"></div>Батарея</div>
+                      <div class="row"><div class="ic ic-cal"><small>ВТ</small><b>3</b></div>Календарь</div>
+                      <div class="row"><div class="ic ic-clock"><svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="#fff"/><path d="M15 7v8l5 3" stroke="#000" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div>Часы</div>
+                      <div class="row"><div class="ic ic-weather"><svg viewBox="0 0 30 30"><circle cx="12" cy="11" r="5" fill="#ffd43b"/></svg></div>Погода</div>
+                      <div class="row"><div class="ic" style="background:#ff9f0a"></div>Напоминания</div>
+                      <div class="row" id="ws-scriptable"><div class="ic ic-scriptable"><svg viewBox="0 0 30 30" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 9 5 15l6 6M19 9l6 6-6 6"/></svg></div>Scriptable</div>
+                      <div class="row"><div class="ic" style="background:#ff2d55"></div>Фитнес</div>
+                    </div></div>
+                  </div>
+                  <div class="ws-pane">
+                    <div class="ws-head"><span class="ws-back">‹</span>Scriptable<span class="ws-x"><svg viewBox="0 0 10 10" stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M2 2l6 6M8 2 2 8"/></svg></span></div>
+                    <div class="ws-opts"><div class="c">Select script</div><div class="r" id="ws-rect">Select script in widget configurator</div></div>
+                    <div class="ws-opts" style="margin-top:14px"><div class="r" style="width:198px;height:28px;border-radius:8px">Select script in widget configurator</div></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- overlays -->
+            <div class="config" id="config">
+              <div class="cfg-back" id="cfg-back"></div>
+              <div class="cfg-card">
+                <div class="track2">
+                  <div class="cfg-pane">
+                    <div class="cfg-h"><span class="ic ic-scriptable"><svg viewBox="0 0 30 30" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 9 5 15l6 6M19 9l6 6-6 6"/></svg></span>Scriptable</div>
+                    <div class="cfg-r"><span>Script</span><span class="v" id="cfg-choose">Choose</span></div>
+                    <div class="cfg-r"><span>When Interacting</span><span class="v">Open App</span></div>
+                    <div class="cfg-r"><span>Parameter</span><span class="g">Text</span></div>
+                  </div>
+                  <div class="cfg-pane cfg-list">
+                    <div class="cfg-h"><span style="color:var(--ios-blue);font-size:20px;line-height:1;font-weight:400">‹</span>Script</div>
+                    <div class="search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>Search</div>
+                    <div class="cfg-item" id="cfg-zvonok"><i><svg viewBox="0 0 22 22" fill="#fff"><path d="M11 2.5a5.5 5.5 0 0 0-5.5 5.5v3.6L3.8 15h14.4l-1.7-3.4V8A5.5 5.5 0 0 0 11 2.5zM8.6 16.5a2.4 2.4 0 0 0 4.8 0z"/></svg></i>Звонок</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="promo" id="promo" data-hw="real">
+              <div class="promo-back"></div>
+              <div class="promo-card">
+                <span class="promo-tag"><i></i>ПО ЖЕЛАНИЮ</span>
+                <h6>Виджет на рабочий стол</h6>
+                <p>Экран блокировки готов. Если хочешь, поставь «Звонок» ещё и на рабочий стол. Вот как он будет выглядеть:</p>
+                <div class="promo-prev">
+                  <div class="wall"></div>
+                  <div class="mwbox">
+                    <div class="mw" id="promo-mw"><div class="real">
+                      <div class="mw-h"><span>УРОК 4 / 7</span><span class="dots"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i></span></div>
+                      <div class="mw-mid"><div><b>Физика</b><small>каб. 48/49 · звонок 11:35</small></div><span class="tmr" data-timer>23:00</span></div>
+                      <div class="pbar"><i data-prog></i></div>
+                      <div class="mw-next"><em>ДАЛЬШЕ</em><span>Программирование</span><span class="rc">56/57</span></div>
+                    </div></div>
+                    <span>Scriptable</span>
+                  </div>
+                  <div class="icons"><i></i><i></i><i></i><i></i></div>
+                </div>
+                <div class="promo-btns"><span class="promo-go" id="promo-go">Показать, как</span><span class="promo-skip">Не надо</span></div>
+              </div>
+            </div>
+
+            <div class="kb" id="kb" data-l="en"></div>
+
+            <div class="sb"><span class="sb-time" data-sbclock>11:12</span><span class="sb-r">
+              <svg viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx=".8"/><rect x="5" y="5" width="3" height="6" rx=".8"/><rect x="10" y="2.5" width="3" height="8.5" rx=".8"/><rect x="15" y="0" width="3" height="11" rx=".8"/></svg>
+              <svg viewBox="0 0 16 11" fill="#fff"><path d="M8 2.2c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 0 0 8 .6a9.6 9.6 0 0 0-6.8 2.8l1.1 1.1A8 8 0 0 1 8 2.2zm0 3.2c1.3 0 2.5.5 3.4 1.4l1.1-1.1A6.4 6.4 0 0 0 8 3.8a6.4 6.4 0 0 0-4.5 1.9l1.1 1.1c.9-.9 2.1-1.4 3.4-1.4zm0 3.2c-.5 0-.9.2-1.2.5L8 10.4l1.2-1.3c-.3-.3-.7-.5-1.2-.5z"/></svg>
+              <svg viewBox="0 0 27 12" fill="none"><rect x=".5" y=".5" width="23" height="11" rx="3.2" stroke="#fff" opacity=".45"/><rect x="2" y="2" width="16" height="8" rx="1.8" fill="#fff"/><path d="M25 4v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" fill="#fff" opacity=".45"/></svg>
+            </span></div>
+            <div class="island"></div>
+            <div class="homeind"></div>
+            <div class="finger" id="finger"><div class="fi"></div><svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="26"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cap" aria-live="polite"><span class="cap-num" id="cap-num">1</span><span class="cap-text" id="cap-text">Открой App Store</span></div>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="ctrl">
+        <button class="cbtn" id="b-prev" aria-label="Предыдущий шаг"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4 6 9l5 5"/></svg></button>
+        <button class="cbtn" id="b-again" aria-label="Повторить шаг"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 9a5.5 5.5 0 1 0 1.7-4M3.5 2.5V5.5h3"/></svg></button>
+        <button class="cbtn main" id="b-play" aria-label="Пауза"><svg viewBox="0 0 18 18" fill="currentColor" id="i-pause"><rect x="4" y="3" width="3.5" height="12" rx="1"/><rect x="10.5" y="3" width="3.5" height="12" rx="1"/></svg><svg viewBox="0 0 18 18" fill="currentColor" id="i-play" hidden><path d="M5 3v12l10-6z"/></svg></button>
+        <button class="cbtn" id="b-next" aria-label="Следующий шаг"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 5-5 5"/></svg></button>
+      </div>
+    </div>
+
+    <section class="panel">
+      <nav class="chips" id="chips" aria-label="Шаги"></nav>
+      <div class="step" id="step">
+        <p class="step-of" id="step-of">Шаг 1 из 8</p>
+        <h2 id="step-title">Установи Scriptable</h2>
+        <p class="txt" id="step-txt"></p>
+        <ol class="beats" id="beats"></ol>
+        <div class="tip" id="tip"></div>
+      </div>
+    </section>
+  </main>
+
+  <section class="looks" data-lw="real" data-hw="real">
+    <h3>Как выглядит виджет</h3>
+    <p>Пример для 7Б во вторник в 11:12, идёт 4-й урок. Таймер тикает сам. После звонка iPhone переключает виджет на перемену или следующий урок, иногда с опозданием на пару минут, но время звонка видно всегда.</p>
+    <div class="lk-grid">
+      <div class="lk">
+        <div class="lk-stage lk-lock"><div class="wall"></div>
+          <div class="li">Физика до 11:35 → 56/57</div>
+          <div class="ck" data-clock>11:12</div>
+          <div class="rowl">
+            <div class="lw"><div class="real"><b>Физика · до 11:35</b><span class="tmr" data-timer>23:00</span><small>→ 56/57 · Программирование</small></div></div>
+            <div class="lc"><small>урок 4</small><b data-timer>23:00</b><span>56/57</span></div>
+          </div>
+        </div>
+        <div class="lk-cap"><b>Экран блокировки</b><span>Прямоугольный виджет из инструкции. Ещё можно поставить круглый или строку над часами.</span></div>
+      </div>
+      <div class="lk">
+        <div class="lk-stage"><div class="wall"></div>
+          <div class="sw">
+            <div class="mw-h"><span>УРОК 4 / 7</span><span class="dots"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i></span></div>
+            <b>Физика</b><small>каб. 48/49 · звонок 11:35</small>
+            <span class="tmr" data-timer>23:00</span>
+            <div class="pbar"><i data-prog></i></div>
+            <div class="nx"><span>Программирование</span><span class="rc2">56/57</span></div>
+          </div>
+        </div>
+        <div class="lk-cap"><b>Рабочий стол · маленький <span class="opt-badge">по желанию</span></b><span>Урок, кабинет, таймер до звонка и что дальше.</span></div>
+      </div>
+      <div class="lk">
+        <div class="lk-stage"><div class="wall"></div>
+          <div class="mw"><div class="real">
+            <div class="mw-h"><span>УРОК 4 / 7</span><span class="dots"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i></span></div>
+            <div class="mw-mid"><div><b>Физика</b><small>каб. 48/49 · звонок 11:35</small></div><span class="tmr" data-timer>23:00</span></div>
+            <div class="pbar"><i data-prog></i></div>
+            <div class="mw-next"><em>ДАЛЬШЕ</em><span>Программирование</span><span class="rc">56/57</span></div>
+          </div></div>
+        </div>
+        <div class="lk-cap"><b>Рабочий стол · средний <span class="opt-badge">по желанию</span></b><span>Как в анимации: крупный таймер, полоса урока и следующий кабинет.</span></div>
+      </div>
+      <div class="lk">
+        <div class="lk-stage"><div class="wall"></div>
+          <div class="lgw">
+            <div class="mw-h"><span>УРОК 4 / 7</span><span class="dots"><i class="d"></i><i class="d"></i><i class="d"></i><i class="c"></i><i></i><i></i><i></i></span></div>
+            <div class="mw-mid"><div><b>Физика</b><small>каб. 48/49 · звонок 11:35</small></div><span class="tmr" data-timer>23:00</span></div>
+            <div class="pbar"><i data-prog></i></div>
+            <div class="list">
+              <div class="lr past"><span class="n">1</span><span class="t">8:00</span>Геометрия<span class="r">24/35</span></div>
+              <div class="lr past"><span class="n">2</span><span class="t">8:50</span>Английский язык<span class="r">44/47</span></div>
+              <div class="lr past"><span class="n">3</span><span class="t">9:45</span>Физика<span class="r">48/49</span></div>
+              <div class="lr cur"><span class="n">4</span><span class="t">10:50</span>Физика<span class="r">48/49</span></div>
+              <div class="lr"><span class="n">5</span><span class="t">11:55</span>Программирование<span class="r">56/57</span></div>
+              <div class="lr"><span class="n">6</span><span class="t">12:50</span>Биология<span class="r">25</span></div>
+              <div class="lr"><span class="n">7</span><span class="t">13:45</span>Худ. труд<span class="r">11/1</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="lk-cap"><b>Рабочий стол · большой <span class="opt-badge">по желанию</span></b><span>Таймер и всё расписание на сегодня: прошедшие уроки серые, текущий выделен.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="help">
+    <h3>Если что-то не так</h3>
+    <div class="qa">
+      <div><b>Scriptable нет в списке виджетов</b><p>Открой приложение Scriptable хотя бы один раз, потом добавляй виджет заново.</p></div>
+      <div><b>Виджет пишет «Select script…»</b><p>Скрипт ещё не выбран. Нажми на виджет в режиме настройки и в строке Script выбери «Звонок».</p></div>
+      <div><b>Не появляется «Настроить»</b><p>Телефон не разблокирован. Сначала Face ID или Touch ID, потом зажимай экран блокировки. Смахивать вверх не нужно.</p></div>
+      <div><b>Сменился класс</b><p>Скопируй на сайте скрипт нового класса. В Scriptable открой «Звонок», выдели весь текст, вставь новый и нажми Done. Виджет трогать не нужно.</p></div>
+      <div><b>Время неверное</b><p>Настройки → Основные → Дата и время → включи «Автоматически».</p></div>
+      <div><b>Не хочется копировать текст</b><p>На сайте нажми «Скачать файл», открой его в «Файлах» и перенеси в папку Scriptable.</p></div>
+    </div>
+    <p class="fine">Анимация показывает iOS 17–18 в тёмной теме. На твоём iPhone кнопки могут выглядеть чуть иначе, но названия и порядок те же. Постоянного уведомления, как на Android, на iPhone нет: Apple не даёт его делать сайтам и скриптам.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const D = $('#display'), phone = $('#phone'), pwrap = $('#pwrap'), finger = $('#finger');
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let S = 1;
+
+/* ---------- sizing ---------- */
+function fit(){
+  const col = pwrap.parentElement.getBoundingClientRect().width || 330;
+  const availH = Math.max(480, innerHeight - 190);
+  S = Math.min(1, (col - 4) / 316, availH / 666);
+  phone.style.transform = `scale(${S})`;
+  pwrap.style.width = 316 * S + 'px';
+  pwrap.style.height = 666 * S + 'px';
+}
+addEventListener('resize', fit);
+
+/* ---------- clones of the lock face ---------- */
+const face = $('#s-lock .lockface');
+$$('[data-clone="lock"]').forEach(el => { const c = face.cloneNode(true); c.querySelectorAll('[id]').forEach(n => n.removeAttribute('id')); el.appendChild(c); });
+const live = $('[data-clone="lock-live"]');
+const lc = face.cloneNode(true);
+lc.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+live.replaceWith(lc);
+lc.id = 'le-face';
+lc.querySelector('.l-wrow').id = 'le-slot';
+lc.querySelector('.lw').id = 'le-lw';
+
+/* ---------- fake clock: Tuesday 11:12, lesson 4 ends 11:35 ---------- */
+const T0 = Date.now(), START = 11 * 3600 + 12 * 60 + 8, END = 11 * 3600 + 35 * 60, LSTART = 10 * 3600 + 50 * 60;
+function tick(){
+  const now = START + Math.floor((Date.now() - T0) / 1000) % 900;
+  const rem = END - now;
+  const t = Math.floor(rem / 60) + ':' + String(rem % 60).padStart(2, '0');
+  const hm = Math.floor(now / 3600) + ':' + String(Math.floor(now / 60) % 60).padStart(2, '0');
+  $$('[data-timer]').forEach(e => e.textContent = t);
+  $$('[data-clock],[data-sbclock]').forEach(e => e.textContent = hm);
+  $$('[data-prog]').forEach(e => e.style.width = ((now - LSTART) / (END - LSTART) * 100).toFixed(1) + '%');
+}
+tick(); setInterval(tick, 1000);
+
+/* ---------- keyboard ---------- */
+const KB = { en: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], ru: ['йцукенгшщзх', 'фывапролджэ', 'ячсмитьбю'] };
+const kb = $('#kb');
+const shiftSvg = '<svg viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M9 2.5 2.5 9.5H6v6h6v-6h3.5z"/></svg>';
+const delSvg = '<svg viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M6 3.5h9.5v11H6L1.5 9z"/><path d="M8.5 6.5l4 5M12.5 6.5l-4 5" stroke-linecap="round"/></svg>';
+const globeSvg = '<svg viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.3"><circle cx="9" cy="9" r="6.5"/><path d="M2.5 9h13M9 2.5c-2.5 3-2.5 10 0 13M9 2.5c2.5 3 2.5 10 0 13"/></svg>';
+for (const l of ['en', 'ru']) {
+  const r = KB[l];
+  const keys = s => [...s].map(c => `<span class="k" data-k="${c}">${c}</span>`).join('');
+  kb.insertAdjacentHTML('beforeend', `<div class="kb-l" data-l="${l}">
+    <div class="kr">${keys(r[0])}</div>
+    <div class="kr">${keys(r[1])}</div>
+    <div class="kr"><span class="k sp" data-k="shift">${shiftSvg}</span>${keys(r[2])}<span class="k sp" data-k="del">${delSvg}</span></div>
+    <div class="kr"><span class="k sp">123</span><span class="k sp">${globeSvg}</span><span class="k wide" data-k=" ">${l === 'ru' ? 'Пробел' : 'space'}</span><span class="k ret">return</span></div>
+  </div>`);
+}
+function kbShow(lang, ret, blue){ kb.dataset.l = lang; const r = $(`.kb-l[data-l="${lang}"] .ret`, kb); r.textContent = ret; r.classList.toggle('blue', !!blue); kb.classList.add('x-on'); }
+function kbHide(){ kb.classList.remove('x-on'); }
+const kbRet = () => $(`.kb-l[data-l="${kb.dataset.l}"] .ret`, kb);
+async function hit(k){ const el = $(`.kb-l[data-l="${kb.dataset.l}"] [data-k="${CSS.escape(k)}"]`, kb); if (!el) return; el.classList.add('x-hit'); await wait(90); el.classList.remove('x-hit'); }
+
+/* ---------- code for the editor ---------- */
+const CODE = [
+'function describe(s, now) {',
+'  const d = { timer: false, progress: -1 };',
+'  const n = s.next;',
+'  const c = s.current;',
+'  d.target = s.target;',
+'  if (s.kind === "LESSON") {',
+'    d.timer = true;',
+'    d.title = c.subject;',
+'    d.lockTop = c.subject + " · до " + hm(c.end);',
+'    d.lockBottom = "→ " + n.room + " · " + n.subject;',
+'  }',
+'  return d;',
+'}',
+'',
+'// экран блокировки: прямоугольный',
+'function lockRectWidget(d) {',
+'  const w = new ListWidget();',
+'  w.setPadding(0, 2, 0, 2);',
+'  txt(w, d.lockTop, Font.semiboldSystemFont(13));',
+'  timer(w, d.target, 22);',
+'  return w;',
+'}',
+'',
+'const now = new Date();',
+'const status = compute(now);',
+'const display = describe(status, now);',
+'widget.refreshAfterDate = nextRefresh(status, now);',
+'Script.setWidget(widget);',
+'Script.complete();'
+];
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function hl(line){
+  return esc(line).replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*")|\b(function|const|let|if|else|return|new|true|false)\b|\b(\d+)\b|\b([a-zA-Z]+)(?=\()/g,
+    (m, c, s, k, n, f) => c ? `<span class="tc">${c}</span>` : s ? `<span class="ts">${s}</span>` : k ? `<span class="tk">${k}</span>` : n ? `<span class="tn">${n}</span>` : `<span class="tf">${f}</span>`);
+}
+function fillCode(anim){
+  const el = $('#ed-code');
+  el.classList.toggle('x-paste', !!anim);
+  el.innerHTML = CODE.map((l, i) => `<div class="ln" style="animation-delay:${i * 18}ms"><span class="no">${i + 1}</span><span>${hl(l) || ' '}</span></div>`).join('');
+}
+
+/* ---------- timeline engine ---------- */
+const CANCEL = Symbol('cancel');
+let runId = 0, paused = false, cur = null, z = 10;
+async function wait(ms){
+  const id = runId; let left = RM ? ms * .75 : ms;
+  while (left > 0) {
+    await new Promise(r => setTimeout(r, 40));
+    if (id !== runId) throw CANCEL;
+    if (!paused) left -= 40;
+  }
+}
+function pt(el){
+  const d = D.getBoundingClientRect(), r = el.getBoundingClientRect();
+  return { x: (r.left + r.width / 2 - d.left) / S, y: (r.top + r.height / 2 - d.top) / S };
+}
+let fx = 150, fy = 700;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const place = (x, y) => { finger.style.transform = `translate(${x}px, ${y}px)`; };
+// A real thumb never travels in a ruler-straight line: move along a gently bent curve, ease in and out.
+function glide(x, y, dur){
+  const id = runId, x0 = fx, y0 = fy;
+  const dx = x - x0, dy = y - y0, len = Math.hypot(dx, dy) || 1;
+  const bend = rnd(.06, .2) * len * (Math.random() < .5 ? -1 : 1);
+  const cx = (x0 + x) / 2 - dy / len * bend, cy = (y0 + y) / 2 + dx / len * bend;
+  return new Promise((res, rej) => {
+    let t = 0, last = performance.now();
+    function f(now){
+      if (id !== runId) return rej(CANCEL);
+      if (!paused) t += (now - last) / dur;
+      last = now;
+      const k = Math.min(1, t), e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, u = 1 - e;
+      fx = u * u * x0 + 2 * u * e * cx + e * e * x;
+      fy = u * u * y0 + 2 * u * e * cy + e * e * y;
+      place(fx, fy);
+      k < 1 ? requestAnimationFrame(f) : res();
+    }
+    requestAnimationFrame(f);
+  });
+}
+async function go(sel, o = {}){
+  const el = typeof sel === 'string' ? $(sel, D) : sel;
+  const p = pt(el);
+  // people rarely hit the exact centre of a button
+  const x = p.x + (o.dx || 0) + rnd(-3, 3), y = p.y + (o.dy || 0) + rnd(-2.5, 2.5);
+  if (!finger.classList.contains('x-show')) { fx = x + rnd(20, 50); fy = y + rnd(70, 110); place(fx, fy); void finger.offsetWidth; finger.classList.add('x-show'); }
+  const dist = Math.hypot(x - fx, y - fy);
+  const dur = o.dur || Math.round(Math.min(950, Math.max(360, dist * rnd(1.4, 1.9))));
+  await glide(x, y, RM ? dur * .6 : dur);
+  await wait(rnd(110, 300));
+}
+function ripple(){
+  if (RM) return;
+  const r = document.createElement('div'); r.className = 'rip';
+  r.style.left = fx + 'px'; r.style.top = fy + 'px';
+  D.appendChild(r); setTimeout(() => r.remove(), 600);
+}
+async function tap(){
+  finger.classList.add('x-press'); ripple();
+  await wait(170);
+  finger.classList.remove('x-press');
+  await wait(160);
+}
+async function hold(ms, onPress){
+  finger.style.setProperty('--hold', ms + 'ms');
+  finger.classList.add('x-press', 'x-hold');
+  onPress && onPress(true);
+  await wait(ms);
+  finger.classList.remove('x-press', 'x-hold');
+  onPress && onPress(false);
+  ripple();
+  await wait(120);
+}
+async function drag(dx, ms = 520){
+  finger.classList.add('x-press');
+  await wait(140);
+  await glide(fx + dx, fy + rnd(-6, 6), ms);
+}
+function hideFinger(){ finger.classList.remove('x-show', 'x-press', 'x-hold'); }
+async function type(sel, str, first){
+  const el = $(sel, D);
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch !== ch.toLowerCase()) { await hit('shift'); }
+    hit(ch.toLowerCase()).catch(() => {});
+    if (i === 0 && first) first();
+    el.textContent += ch;
+    // uneven rhythm, with the odd short think
+    await wait(rnd(85, 210) + (Math.random() < .15 ? rnd(150, 320) : 0));
+  }
+}
+const add = (sel, ...c) => $(sel, D).classList.add(...c);
+const rem = (sel, ...c) => $(sel, D).classList.remove(...c);
+
+function syncSB(){ D.classList.toggle('x-lockmode', !!cur && cur.hasAttribute('data-nosbtime')); }
+function show(id, enter){
+  const s = $(id, D); s.dataset.enter = enter || 'fade';
+  s.style.zIndex = ++z; s.classList.add('x-on'); cur = s; syncSB();
+}
+async function open(id, enter, originSel){
+  const inc = $(id, D), out = cur;
+  inc.dataset.enter = enter;
+  if (originSel) { const p = pt($(originSel, D)); inc.style.transformOrigin = `${p.x}px ${p.y}px`; }
+  else inc.style.transformOrigin = '50% 50%';
+  D.classList.add('noanim'); inc.classList.remove('x-on'); void inc.offsetWidth; D.classList.remove('noanim'); void inc.offsetWidth;
+  inc.style.zIndex = ++z;
+  inc.classList.add('x-on'); cur = inc; syncSB();
+  await wait(520);
+  if (out && out !== inc) { out.dataset.enter = 'fade'; out.classList.remove('x-on'); }
+}
+async function back(id){
+  const to = $(id, D), out = cur;
+  to.dataset.enter = 'fade';
+  to.style.zIndex = z - 1; to.classList.add('x-on');
+  cur = to; syncSB();
+  out.classList.remove('x-on');
+  await wait(520);
+  to.style.zIndex = ++z;
+}
+
+function hardReset(){
+  D.classList.add('noanim');
+  [D, ...$$('*', D)].forEach(el => {
+    if (el.classList) [...el.classList].forEach(c => c.startsWith('x-') && el.classList.remove(c));
+  });
+  $$('.scr', D).forEach(s => { s.style.zIndex = ''; s.style.transformOrigin = ''; s.dataset.enter = 'fade'; });
+  $('#as-q').textContent = '';
+  $('#ed-title').textContent = 'Untitled Script';
+  $('#ed-code').innerHTML = '';
+  $('#sf-sel-v').textContent = 'Класс 7А';
+  $('#sf-copy').textContent = 'Скопировать скрипт';
+  $('#cfg-choose').textContent = 'Choose'; rem('#cfg-choose', 'set');
+  D.dataset.lw = 'none'; D.dataset.hw = 'none';
+  hideFinger(); fx = 150; fy = 700;
+  $$('.rip', D).forEach(r => r.remove());
+  cur = null; z = 10;
+}
+function settle(){ void D.offsetWidth; requestAnimationFrame(() => requestAnimationFrame(() => D.classList.remove('noanim'))); }
+
+/* ---------- steps ---------- */
+const STEPS = [
+{
+  chip: 'Scriptable',
+  title: 'Установи Scriptable',
+  txt: 'Это бесплатное приложение для виджетов. В App Store найди <q>Scriptable</q> от Simon B. Støvring, установи и <b>открой один раз</b>. Без этого его не будет в списке виджетов.',
+  beats: ['Открой App Store', 'В поиске набери Scriptable', 'Нажми «Загрузить»', 'Нажми «Открыть»'],
+  tip: 'Если App Store попросит подтвердить, подтверди через Face ID или пароль Apple ID. Приложение бесплатное.',
+  setup(){ show('#s-home'); },
+  async run(B){
+    B(0); await go('#a-appstore .ic'); await tap(); await open('#s-appstore', 'zoom', '#a-appstore .ic');
+    B(1); await go('#as-field'); await tap(); add('#as-field', 'x-focus'); kbShow('en', 'search', true); await wait(450);
+    await type('#as-q', 'Scriptable'); await wait(250);
+    await go(kbRet()); await tap(); kbHide(); rem('#as-field', 'x-focus'); add('#s-appstore', 'x-results'); await wait(700);
+    B(2); await go('#as-get'); await tap(); add('#as-get', 'x-loading'); await wait(2300); add('#as-get', 'x-done'); await wait(500);
+    B(3); await go('#as-get'); await tap(); hideFinger(); await open('#s-scr', 'zoom', '#as-get'); add('#s-home', 'x-has'); await wait(1000);
+  }
+},
+{
+  chip: 'Скрипт',
+  title: 'Скопируй скрипт своего класса',
+  txt: 'Открой сайт <q>Звонок</q> в Safari. В разделе <q>Установить</q> нажми <q>iPhone</q>, выбери свой класс и нажми <q>Скопировать скрипт</q>.',
+  beats: ['Открой сайт в Safari', 'В «Установить» нажми «iPhone»', 'Выбери свой класс', 'Нажми «Скопировать скрипт»'],
+  tip: 'Расписание твоего класса уже внутри скрипта, поэтому виджет работает и офлайн. Если интернет есть, он сам подтянет замены.',
+  setup(){ show('#s-home'); add('#s-home', 'x-has'); },
+  async run(B){
+    B(0); await go('#d-safari'); await tap(); await open('#s-safari', 'zoom', '#d-safari'); await wait(500);
+    B(1); await go('#sf-ios'); await tap(); add('#s-safari', 'x-ios'); await wait(1100);
+    B(2); await go('#sf-sel'); await tap(); add('#sf-menu', 'x-on'); await wait(600);
+    await go('#sf-opt'); await tap(); rem('#sf-menu', 'x-on'); $('#sf-sel-v').textContent = 'Класс 7Б'; await wait(600);
+    B(3); await go('#sf-copy'); await tap(); $('#sf-copy').textContent = 'Скопировано'; add('#sf-copy', 'x-ok'); add('#toast', 'x-on'); hideFinger(); await wait(1800); rem('#toast', 'x-on'); await wait(400);
+  }
+},
+{
+  chip: 'Вставка',
+  title: 'Вставь скрипт в Scriptable',
+  txt: 'Открой Scriptable и нажми <q>+</q> справа сверху. Откроется пустой скрипт: нажми в поле и выбери <q>Вставить</q>.',
+  beats: ['Нажми «+» справа сверху', 'Нажми в пустое поле', 'Выбери «Вставить»', 'Скрипт на месте'],
+  tip: 'Скрипт длинный, так и должно быть. Ничего в нём не меняй.',
+  setup(){ show('#s-scr'); add('#s-home', 'x-has'); },
+  async run(B){
+    B(0); await go('#sc-plus'); await tap(); await open('#s-editor', 'up'); await wait(300);
+    B(1); await go('#ed-area', { dy: -170, dx: -40 }); await tap(); add('#s-editor', 'x-focus'); kbShow('en', 'return'); await wait(450); add('#callout', 'x-on'); await wait(500);
+    B(2); await go('#callout-paste'); await tap(); rem('#callout', 'x-on'); fillCode(true); hideFinger(); await wait(1100);
+    B(3); kbHide(); rem('#s-editor', 'x-focus'); await wait(500); add('#ed-code', 'x-scrolled'); await wait(1400); rem('#ed-code', 'x-scrolled'); await wait(1300);
+  }
+},
+{
+  chip: 'Название',
+  title: 'Назови его «Звонок»',
+  txt: 'Нажми на <q>Untitled Script</q> сверху и введи <q>Звонок</q>. Потом нажми <q>Done</q> слева сверху. Scriptable на английском: Done значит «Готово».',
+  beats: ['Нажми на «Untitled Script»', 'Введи «Звонок»', 'Нажми «Done»', 'Скрипт сохранён'],
+  tip: 'Название нужно, чтобы потом быстро найти скрипт, когда будешь настраивать виджет.',
+  setup(){ show('#s-editor', 'up'); fillCode(false); add('#s-home', 'x-has'); },
+  async run(B){
+    B(0); await go('#ed-title'); await tap(); add('#s-editor', 'x-rename'); kbShow('ru', 'Готово', true); await wait(650);
+    B(1); await type('#ed-title', 'Звонок', () => { $('#ed-title').textContent = ''; add('#s-editor', 'x-typing'); }); await wait(500);
+    B(2); await go('#ed-done'); await tap(); kbHide(); rem('#s-editor', 'x-rename', 'x-typing'); hideFinger(); await wait(250); await back('#s-scr');
+    B(3); add('#s-scr', 'x-tile'); await wait(1500);
+  }
+},
+{
+  chip: 'Настройка',
+  title: 'Открой настройку экрана блокировки',
+  txt: 'Разблокируй телефон через Face ID или Touch ID, но <b>не смахивай вверх</b>. Зажми экран, нажми <q>Настроить</q> и выбери <q>Экран блокировки</q>.',
+  beats: ['Разблокируй, не смахивая', 'Зажми экран на секунду', 'Нажми «Настроить»', 'Выбери «Экран блокировки»'],
+  tip: 'Если «Настроить» не появилось, значит телефон ещё заблокирован. Замок вверху должен быть открыт.',
+  setup(){ show('#s-lock'); add('#s-home', 'x-has'); },
+  async run(B){
+    B(0); await wait(400); add('#s-lock', 'x-faceid'); await wait(1300); add('#s-lock', 'x-unlocked'); await wait(300); rem('#s-lock', 'x-faceid'); await wait(900);
+    B(1); await go('#l-center'); await hold(1100, on => $('#s-lock').classList.toggle('x-press', on)); await open('#s-gallery', 'shrink'); await wait(300);
+    B(2); await go('#g-custom'); await tap(); await open('#s-choose', 'fade'); await wait(400);
+    B(3); await go('#ch-lock .mini'); await tap(); await open('#s-ledit', 'grow', '#ch-lock .mini'); hideFinger(); await wait(900);
+  }
+},
+{
+  chip: 'Виджет',
+  title: 'Добавь виджет Scriptable',
+  txt: 'Нажми на поле под часами. В списке найди <q>Scriptable</q> и выбери <b>прямоугольный</b> виджет. Потом закрой список крестиком.',
+  beats: ['Нажми на поле под часами', 'Найди Scriptable', 'Выбери прямоугольный виджет', 'Закрой список'],
+  tip: 'Пока скрипт не выбран, виджет пишет «Select script in widget configurator». Это нормально, исправим на следующем шаге.',
+  setup(){ show('#s-ledit'); add('#s-home', 'x-has'); },
+  async run(B){
+    B(0); await go('#le-slot'); await tap(); add('#wsheet', 'x-on'); await wait(800);
+    B(1); add('#wsheet', 'x-scroll'); await wait(700); await go('#ws-scriptable'); await tap(); add('#wsheet', 'x-app'); await wait(700);
+    B(2); await go('#ws-rect'); await tap(); D.dataset.lw = 'blank'; add('#le-lw', 'x-pop'); await wait(1000);
+    B(3); await go('#ws-close'); await tap(); rem('#wsheet', 'x-on'); hideFinger(); await wait(1200);
+  }
+},
+{
+  chip: 'Выбор скрипта',
+  title: 'Выбери скрипт «Звонок»',
+  txt: 'Нажми на новый виджет. В строке <q>Script</q> нажми <q>Choose</q> и выбери <q>Звонок</q>. Нажми <q>Готово</q> справа сверху. Всё, таймер на экране блокировки.',
+  beats: ['Нажми на виджет', 'Script → Choose', 'Выбери «Звонок»', 'Нажми «Готово»', 'Таймер тикает сам'],
+  tip: 'Виджет показывает урок, кабинет и сколько осталось до звонка. Дальше по желанию: виджет на рабочий стол.',
+  setup(){ show('#s-ledit'); D.dataset.lw = 'blank'; add('#s-home', 'x-has'); },
+  async run(B){
+    B(0); await go('#le-lw'); await tap(); add('#config', 'x-on'); await wait(650);
+    B(1); await go('#cfg-choose'); await tap(); add('#config', 'x-list'); await wait(650);
+    B(2); await go('#cfg-zvonok'); await tap(); rem('#config', 'x-list'); $('#cfg-choose').textContent = 'Звонок'; add('#cfg-choose', 'set'); await wait(800);
+    await go('#le-empty'); await tap(); rem('#config', 'x-on'); D.dataset.lw = 'real'; rem('#le-lw', 'x-pop'); void $('#le-lw').offsetWidth; add('#le-lw', 'x-pop'); await wait(1000);
+    B(3); await go('#le-done'); await tap(); await open('#s-gallery', 'shrink'); await wait(450); await go('#g-card'); await tap(); hideFinger(); add('#s-lock', 'x-unlocked'); await open('#s-lock', 'grow');
+    B(4); await wait(300); add('#lw', 'x-glow'); await wait(3400);
+  }
+},
+{
+  chip: 'Рабочий стол',
+  opt: true,
+  title: 'Виджет на рабочий стол',
+  txt: 'Это не обязательно: таймер на экране блокировки уже работает. Если хочешь ещё и на рабочем столе, зажми пустое место, нажми <q>Изменить</q> → <q>Добавить виджет</q>. Найди <q>Scriptable</q>, выбери размер и нажми <q>Добавить виджет</q>. Потом зажми виджет → <q>Изменить виджет</q> → Script → <q>Звонок</q>.',
+  beats: ['Посмотри, как он будет выглядеть', 'Зажми пустое место', '«Изменить» → «Добавить виджет»', 'Scriptable → размер → «Добавить»', 'Зажми виджет → «Изменить виджет»', 'Script → «Звонок»', 'Готово: так он выглядит'],
+  tip: 'Есть три размера: маленький, средний и большой (с расписанием на весь день). Как они выглядят, показано ниже. На iOS 17 вместо «Изменить» сверху слева будет кнопка «+».',
+  setup(){ show('#s-home'); add('#s-home', 'x-has'); D.dataset.lw = 'real'; },
+  async run(B){
+    B(0); add('#promo', 'x-on'); await wait(1300); add('#promo-mw', 'x-glow'); await wait(3400);
+    await go('#promo-go'); await tap(); rem('#promo', 'x-on'); await wait(650);
+    B(1); await go('#h-empty'); await hold(1000); add('#s-home', 'x-jiggle'); await wait(600);
+    B(2); await go('#h-edit'); await tap(); add('#h-menu', 'x-on'); await wait(550); await go('#hm-add'); await tap(); rem('#h-menu', 'x-on'); add('#wgal', 'x-on'); await wait(800);
+    B(3); await go('#wg-scriptable'); await tap(); add('#wgal', 'x-app'); await wait(800);
+    await go('#wgal .wg-view', { dx: 70 }); await drag(-150); add('#wgal', 'x-medium'); finger.classList.remove('x-press'); await wait(700);
+    await go('#wg-add'); await tap(); rem('#wgal', 'x-on'); D.dataset.hw = 'blank'; add('#s-home', 'x-widget'); await wait(900);
+    await go('#h-done'); await tap(); rem('#s-home', 'x-jiggle'); await wait(600);
+    B(4); await go('#h-mw'); await hold(700); add('#s-home', 'x-ctx'); await wait(600); await go('#ctx-edit'); await tap(); rem('#s-home', 'x-ctx'); add('#config', 'x-home', 'x-on'); await wait(650);
+    B(5); await go('#cfg-choose'); await tap(); add('#config', 'x-list'); await wait(650);
+    await go('#cfg-zvonok'); await tap(); rem('#config', 'x-list'); $('#cfg-choose').textContent = 'Звонок'; add('#cfg-choose', 'set'); await wait(800);
+    await go('#cfg-back', { dy: -230 }); await tap(); rem('#config', 'x-on'); hideFinger(); await wait(350); rem('#config', 'x-home'); D.dataset.hw = 'real'; add('#h-mw', 'x-pop'); await wait(900);
+    B(6); add('#h-mw', 'x-glow'); await wait(3600);
+  }
+}
+];
+
+/* ---------- panel ---------- */
+const chips = $('#chips'), stepEl = $('#step'), beatsEl = $('#beats'), capText = $('#cap-text'), capNum = $('#cap-num'), bar = $('#bar');
+const check = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5 4.5-5.5"/></svg>';
+const tipIcon = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="7.2"/><path d="M9 8.2v4.6M9 5.4v.1" stroke-linecap="round"/></svg>';
+STEPS.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button';
+  b.innerHTML = `<b>${i + 1}</b>${s.chip}${s.opt ? '<i>по желанию</i>' : ''}`;
+  b.addEventListener('click', () => play(i));
+  chips.appendChild(b);
+});
+let idx = 0, done = new Set();
+function render(i){
+  const s = STEPS[i];
+  $$('.chip', chips).forEach((c, j) => { c.classList.toggle('on', j === i); c.classList.toggle('done', done.has(j) && j !== i); });
+  const on = $$('.chip', chips)[i];
+  chips.scrollTo({ left: on.offsetLeft - 16, behavior: RM ? 'auto' : 'smooth' });
+  stepEl.classList.add('swap');
+  setTimeout(() => {
+    $('#step-of').innerHTML = `Шаг ${i + 1} из ${STEPS.length}` + (s.opt ? '<span class="opt-badge">по желанию</span>' : '');
+    $('#step-title').textContent = s.title;
+    $('#step-txt').innerHTML = s.txt;
+    beatsEl.innerHTML = s.beats.map((b, j) => `<li><span class="dot"><span>${j + 1}</span>${check}</span>${b}</li>`).join('');
+    $('#tip').innerHTML = s.tip ? tipIcon + `<span>${s.tip}</span>` : '';
+    stepEl.classList.remove('swap');
+  }, 180);
+  setCap(i, s.beats[0], true);
+  bar.style.width = '0%';
+}
+function setCap(i, text, quiet){
+  capNum.textContent = i + 1;
+  capText.classList.add('swap');
+  setTimeout(() => { capText.textContent = text; capText.classList.remove('swap'); }, quiet ? 0 : 160);
+}
+function beat(i, j){
+  const s = STEPS[i];
+  $$('li', beatsEl).forEach((li, k) => { li.classList.toggle('ok', k < j); li.classList.toggle('now', k === j); });
+  setCap(i, s.beats[j]);
+  bar.style.width = (j / s.beats.length * 100) + '%';
+}
+function finishBeats(i){
+  $$('li', beatsEl).forEach(li => { li.classList.remove('now'); li.classList.add('ok'); });
+  bar.style.width = '100%';
+  done.add(i);
+  $$('.chip', chips)[i].classList.add('done');
+}
+
+/* ---------- playback ---------- */
+const bPlay = $('#b-play');
+function setPaused(p){
+  paused = p;
+  D.classList.toggle('is-paused', p);
+  $('#i-pause').hidden = p; $('#i-play').hidden = !p;
+  bPlay.setAttribute('aria-label', p ? 'Смотреть' : 'Пауза');
+}
+let ended = false;
+async function play(i){
+  const id = ++runId;
+  idx = i; ended = false;
+  if (paused) setPaused(false);
+  hardReset();
+  render(i);
+  STEPS[i].setup();
+  settle();
+  try {
+    await wait(900);
+    await STEPS[i].run(j => beat(i, j));
+    finishBeats(i);
+    if (i < STEPS.length - 1) { await wait(1300); if (id === runId) play(i + 1); }
+    else { ended = true; setCap(i, 'Готово! Можно смотреть сначала'); setPaused(true); }
+  } catch (e) { if (e !== CANCEL) console.error(e); }
+}
+bPlay.addEventListener('click', () => { if (ended) { done.clear(); play(0); } else setPaused(!paused); });
+$('#b-next').addEventListener('click', () => play(Math.min(STEPS.length - 1, idx + 1)));
+$('#b-prev').addEventListener('click', () => play(Math.max(0, idx - 1)));
+$('#b-again').addEventListener('click', () => play(idx));
+addEventListener('keydown', e => {
+  if (e.target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
+  if (e.key === 'ArrowRight') play(Math.min(STEPS.length - 1, idx + 1));
+  else if (e.key === 'ArrowLeft') play(Math.max(0, idx - 1));
+  else if (e.key === ' ') { e.preventDefault(); bPlay.click(); }
+});
+
+fit();
+const start = () => play(0);
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { fit(); start(); });
+})();
+</script>
+</body>
+</html>

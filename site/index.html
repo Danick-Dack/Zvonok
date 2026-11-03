@@ -258,6 +258,10 @@ input[type=range]{width:100%;accent-color:#fff}
 .step b{display:block;margin-bottom:2px}
 .step p{color:var(--soft);font-size:15px}
 .step .row{margin-top:10px}
+.vguide{display:flex;align-items:center;gap:14px;margin-top:18px;padding:14px 16px;border-radius:18px;background:#fff;color:#000;text-decoration:none}
+.vguide b{display:block;font-size:17px}.vguide small{display:block;color:#555;font-size:13px}
+.vplay{flex:none;width:44px;height:44px;border-radius:50%;background:#000;position:relative}
+.vplay:after{content:"";position:absolute;left:17px;top:13px;border:9px solid transparent;border-left:14px solid #fff;border-right:0}
 .bhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:26px}
 .warn{border:1px solid var(--line2);border-radius:16px;padding:14px 16px;color:var(--soft);font-size:14px;margin-top:12px}
 
@@ -539,7 +543,7 @@ footer .links a{color:var(--soft);font-size:14px;text-decoration:none}footer .li
       <details><summary>Как обновить приложение?</summary><p>При первом запуске приложение спросит, можно ли проверять обновления. Если разрешишь, оно раз в сутки смотрит, вышла ли новая версия, и показывает белую плашку «Вышла версия…». Проверить самому можно в ⚙ → «Обновления». Нажимаешь, браузер скачивает новый APK, открываешь его и жмёшь «Обновить». Удалять старое приложение не нужно. Если Android всё же пишет «Приложение не установлено», значит у тебя совсем старая версия: удали её один раз и поставь новую.</p></details>
       <details><summary>Работает офлайн?</summary><p>Да. Расписание уже внутри приложения, интернет нужен, только если ты разрешил проверку обновлений и замен. Сайт после первого раза тоже открывается без сети, а ещё его можно скачать одним файлом и скинуть в чат.</p></details>
       <details><summary>Как отправить приложение другу без интернета?</summary><p>В приложении: ⚙ → «Отправить приложение другу». Можно по Bluetooth, через Quick Share или в мессенджер. Друг получит APK и поставит его так же, как ты.</p></details>
-      <details><summary>Как поставить на iPhone?</summary><p>Через бесплатное приложение Scriptable из App Store. Скопируй на сайте скрипт своего класса, вставь его в Scriptable и добавь виджет на экран блокировки или рабочий стол. Он покажет урок, кабинет и таймер до звонка. Подробные шаги в разделе «Установить» → iPhone.</p></details>
+      <details><summary>Как поставить на iPhone?</summary><p>Проще всего открыть <a href="iphone.html">видеогайд</a> и повторять за ним. Коротко: Через бесплатное приложение Scriptable из App Store. Скопируй на сайте скрипт своего класса, вставь его в Scriptable и добавь виджет на экран блокировки или рабочий стол. Он покажет урок, кабинет и таймер до звонка. Подробные шаги в разделе «Установить» → iPhone.</p></details>
       <details><summary>Есть ли на iPhone уведомление, как на Android?</summary><p>Нет, Apple не разрешает сайтам и скриптам держать уведомление на экране. Зато есть виджеты на экран блокировки через бесплатное приложение Scriptable (как поставить, написано в «Установить» → iPhone).</p></details>
       <details><summary>Как удалить?</summary><p>Как любое другое приложение: зажми иконку «Звонок» и нажми «Удалить». После этого на телефоне от него ничего не останется.</p></details>
     </div>
@@ -1238,6 +1242,9 @@ function renderGuide(key) {
     const sel = h("select", {class: "f", style: "flex:1;min-width:140px", "aria-label": "Класс для скрипта"}, CLASSES.map(c => h("option", {value: c, text: "Класс " + c})));
     sel.value = cls;
     g.append(
+      h("a", {class: "vguide", href: "iphone.html"},
+        h("span", {class: "vplay", "aria-hidden": "true"}),
+        h("span", null, h("b", {text: "Смотреть видеогайд"}), h("small", {text: "3 минуты. iPhone на экране сам показывает, куда нажимать"}))),
       h("div", {class: "bhead"}, h("span", {class: "caps", text: "Так это будет выглядеть"})),
       h("div", {id: "iosPv"}),
       h("p", {class: "note pvnote", text: "Цвета виджетов на рабочем столе берутся из конструктора, раздел «Виджеты и уведомление». На экране блокировки iPhone красит виджеты сам."}),

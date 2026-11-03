@@ -1,7 +1,7 @@
 // Звонок: работа без интернета. Сначала сеть (чтобы приходили обновления расписания),
 // без сети сохранённая копия. Чужие сайты не трогаем.
-const CACHE = "zvonok-v5";
-const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./poster.html", "./changes.json", "./changelog.html", "./feedback.html"];
+const CACHE = "zvonok-v6";
+const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./poster.html", "./changes.json", "./changelog.html", "./feedback.html", "./iphone.html"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
