@@ -13,7 +13,8 @@ button{cursor:pointer;background:none;border:0}
 a{color:inherit}
 .wrap{max-width:760px;margin:0 auto;padding:0 18px}
 .caps{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.glow{position:fixed;left:0;right:0;top:0;height:70vh;pointer-events:none;z-index:-1;background:radial-gradient(60% 50% at 50% 0%,rgba(255,255,255,.07),transparent 70%)}
+.glow{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(60% 45% at 50% 0%,rgba(255,255,255,.07),transparent 70%),radial-gradient(45% 40% at 90% 35%,rgba(110,130,255,.055),transparent 70%),radial-gradient(50% 45% at 5% 80%,rgba(150,110,255,.045),transparent 70%)}
+.glow::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1.2px);background-size:26px 26px;-webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 60%,transparent 100%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 60%,transparent 100%)}
 header{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);
   border-bottom:1px solid rgba(255,255,255,.06);padding-top:env(safe-area-inset-top)}
 header .wrap{max-width:1080px}
@@ -23,7 +24,7 @@ header .wrap{max-width:1080px}
 nav{display:flex;gap:4px;margin-left:auto}
 nav a{white-space:nowrap;text-decoration:none;color:var(--soft);font-size:14px;padding:8px 12px;border-radius:12px}
 nav a:hover,nav a[aria-current=page]{background:var(--s2);color:var(--fg)}
-@media(max-width:1000px){nav{display:none}}
+@media(max-width:1000px){.bar{flex-wrap:wrap;height:auto;padding:9px 0 10px;row-gap:8px}nav{display:flex;order:3;width:100%;margin:0;overflow-x:auto;scrollbar-width:none;gap:6px}nav::-webkit-scrollbar{display:none}nav a{flex:none;font-size:13px;padding:6px 12px;border-radius:999px;background:var(--s2);border:1px solid var(--line2)}}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:14px;min-height:44px;
   font-weight:600;font-size:15px;text-decoration:none;transition:transform .15s,background .15s;white-space:nowrap}
 .btn:active{transform:scale(.97)}

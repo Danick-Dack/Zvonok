@@ -115,13 +115,9 @@ document.getElementById("f").onload = () => setTimeout(() => {
     ev('$("rq").value="";renderRooms()');
   });
 
-  run("где друг", () => {
-    ev('cls="7Б";useCustom=false;pick=false;rebuild()');
-    withDate("2026-11-02T10:00:00", '($("fCls").value="9А",renderFriend())');
-    const t = d.getElementById("fOut").textContent;
-    ok(t.includes("Сейчас у 9А:") && t.includes("Общие перемены") && /Домой|вместе/.test(t), "где друг: сейчас, перемены, домой: " + t);
-    withDate("2026-11-07T10:00:00", "renderFriend()");
-    ok(d.getElementById("fOut").textContent.startsWith("Понедельник у 9А"), "в выходной показывает ближайший день");
+  run("где друг убран", () => {
+    ok(!d.getElementById("friend") && typeof w.renderFriend === "undefined", "блока «Где друг» нет");
+    ok(d.querySelector("#rooms h3").textContent === "Кто в кабинете?", "заголовок «Кто в кабинете?»");
   });
 
   run("ошибка и календарь", () => {
@@ -200,7 +196,7 @@ async function pages() {
     ok([...d.querySelectorAll(".rel")].every(c => c.textContent.includes("iPhone")) && d.querySelectorAll(".rel").length < n, "фильтр по iPhone");
     ok(!/—/.test(d.body.innerText) && !/undefined|null/.test(d.body.innerText), "что нового: без длинных тире и мусора");
     w = await load("_feedback_under_test.html"); d = w.document;
-    ok(d.getElementById("pTitle").textContent === "Через GitHub" && !d.getElementById("pText").textContent.includes("Анонимно"), "без Google Формы честно: через GitHub, не анонимно");
+    ok(d.getElementById("pTitle").textContent === "Анонимно" && /formsubmit\.co\/ajax\//.test(d.documentElement.innerHTML) && !/github\.com/.test(d.querySelector("script:not([src])").textContent), "анонимно, без GitHub");
     ok(d.getElementById("send").disabled, "пустой текст не отправить");
     const t = d.getElementById("text"); t.value = "Хочу тёмную тему посветлее"; t.dispatchEvent(new w.Event("input"));
     ok(!d.getElementById("send").disabled && d.getElementById("cnt").textContent === "26 / 1000", "счётчик и кнопка");

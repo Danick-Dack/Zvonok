@@ -1395,6 +1395,11 @@ const STEPS = [
 
 /* ---------- panel ---------- */
 const chips = $('#chips'), stepEl = $('#step'), beatsEl = $('#beats'), capText = $('#cap-text'), capNum = $('#cap-num'), bar = $('#bar');
+// колёсико мыши листает шаги вбок (на ПК)
+chips.addEventListener('wheel', e => {
+  if (chips.scrollWidth <= chips.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  e.preventDefault(); chips.scrollLeft += e.deltaY;
+}, { passive: false });
 const check = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5 4.5-5.5"/></svg>';
 const tipIcon = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="7.2"/><path d="M9 8.2v4.6M9 5.4v.1" stroke-linecap="round"/></svg>';
 STEPS.forEach((s, i) => {

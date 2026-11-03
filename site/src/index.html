@@ -48,8 +48,10 @@ a{color:inherit}
 .wrap{max-width:1080px;margin:0 auto;padding:0 18px}
 .caps{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .num{font-variant-numeric:tabular-nums}
-.glow{position:fixed;left:0;right:0;top:0;height:80vh;pointer-events:none;z-index:-1;
-  background:radial-gradient(60% 50% at 50% 0%,rgba(255,255,255,.08),transparent 70%)}
+.glow{position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background:radial-gradient(60% 45% at 50% 0%,rgba(255,255,255,.07),transparent 70%),radial-gradient(45% 40% at 90% 35%,rgba(110,130,255,.055),transparent 70%),radial-gradient(50% 45% at 5% 80%,rgba(150,110,255,.045),transparent 70%)}
+.glow::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1.2px);background-size:26px 26px;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 60%,transparent 100%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 60%,transparent 100%)}
 
 /* шапка */
 header{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.72);backdrop-filter:saturate(1.6) blur(18px);
@@ -68,7 +70,9 @@ nav a:hover{background:var(--s2);color:var(--fg)}
 .btn.d{background:var(--s2);border:1px solid var(--line2);color:var(--fg)}
 .btn.d:hover{background:var(--s3)}
 .btn.sm{padding:9px 14px;font-size:14px;border-radius:12px}
-@media(max-width:1000px){nav{display:none}.bar .btn{margin-left:auto}}
+@media(max-width:1000px){.bar{flex-wrap:wrap;height:auto;padding:9px 0 10px;row-gap:8px}.bar>.btn{margin-left:auto}
+  nav{display:flex;order:3;width:100%;margin:0;overflow-x:auto;scrollbar-width:none;gap:6px}nav::-webkit-scrollbar{display:none}
+  nav a{flex:none;font-size:13px;padding:6px 12px;border-radius:999px;background:var(--s2);border:1px solid var(--line2)}}
 }
 
 /* hero */
@@ -176,9 +180,6 @@ section{padding:70px 0 10px}
 .rnow{padding:12px 12px 4px;font-weight:600}
 .chip.sub{background:none;border:1px dashed var(--soft);color:var(--soft);font-weight:650;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
 .dnote{border:1px dashed var(--line2);border-radius:16px;padding:12px 16px;color:var(--soft);font-size:14px;margin-bottom:10px}
-.friend{margin-top:16px;padding:14px}
-.fhead{display:flex;align-items:center;gap:12px}
-.fhead .f{width:auto;margin-left:auto;padding:7px 10px}
 .fl{color:var(--soft);font-size:15px;margin-top:8px}.fl b{color:var(--fg);font-weight:600}
 
 /* конструктор */
@@ -425,14 +426,10 @@ footer .links a{color:var(--soft);font-size:14px;text-decoration:none}footer .li
     <div class="card" id="dayList"></div>
     <div class="week" id="weekView" hidden></div>
     <div class="row"><a class="btn d sm" id="report" target="_blank" rel="noopener noreferrer">Нашёл ошибку в расписании</a></div>
-    <div class="card friend" id="friend">
-      <div class="fhead"><span class="caps">Где друг</span><select class="f" id="fCls" aria-label="Класс друга"></select></div>
-      <div id="fOut"></div>
-    </div>
   </section>
 
   <section id="rooms">
-    <div class="sh"><h3>Где <b>кабинет</b>?</h3><p>Кто сейчас сидит в кабинете, когда он освободится и где пусто прямо сейчас.</p></div>
+    <div class="sh"><h3>Кто в <b>кабинете</b>?</h3><p>Кто сейчас сидит в кабинете, когда он освободится и где пусто прямо сейчас.</p></div>
     <div class="search">
       <input id="rq" inputmode="text" placeholder="Кабинет, например 46" autocomplete="off" aria-label="Кабинет">
       <select id="rday" aria-label="День"></select>
@@ -902,7 +899,6 @@ function renderDay() {
   });
   $("report").href = reportUrl();
   renderWeek();
-  renderFriend();
 }
 function renderWeek() {
   const box = $("weekView"); box.textContent = "";
@@ -993,43 +989,6 @@ function renderRooms() {
 
 /* ---------- где друг ---------- */
 function gaps(list) { const g = []; for (let i = 1; i < list.length; i++) if (list[i].start > list[i - 1].end) g.push([list[i - 1].end, list[i].start]); return g; }
-function renderFriend() {
-  const sel = $("fCls"), out = $("fOut");
-  $("friend").hidden = pick;
-  if (!sel.options.length) {
-    CLASSES.forEach(c => sel.append(h("option", {value: c, text: c})));
-    sel.value = store.get("friend", null) || CLASSES.find(c => c !== cls);
-    sel.onchange = () => { store.set("friend", sel.value); renderFriend(); };
-  }
-  const fc = sel.value, now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), me = useCustom ? "у тебя" : "у " + cls;
-  // сегодня, пока у кого-то идут уроки, иначе ближайший учебный день
-  const date = new Date(now); let label = "Сегодня", A, B;
-  for (let i = 0; i < 60; i++) {
-    A = lessonsOn(date); B = dayLessons(fc, date);
-    const end = Math.max(A.length ? A[A.length - 1].end : 0, B.length ? B[B.length - 1].end : 0);
-    if (end && (i > 0 || end > nowMin)) break;
-    date.setDate(date.getDate() + 1);
-    label = i === 0 ? "Завтра" : i < 6 ? DAYN[dow(date)] : dm(date);
-  }
-  const isT = iso(date) === iso(now), lines = [];
-  if (!B.length) lines.push([label + " у " + fc + " уроков нет"]);
-  else if (isT) {
-    const cur = B.find(l => nowMin >= l.start && nowMin < l.end), nx = B.find(l => l.start > nowMin), wr = l => l.subject + (l.room ? ", " + roomText(l.room) : "");
-    if (cur) lines.push(["Сейчас у " + fc + ": ", wr(cur), ", до " + hm(cur.end)]);
-    else if (nx && nowMin < B[0].start) lines.push(["У " + fc + " уроки с " + hm(nx.start) + ": ", wr(nx)]);
-    else if (nx) lines.push(["У " + fc + " перемена до " + hm(nx.start) + ", дальше ", wr(nx)]);
-    else lines.push(["У " + fc + " уроки уже закончились"]);
-  } else lines.push([label + " у " + fc + ": ", plural(B.length) + ", " + hm(B[0].start) + "–" + hm(B[B.length - 1].end)]);
-  if (A.length && B.length) {
-    const ga = gaps(A), common = [];
-    gaps(B).forEach(b => ga.forEach(a => { const s = Math.max(a[0], b[0]), e = Math.min(a[1], b[1]); if (e - s >= 5 && (!isT || e > nowMin)) common.push(hm(s) + "–" + hm(e)); }));
-    lines.push(common.length ? ["Общие перемены: ", common.join(", ")] : ["Общих перемен " + (isT ? "больше " : "") + "нет"]);
-    const ea = A[A.length - 1].end, eb = B[B.length - 1].end;
-    lines.push(ea === eb ? ["Заканчиваете вместе, в ", hm(ea)] : ["Домой: " + me + " в " + hm(ea) + ", у " + fc + " в ", hm(eb)]);
-  }
-  out.textContent = "";
-  lines.forEach(l => out.append(h("p", {class: "fl"}, l[0], l[1] ? h("b", {text: l[1]}) : null, l[2] || null)));
-}
 
 /* ---------- нашёл ошибку ---------- */
 const REPO = "https://github.com/Danick-Dack/Zvonok";
@@ -1363,10 +1322,18 @@ function renderPreview() {
   box._h = html; box.innerHTML = html;
   if (sx && box.firstChild) box.firstChild.scrollLeft = sx;
 }
-["touchstart", "pointerdown"].forEach(e => $("iosPv").addEventListener(e, () => { $("iosPv")._t = true; }, {passive: true}));
-["touchend", "touchcancel", "pointerup", "pointercancel"].forEach(e => $("iosPv").addEventListener(e, () => { setTimeout(() => { $("iosPv")._t = false; }, 800); }, {passive: true}));
+// пока листают превью пальцем, не перерисовываем его (иначе прокрутка сбрасывается)
+let pvTouchT;
+["touchstart", "pointerdown"].forEach(e => document.addEventListener(e, ev => { const b = ev.target.closest && ev.target.closest("#iosPv"); if (b) { b._t = true; clearTimeout(pvTouchT); } }, {passive: true}));
+["touchend", "touchcancel", "pointerup", "pointercancel"].forEach(e => document.addEventListener(e, () => { const b = $("iosPv"); if (b && b._t) { clearTimeout(pvTouchT); pvTouchT = setTimeout(() => { b._t = false; }, 800); } }, {passive: true}));
 if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => { pvOn = e.isIntersecting; if (pvOn) renderPreview(); })).observe($("guide"));
 else pvOn = true;
+// колёсико мыши листает горизонтальные ленты (меню, превью iPhone, плашки)
+document.addEventListener("wheel", e => {
+  const el = e.target.closest && e.target.closest("nav, .pvs, .tags");
+  if (!el || el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  e.preventDefault(); el.scrollLeft += e.deltaY;
+}, {passive: false});
 const calUrl = c => SITE.replace(/^https?:/, "webcal:") + "cal/" + c.replace(/[АБВГ]/g, x => LAT[x].toUpperCase()) + ".ics";
 function scriptFor(c) {
   const w = classWeek(c), week = {};

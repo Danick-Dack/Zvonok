@@ -258,6 +258,8 @@ public class MainActivity extends Activity {
         Updater.update(this);
         if (!Updater.prefs(this).contains(Schedule.KEY_CLASS) && !askedClass) {
             askedClass = true;
+            // запоминаем сразу: если окно закроют без выбора, больше не спрашиваем (класс меняется кнопкой сверху)
+            Updater.prefs(this).edit().putString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS).apply();
             Ui.pickClass(this, () -> { rebuild(); Updates.askOnce(this, () -> Updates.check(this, ok -> showUpdate())); });
         } else {
             Updates.askOnce(this, () -> Updates.check(this, ok -> showUpdate()));
