@@ -803,7 +803,7 @@ function renderLive() {
   } else {
     st = s.kind === "AFTER" ? "Уроки закончились" : s.holiday ? s.holiday[2] : "Выходной"; t = s.kind === "AFTER" ? "Свободен" : s.holiday && /каникул/i.test(s.holiday[2]) ? "Каникулы" : "Отдыхай";
     if (n) {
-      big = hm(n.start); sideH = "уроки до"; sideV = s.nEnd; statH = s.nLabel; statV = plural(s.nCount) + " · до " + s.nEnd;
+      big = hm(n.start); sideH = (s.nLabel === "Завтра" ? "завтра" : s.nWhen) + " в"; sideV = hm(n.start); statH = s.nLabel; statV = plural(s.nCount) + " · до " + s.nEnd;
       nH = s.nLabel + " · " + hm(n.start) + mark(n); nS = n.subject; nR = n.room; foot = s.nLabel + ": " + plural(s.nCount) + ", " + hm(n.start) + "–" + s.nEnd;
       if (s.holiday) {
         const days = Math.round((at(new Date(s.target), 0) - at(now, 0)) / 864e5);

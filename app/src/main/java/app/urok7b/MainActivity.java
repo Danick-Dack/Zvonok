@@ -146,6 +146,7 @@ public class MainActivity extends Activity {
         caption = Ui.text(this, "", 10, MUTED, "sans-serif-medium");
         caption.setLetterSpacing(0.16f);
         caption.setPadding(0, dp(8), 0, 0);
+        chrono.setGravity(Gravity.CENTER); big.setGravity(Gravity.CENTER); caption.setGravity(Gravity.CENTER);
         center.addView(caption);
         ringBox.addView(center, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         hero.addView(ringBox);
