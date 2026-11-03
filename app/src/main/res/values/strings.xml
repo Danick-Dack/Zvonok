@@ -6,4 +6,9 @@
     <string name="widget_day_name">Звонок · день</string>
     <string name="widget_day_desc">Таймер до звонка и все уроки на сегодня</string>
     <string name="widget_mini_desc">Таймер до звонка и кабинет следующего урока</string>
+    <string name="sc_free">Свободные кабинеты</string>
+    <string name="sc_free_short">Свободные</string>
+    <string name="sc_week">Неделя</string>
+    <string name="sc_find">Найти кабинет</string>
+    <string name="sc_find_short">Найти</string>
 </resources>

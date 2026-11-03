@@ -466,7 +466,7 @@ public final class Updater {
                 .setDeleteIntent(repost(ctx))
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setCategory(Notification.CATEGORY_STATUS)
-                .setContentIntent(openApp(ctx));
+                .setContentIntent(openFromNotif(ctx));
         if (Build.VERSION.SDK_INT >= 31) {
             b.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
         }
@@ -510,6 +510,14 @@ public final class Updater {
     private static PendingIntent repost(Context ctx) {
         Intent i = new Intent(ctx, TickReceiver.class).setAction(ACTION_REPOST);
         return PendingIntent.getBroadcast(ctx, 3, i,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    /** Нажатие на уведомление: на заблокированном телефоне — большой таймер поверх блокировки, иначе главный экран. */
+    static PendingIntent openFromNotif(Context ctx) {
+        Intent i = new Intent(ctx, LockActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        return PendingIntent.getActivity(ctx, 2, i,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 

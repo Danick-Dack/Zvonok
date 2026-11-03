@@ -1,17 +1,12 @@
 package app.urok7b;
 
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.content.ClipData;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -75,34 +70,8 @@ public class SettingsActivity extends Activity {
         upd.addView(flag("Проверять автоматически", "Новая версия раз в сутки, замены в расписании раз в 3 часа, когда приложение открыто. Нужен интернет", Updates.KEY_AUTO, false));
 
         LinearLayout checks = section("ПРОВЕРКА ТЕЛЕФОНА");
-        NotificationManager nm = getSystemService(NotificationManager.class);
-        boolean notifOk = nm != null && nm.areNotificationsEnabled();
-        if (notifOk) {
-            NotificationChannel ch = nm.getNotificationChannel(Updater.CHANNEL);
-            notifOk = ch == null || ch.getImportance() != NotificationManager.IMPORTANCE_NONE;
-        }
-        checks.addView(check("Показ уведомления", "Разрешение и экран блокировки", notifOk, () -> {
-            if (!open(new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                    .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()).putExtra(Settings.EXTRA_CHANNEL_ID, Updater.CHANNEL)))
-                open(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
-        }));
-        if (Build.VERSION.SDK_INT >= 31) {
-            AlarmManager am = getSystemService(AlarmManager.class);
-            checks.addView(check("Точное время звонков", "Таймер переключается ровно по звонку",
-                    am == null || am.canScheduleExactAlarms(),
-                    () -> open(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg()))));
-        }
-        PowerManager pm = getSystemService(PowerManager.class);
-        checks.addView(check("Без ограничений батареи", "Чтобы система не закрывала уведомление. Расход не растёт",
-                pm != null && pm.isIgnoringBatteryOptimizations(getPackageName()), () -> {
-                    if (!open(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg())))
-                        open(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
-                }));
-        checks.addView(check("Автозапуск (Xiaomi)", "Чтобы уведомление вернулось после перезагрузки", null, () -> {
-            if (!open(new Intent().setComponent(new ComponentName("com.miui.securitycenter",
-                    "com.miui.permcenter.autostart.AutoStartManagementActivity"))))
-                open(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg()));
-        }));
+        for (Perms.Item i : Perms.list(this))
+            checks.addView(check(i.title, i.why, i.ok, () -> { Perms.markSeen(this, i); i.fix.run(); }));
 
         LinearLayout share = section("ПОДЕЛИТЬСЯ");
         share.addView(Ui.linkRow(this, "Отправить приложение другу", "Скинуть APK по Bluetooth, Quick Share или в Telegram, можно без интернета",

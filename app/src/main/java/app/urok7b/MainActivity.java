@@ -45,7 +45,16 @@ public class MainActivity extends Activity {
     private DayOfWeek selected;
     private String lastSig = "";
     private long lastTarget = -1;
-    private boolean askedNotif, askedClass;
+    private boolean askedNotif, askedClass, permsDue;
+    private ScrollView scroll;
+    private View daysRow;
+    static final String EXTRA_WEEK = "week";
+    private long notifAskT;
+
+    /** Только что показали системный запрос уведомлений — свою подсказку не накладываем сверху. */
+    private boolean askedNotifNow() {
+        return System.currentTimeMillis() - notifAskT < 1500;
+    }
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable tick = new Runnable() {
@@ -58,7 +67,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        permsDue = state == null; // подсказка про разрешения — при каждом запуске, пока чего-то не хватает
         ScrollView sv = new ScrollView(this);
+        scroll = sv;
         sv.setBackgroundColor(BG);
         sv.setVerticalScrollBarEnabled(false);
         LinearLayout root = Ui.vertical(this);
@@ -217,6 +228,7 @@ public class MainActivity extends Activity {
             days.addView(b);
         }
         root.addView(days);
+        daysRow = days;
 
         LinearLayout dh = Ui.horizontal(this);
         dh.setGravity(Gravity.BOTTOM);
@@ -245,6 +257,63 @@ public class MainActivity extends Activity {
         by.setPadding(0, dp(28), 0, 0);
         root.addView(by, Ui.mw(this, 0));
         setContentView(sv);
+        handleIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+    }
+
+    /** Ярлык «Неделя»: сразу к дням недели и списку уроков. */
+    private void handleIntent(Intent i) {
+        // из ярлыка extra приходит строкой "true"
+        if (i == null || !"true".equals(String.valueOf(i.getExtras() == null ? null : i.getExtras().get(EXTRA_WEEK)))) return;
+        i.removeExtra(EXTRA_WEEK);
+        scroll.post(() -> scroll.smoothScrollTo(0, Math.max(0, daysRow.getTop() - dp(12))));
+    }
+
+    /** Необязательная подсказка: чего не хватает и что нажать. Можно закрыть «Не сейчас». */
+    private void askPerms() {
+        java.util.List<Perms.Item> miss = Perms.missing(this);
+        if (miss.isEmpty()) return;
+        LinearLayout box = Ui.vertical(this);
+        box.setPadding(dp(22), dp(4), dp(22), dp(4));
+        TextView intro = Ui.text(this, "Это не обязательно, но без этих разрешений таймер в уведомлении и на экране блокировки "
+                + "может не появиться или отставать. Нажми на пункт и разреши в открывшихся настройках.", 13, SOFT, null);
+        intro.setLineSpacing(0, 1.15f);
+        intro.setPadding(0, 0, 0, dp(8));
+        box.addView(intro);
+        android.app.AlertDialog[] dlg = new android.app.AlertDialog[1];
+        for (Perms.Item it : miss) {
+            LinearLayout r = Ui.horizontal(this);
+            r.setGravity(Gravity.CENTER_VERTICAL);
+            r.setPadding(0, dp(10), 0, dp(10));
+            LinearLayout tl = Ui.twoLines(this, it.title, it.why);
+            tl.setLayoutParams(Ui.weight(1));
+            r.addView(tl);
+            TextView b = Ui.text(this, it.ok == null ? "Открыть" : "Включить", 12, it.ok == null ? TEXT : BG, "sans-serif-medium");
+            b.setBackground(it.ok == null ? Ui.round(this, 0, 12, Color.parseColor("#3A3A3A")) : Ui.round(this, TEXT, 12, 0));
+            b.setPadding(dp(12), dp(6), dp(12), dp(6));
+            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            bp.leftMargin = dp(10);
+            r.addView(b, bp);
+            r.setOnClickListener(v -> {
+                Perms.markSeen(this, it);
+                if (dlg[0] != null) dlg[0].dismiss();
+                it.fix.run();
+            });
+            box.addView(r);
+        }
+        ScrollView sv = new ScrollView(this);
+        sv.addView(box);
+        dlg[0] = new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Чтобы всё работало").setView(sv)
+                .setNegativeButton("Не сейчас", null)
+                .setPositiveButton("Все настройки", (d, w) -> startActivity(new Intent(this, SettingsActivity.class)))
+                .show();
     }
 
     @Override
@@ -253,7 +322,9 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33 && !askedNotif
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             askedNotif = true;
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+            Updater.prefs(this).edit().putBoolean("notif_asked", true).apply();
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, Perms.REQ_NOTIF);
+            notifAskT = System.currentTimeMillis();
         }
         Updater.update(this);
         if (!Updater.prefs(this).contains(Schedule.KEY_CLASS) && !askedClass) {
@@ -261,8 +332,13 @@ public class MainActivity extends Activity {
             // запоминаем сразу: если окно закроют без выбора, больше не спрашиваем (класс меняется кнопкой сверху)
             Updater.prefs(this).edit().putString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS).apply();
             Ui.pickClass(this, () -> { rebuild(); Updates.askOnce(this, () -> Updates.check(this, ok -> showUpdate())); });
+            permsDue = false;
         } else {
             Updates.askOnce(this, () -> Updates.check(this, ok -> showUpdate()));
+        }
+        if (permsDue && !askedNotifNow()) {
+            permsDue = false;
+            askPerms();
         }
         if (Updates.due(this)) Updates.check(this, ok -> { showUpdate(); rebuild(); });
         else if (Updates.changesDue(this)) Updates.checkChanges(this, this::rebuild);

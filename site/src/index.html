@@ -270,6 +270,9 @@ input[type=range]{width:100%;accent-color:#fff}
 .vplay:after{content:"";position:absolute;left:17px;top:13px;border:9px solid transparent;border-left:14px solid #fff;border-right:0}
 .bhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:26px}
 .warn{border:1px solid var(--line2);border-radius:16px;padding:14px 16px;color:var(--soft);font-size:14px;margin-top:12px}
+.calm{border:1px solid rgba(120,200,140,.28);background:rgba(120,200,140,.06);border-radius:16px;padding:14px 16px;margin:12px 0 4px}
+.calm b{display:block;font-size:15px}
+.calm p{color:var(--soft);font-size:14px;margin-top:4px}
 
 /* факты */
 .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
@@ -1192,6 +1195,9 @@ function renderGuide(key) {
     const grp = key && ANDROID[key];
     g.append(h("div", {class: "bhead"}, h("span", {class: "caps", text: "Android" + (grp ? " · " + grp.names.join(", ") + " · " + grp.os : "")}),
       grp ? null : h("span", {class: "note", style: "margin:0", text: "Нажми на марку своего телефона в облаке выше, чтобы получить точные шаги."})));
+    g.append(h("div", {class: "calm"},
+      h("b", {text: "Телефон предупредит. Это нормально"}),
+      h("p", {text: "«Звонка» нет в Play Маркете, поэтому Android спросит про установку из неизвестного источника, а Play Защита может написать «Неизвестное приложение». Так он пишет про любое приложение не из магазина. Нажми «Подробнее» → «Всё равно установить». Внутри нет рекламы, слежки и доступа к личным данным, а весит оно всего 125 КБ."})));
     const steps = h("div", {class: "steps"},
       step("Скачай приложение", "Файл Zvonok-165.apk, всего 125 КБ. Без интернета? Попроси друга: в приложении есть «Настройки → Отправить приложение другу».",
         h("a", {class: "btn w", href: APK, rel: "noopener noreferrer", text: "Скачать APK"})),

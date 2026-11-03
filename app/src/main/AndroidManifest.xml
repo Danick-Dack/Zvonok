@@ -34,7 +34,31 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- ярлыки на иконке: «Свободные кабинеты», «Неделя», «Найти кабинет» -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Большой таймер поверх экрана блокировки (по нажатию на уведомление). Экран не включает, блокировку не снимает -->
+        <activity
+            android:name=".LockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="app.urok7b.lock"
+            android:launchMode="singleTask"
+            android:showWhenLocked="true"
+            android:turnScreenOn="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/LockTheme" />
+
+        <!-- Кабинеты: свободные сейчас и поиск. Открывается из ярлыков на иконке -->
+        <activity
+            android:name=".RoomsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".EditorActivity"

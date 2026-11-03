@@ -11,4 +11,9 @@
         <item name="android:colorControlActivated">#FFFFFFFF</item>
         <item name="android:forceDarkAllowed">false</item>
     </style>
+    <!-- Поверх блокировки: чисто чёрный, без анимации открытия -->
+    <style name="LockTheme" parent="AppTheme">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
 </resources>

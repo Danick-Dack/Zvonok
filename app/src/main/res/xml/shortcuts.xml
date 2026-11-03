@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="free_rooms"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_free"
+        android:shortcutShortLabel="@string/sc_free_short"
+        android:shortcutLongLabel="@string/sc_free">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.urok7b"
+            android:targetClass="app.urok7b.RoomsActivity">
+            <extra android:name="mode" android:value="free" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="week"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_week"
+        android:shortcutShortLabel="@string/sc_week"
+        android:shortcutLongLabel="@string/sc_week">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.urok7b"
+            android:targetClass="app.urok7b.MainActivity">
+            <extra android:name="week" android:value="true" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="find_room"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_find"
+        android:shortcutShortLabel="@string/sc_find_short"
+        android:shortcutLongLabel="@string/sc_find">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.urok7b"
+            android:targetClass="app.urok7b.RoomsActivity">
+            <extra android:name="mode" android:value="find" />
+        </intent>
+    </shortcut>
+</shortcuts>
