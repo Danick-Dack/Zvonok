@@ -586,7 +586,8 @@ HEAD_JS = ('(function(){try{if(top!==self)void top.location.href}catch(e){docume
 def csp(page, connect="'self'"):
     """CSP по хешам: выполняются только скрипты, которые собрала сборка."""
     hashes = []
-    for m in re.finditer(r"<script(?![^>]*application/ld\+json)[^>]*>(.*?)</script>", page, re.S):
+    # хешируем и блок данных JSON-LD: браузер его не выполняет, но валидаторы ждут, что каждый <script> разрешён
+    for m in re.finditer(r"<script[^>]*>(.*?)</script>", page, re.S):
         hashes.append("'sha256-%s'" % base64.b64encode(hashlib.sha256(m.group(1).encode("utf-8")).digest()).decode())
     return ("default-src 'self'; script-src %s; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
             "connect-src %s; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"

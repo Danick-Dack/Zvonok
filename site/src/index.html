@@ -69,7 +69,7 @@
             <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="arc" id="lArc" cx="60" cy="60" r="54" stroke-dasharray="339.29" stroke-dashoffset="339.29"/></svg>
             <div class="dial-in"><div class="timer" id="lTimer"></div><div class="timer-cap" id="lCap"></div></div>
           </div>
-          <div class="subject"><h2 id="lTitle"></h2><span id="lRoom" hidden></span></div>
+          <div class="subject"><h2 id="lTitle">Сейчас</h2><span id="lRoom" hidden></span></div>
           <p class="subject-sub" id="lSub"></p>
           <div class="next" id="lNext" hidden><div class="next-txt"><small id="lNextH"></small><b id="lNextS"></b></div><span id="lNextR" hidden></span></div>
           <p class="live-foot" id="lFoot"></p>
@@ -106,10 +106,10 @@
     </div>
     <div class="slots" id="slots" role="group" aria-label="Урок"></div>
     <div class="rooms-grid">
-      <section class="card" id="roomCard" aria-live="polite" hidden></section>
+      <div class="card" id="roomCard" aria-live="polite" hidden></div>
       <div class="stack">
         <section class="card" aria-labelledby="freeH"><h2 class="card-title" id="freeH">Свободные кабинеты</h2><p class="note" id="freeNote"></p><div class="free" id="free"></div></section>
-        <section class="card" id="nextFree" aria-labelledby="nextFreeH" hidden><h2 class="card-title" id="nextFreeH"></h2><p class="note" id="nextFreeNote"></p><div class="free" id="nextFreeList"></div></section>
+        <section class="card" id="nextFree" aria-labelledby="nextFreeH" hidden><h2 class="card-title" id="nextFreeH">На следующем уроке</h2><p class="note" id="nextFreeNote"></p><div class="free" id="nextFreeList"></div></section>
       </div>
     </div>
   </section>
@@ -139,8 +139,8 @@
             <div class="row">
               <button class="btn btn-primary btn-sm" id="shareBtn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg>Поделиться</button>
               <button class="btn btn-quiet btn-sm" id="copyBtn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Ссылка</button>
-              <a class="btn btn-quiet btn-sm" id="shTg" target="_blank" rel="noopener noreferrer">Telegram</a>
-              <a class="btn btn-quiet btn-sm" id="shWa" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+              <a class="btn btn-quiet btn-sm" id="shTg" href="https://t.me/share/url?url=@SITE_URL@" target="_blank" rel="noopener noreferrer">Telegram</a>
+              <a class="btn btn-quiet btn-sm" id="shWa" href="https://wa.me/?text=@SITE_URL@" target="_blank" rel="noopener noreferrer">WhatsApp</a>
             </div>
             <div class="row">
               <button class="btn btn-line btn-sm" id="msgBtn" type="button">Текст для чата</button>
