@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-LQ9B4uCrau3idbQ7YC7w5eLEAFWnJcsQYPgsI0lMnis='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-JPzlfDaWYYC7YxPVvUPkXDCg1EVZpuDw/9SEfiJZTCk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -342,7 +342,8 @@ function cleanChanges(j) {
     if (!/^\d{4}-\d\d-\d\d$/.test(date) || !obj(c)) continue;
     const day = {};
     if (str(c.note)) day.note = c.note;
-    if (str(c.off)) day.off = c.off;
+    if (str(c.off) && c.off.trim()) day.off = c.off;
+    else if (c.off === true) day.off = "Уроков нет"; // off: true тоже значит «уроков нет», пустая строка нет
     if (Array.isArray(c.bells)) day.bells = c.bells.map(b => Array.isArray(b) && str(b[0]) && str(b[1]) ? [b[0], b[1]] : null);
     if (obj(c.classes)) {
       day.classes = {};

@@ -197,8 +197,10 @@ function loadChanges() {
   if (!ONLINE_SITE || Date.now() - chAt < 600000) return;
   chAt = Date.now();
   fetch("changes.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(j => {
-    if (!j || typeof j.days !== "object" || JSON.stringify(j) === JSON.stringify(CHANGES)) return;
-    CHANGES = cleanChanges(j); chVer++; refresh(); // только поля, которые правила умеют читать
+    // сравниваем уже очищенное: лишнее поле в файле не должно вызывать перерисовку каждые 10 минут
+    const next = j && typeof j.days === "object" ? cleanChanges(j) : null;
+    if (!next || JSON.stringify(next) === JSON.stringify(CHANGES)) return;
+    CHANGES = next; chVer++; refresh(); // только поля, которые правила умеют читать
   }).catch(() => {});
 }
 // своё расписание меняют в конструкторе в соседней вкладке

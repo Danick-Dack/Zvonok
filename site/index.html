@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-o2Zgr7/QCzFGE9L56tk4rns2lYWePME/wgPNSPbkvTc=' 'sha256-tefvlX/BzL+yH9GciKGetcBdInBAJLBpNJ6h/H1stYM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-RtNx5+5hX9WXxmSXx+bIzfDC2eYk+KUyy6K98fzkNTw=' 'sha256-tefvlX/BzL+yH9GciKGetcBdInBAJLBpNJ6h/H1stYM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -564,7 +564,8 @@ function cleanChanges(j) {
     if (!/^\d{4}-\d\d-\d\d$/.test(date) || !obj(c)) continue;
     const day = {};
     if (str(c.note)) day.note = c.note;
-    if (str(c.off)) day.off = c.off;
+    if (str(c.off) && c.off.trim()) day.off = c.off;
+    else if (c.off === true) day.off = "Уроков нет"; // off: true тоже значит «уроков нет», пустая строка нет
     if (Array.isArray(c.bells)) day.bells = c.bells.map(b => Array.isArray(b) && str(b[0]) && str(b[1]) ? [b[0], b[1]] : null);
     if (obj(c.classes)) {
       day.classes = {};
@@ -870,8 +871,10 @@ function loadChanges() {
   if (!ONLINE_SITE || Date.now() - chAt < 600000) return;
   chAt = Date.now();
   fetch("changes.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(j => {
-    if (!j || typeof j.days !== "object" || JSON.stringify(j) === JSON.stringify(CHANGES)) return;
-    CHANGES = cleanChanges(j); chVer++; refresh(); // только поля, которые правила умеют читать
+    // сравниваем уже очищенное: лишнее поле в файле не должно вызывать перерисовку каждые 10 минут
+    const next = j && typeof j.days === "object" ? cleanChanges(j) : null;
+    if (!next || JSON.stringify(next) === JSON.stringify(CHANGES)) return;
+    CHANGES = next; chVer++; refresh(); // только поля, которые правила умеют читать
   }).catch(() => {});
 }
 // своё расписание меняют в конструкторе в соседней вкладке

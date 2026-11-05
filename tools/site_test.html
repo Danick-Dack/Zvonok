@@ -195,6 +195,10 @@ async function main() {
       classes: {"7Б": {"1": 42, "2": {subject: ["x"], room: 46}, "x": null, "3": "нет"}, "7А": "всё"}}, "вчера": {off: "x"}, "2026-11-11": [1, 2]}};
     ok(JSON.stringify(ev("cleanChanges(" + JSON.stringify(bad) + ")")) === JSON.stringify({days: {"2026-11-10": {classes: {"7Б": {"2": {room: "46"}, "3": "нет"}}}}}),
       "из кривого changes.json остаётся только то, что можно прочитать");
+    ok(ev('cleanChanges({days: {"2026-11-12": {off: true}, "2026-11-13": {off: ""}, "2026-11-16": {off: "Субботник"}}})').days["2026-11-12"].off === "Уроков нет"
+      && !("off" in ev('cleanChanges({days: {"2026-11-13": {off: ""}}})').days["2026-11-13"])
+      && ev('cleanChanges({days: {"2026-11-16": {off: "Субботник"}}})').days["2026-11-16"].off === "Субботник",
+      "off: true значит «уроков нет», пустая строка ничего не отменяет");
     const day = ev("(() => { const keep = CHANGES; CHANGES = cleanChanges(" + JSON.stringify(bad) + "); try { return dayLessons('7Б', new Date(2026, 10, 10)).map(l => l.num + ':' + l.subject + ':' + l.room).join(','); } finally { CHANGES = keep; } })()");
     ok(day.includes("2:Английский язык:46") && !/(^|,)3:/.test(day) && day.startsWith("1:Геометрия"), "с такими заменами день считается: " + day.slice(0, 60) + "…");
   });
