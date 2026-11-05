@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-RtNx5+5hX9WXxmSXx+bIzfDC2eYk+KUyy6K98fzkNTw=' 'sha256-nQ5VHXIpG7T4G0K16QszDA1kLtsFUzOwvne+lt0bB2E=' 'sha256-tefvlX/BzL+yH9GciKGetcBdInBAJLBpNJ6h/H1stYM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-W17crB7hX8OFi+IEHAABSJod2bq0CQP7Vla4XK3M6EU=' 'sha256-nQ5VHXIpG7T4G0K16QszDA1kLtsFUzOwvne+lt0bB2E=' 'sha256-tefvlX/BzL+yH9GciKGetcBdInBAJLBpNJ6h/H1stYM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -350,7 +350,7 @@ const store = {
 
 /* Цвета виджетов из конструктора. Код темы уходит внутрь скрипта для iPhone и в приложение на Android,
    поэтому из хранилища берём только известные поля с правильными значениями, остальное по умолчанию. */
-const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 0, tx: ""};
+const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 1, tx: ""}; // sc: цвет урока, по умолчанию включён (4.0)
 function cleanTheme(raw) {
   const o = raw && typeof raw === "object" ? raw : {}, t = Object.assign({}, TH_DEFAULT);
   const hex = v => typeof v === "string" && /^[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;
@@ -1066,7 +1066,7 @@ function renderPromo() {
 }
 
 /* «Что нового» после обновления: показываем один раз тем, кто уже пользовался сайтом */
-const NEWS = {"date":"2026-11-05","title":"Меньше заряда и сайт о проекте"};
+const NEWS = {"date":"2026-11-05","title":"Звонок 4.0: большое обновление"};
 (function initNews() {
   if (!NEWS) return;
   const key = NEWS.date + "|" + NEWS.title, seen = store.get("seenLog", null);

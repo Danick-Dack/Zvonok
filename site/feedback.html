@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-x49hT7nfgv7dEj6ZKKYzi9SjAqqKow0hhF2t/lPpEcI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.web3forms.com https://formsubmit.co; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-5cNv0tTd+/FnEkTqtAKJ1gNpLf6bUOD5lYVGj0QcET8=' 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.web3forms.com https://formsubmit.co; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -84,7 +84,7 @@ const store = {
 
 /* Цвета виджетов из конструктора. Код темы уходит внутрь скрипта для iPhone и в приложение на Android,
    поэтому из хранилища берём только известные поля с правильными значениями, остальное по умолчанию. */
-const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 0, tx: ""};
+const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 1, tx: ""}; // sc: цвет урока, по умолчанию включён (4.0)
 function cleanTheme(raw) {
   const o = raw && typeof raw === "object" ? raw : {}, t = Object.assign({}, TH_DEFAULT);
   const hex = v => typeof v === "string" && /^[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;

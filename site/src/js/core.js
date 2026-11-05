@@ -38,7 +38,7 @@ const store = {
 
 /* Цвета виджетов из конструктора. Код темы уходит внутрь скрипта для iPhone и в приложение на Android,
    поэтому из хранилища берём только известные поля с правильными значениями, остальное по умолчанию. */
-const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 0, tx: ""};
+const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 1, tx: ""}; // sc: цвет урока, по умолчанию включён (4.0)
 function cleanTheme(raw) {
   const o = raw && typeof raw === "object" ? raw : {}, t = Object.assign({}, TH_DEFAULT);
   const hex = v => typeof v === "string" && /^[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;

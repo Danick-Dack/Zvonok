@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-JPzlfDaWYYC7YxPVvUPkXDCg1EVZpuDw/9SEfiJZTCk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-QnOt7B7ymfoZ8tLf6XXhftmvadh4zjVQumgQW9IRHQY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -57,8 +57,8 @@
       <article class="ab-tile"><span class="ab-ic hue-blue"><svg class="icon"><use href="#i-now"/></svg></span><h3>Таймер до звонка</h3><p>Крупно, сколько осталось до конца урока или перемены, и что будет дальше.</p></article>
       <article class="ab-tile"><span class="ab-ic hue-purple"><svg class="icon"><use href="#i-week"/></svg></span><h3>Неделя с заменами</h3><p>Расписание класса на неделю. Замены, отменённые уроки и сокращённые дни видны сразу.</p></article>
       <article class="ab-tile"><span class="ab-ic hue-green"><svg class="icon"><use href="#i-door"/></svg></span><h3>Свободные кабинеты</h3><p>Где сейчас пусто, кто сидит в нужном кабинете и когда он освободится.</p></article>
-      <article class="ab-tile"><span class="ab-ic hue-orange"><svg class="icon"><use href="#i-phone"/></svg></span><h3>Виджеты на iPhone</h3><p>Экран блокировки и рабочий стол через Scriptable. Новые версии ставятся сами.</p></article>
-      <article class="ab-tile"><span class="ab-ic hue-teal"><svg class="icon"><use href="#i-bell"/></svg></span><h3>Приложение для Android</h3><p>Уведомление с таймером, виджеты, плитка в шторке и экран блокировки. Почти не тратит заряд.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-orange"><svg class="icon"><use href="#i-phone"/></svg></span><h3>Виджеты на iPhone</h3><p>Экран блокировки и рабочий стол через Scriptable, в цветах предметов. Новые версии ставятся сами.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-teal"><svg class="icon"><use href="#i-bell"/></svg></span><h3>Приложение для Android</h3><p>Уведомление с таймером, виджеты, плитка в шторке и экран блокировки. Светлая и тёмная тема. Почти не тратит заряд.</p></article>
       <article class="ab-tile"><span class="ab-ic hue-indigo"><svg class="icon"><use href="#i-lock"/></svg></span><h3>Без интернета и слежки</h3><p>Открывается без сети. Класс и настройки хранятся только на твоём телефоне.</p></article>
     </div>
   </section>
@@ -128,7 +128,7 @@ const store = {
 
 /* Цвета виджетов из конструктора. Код темы уходит внутрь скрипта для iPhone и в приложение на Android,
    поэтому из хранилища берём только известные поля с правильными значениями, остальное по умолчанию. */
-const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 0, tx: ""};
+const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 1, tx: ""}; // sc: цвет урока, по умолчанию включён (4.0)
 function cleanTheme(raw) {
   const o = raw && typeof raw === "object" ? raw : {}, t = Object.assign({}, TH_DEFAULT);
   const hex = v => typeof v === "string" && /^[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;

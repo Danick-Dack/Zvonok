@@ -35,7 +35,7 @@ jobs:
         env:
           SIGNING_KEY_B64: ${{ secrets.SIGNING_KEY_B64 }}
         run: |
-          if [ -n "$SIGNING_KEY_B64" ]; then echo "$SIGNING_KEY_B64" | base64 -d > app/uroki7b.jks; fi
+          if [ -n "$SIGNING_KEY_B64" ]; then echo "$SIGNING_KEY_B64" | base64 -d > app/zvonok.jks; fi
 
       - name: Build
         env:
@@ -45,7 +45,7 @@ jobs:
       - name: Collect files
         run: |
           cp app/build/outputs/apk/release/app-release.apk Zvonok-165.apk
-          cp Zvonok-165.apk Uroki7B.apk
+          cp Zvonok-165.apk Uroki7B.apk   # копия под старым именем: по нему ищет обновление приложение v3.0
           cp site/index.html Zvonok-165.html
 
       - uses: actions/upload-artifact@v4

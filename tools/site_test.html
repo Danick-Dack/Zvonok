@@ -322,7 +322,7 @@ async function pages() {
     const thc = w.eval("themeCode()"), src7 = w.scriptFor("7Б");
     let compiles7 = true;
     try { new (Object.getPrototypeOf(async function () {}).constructor)(src7); } catch (e) { compiles7 = false; }
-    ok(thc === "ZV1;bg=000000;ac=60A5FA;op=70;r=26;s=1;p=1;n=1;d=1;sc=0" && src7.includes('const THEME = "' + thc + '"') && compiles7,
+    ok(thc === "ZV1;bg=000000;ac=60A5FA;op=70;r=26;s=1;p=1;n=1;d=1;sc=1" &&src7.includes('const THEME = "' + thc + '"') && compiles7,
       "испорченная тема в хранилище: в скрипт попадают только проверенные поля (" + thc + ")");
     w.localStorage.removeItem("zv.theme");
     await iosScript(w);
@@ -354,9 +354,11 @@ async function iosScript(w) {
   try {
     // код темы в виджете: мусор на входе даёт тему по умолчанию, без исключений
     const pt = (await run({versions: {classes: {}}}, src.replace("Script.complete();", "Script.complete(); return parseTheme;"))).ret;
-    const DEF = JSON.stringify({bg: "000000", ac: "FFFFFF", p: 1, n: 1, d: 1, sc: 0, tx: ""});
-    let themeOk = [undefined, null, "", "abc", "ZV2;bg=112233", "ZV1;" + "x".repeat(300), "ZV1;bg=zzzzzz;sc=abc;p=2;n=;d=x;tx=GGGGGG;=;;", 42, {}]
+    // без своей темы цвет урока включён (4.0); в своём коде без sc=1 выключен, как было
+    const DEF = JSON.stringify({bg: "000000", ac: "FFFFFF", p: 1, n: 1, d: 1, sc: 1, tx: ""}), DEF0 = DEF.replace('"sc":1', '"sc":0');
+    let themeOk = [undefined, null, "", "abc", "ZV2;bg=112233", "ZV1;" + "x".repeat(300), 42, {}]
       .every(x => { try { return JSON.stringify(pt(x)) === DEF; } catch (e) { return false; } });
+    try { themeOk = themeOk && JSON.stringify(pt("ZV1;bg=zzzzzz;sc=abc;p=2;n=;d=x;tx=GGGGGG;=;;")) === DEF0; } catch (e) { themeOk = false; }
     const good = pt("ZV1;bg=0b1220;ac=60A5FA;p=0;n=1;d=0;sc=1;tx=ffffff;zz=1");
     themeOk = themeOk && good.bg === "0B1220" && good.ac === "60A5FA" && good.p === 0 && good.d === 0 && good.sc === 1 && good.tx === "FFFFFF" && !("zz" in good);
     ok(themeOk, "код темы в виджете: мусор даёт тему по умолчанию, верный код читается целиком");

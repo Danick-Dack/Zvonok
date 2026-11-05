@@ -8,7 +8,7 @@
 Встроенные скрипты разрешены в CSP по SHA-256, а не через 'unsafe-inline'.
 
 Данные: data/schedule.json (расписание), data/changes.json (замены), data/changelog.json («Что нового»),
-ios/Uroki7B.js (скрипт виджетов iPhone для Scriptable).
+ios/Zvonok.js (скрипт виджетов iPhone для Scriptable).
 
 Что получается:
   site/index.html            главная: таймер, неделя, кабинеты, установка (одним файлом)
@@ -352,7 +352,7 @@ def with_rules(js):
 def scriptable_template(data):
     """Скрипт для Scriptable: общие данные (каникулы, предметы, сайт) вписываем сразу,
     а класс, звонки, неделю и тему страница подставит сама (метки __CLASS__, __BELLS__, __WEEK__, __THEME__)."""
-    js = with_rules(read("ios", "Uroki7B.js"))
+    js = with_rules(read("ios", "Zvonok.js"))
     a = js.index("// ---------- данные")
     b = js.index("// ---------- конец данных ----------")
     j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
@@ -371,7 +371,7 @@ def scriptable_template(data):
         "const SITE = " + j(SITE_URL) + ";",
         ""])
     js = js[:a] + block + js[b:]
-    return js.replace("// Звонок 7Б:", "// Звонок __CLASS__:")
+    return js.replace("// Звонок:", "// Звонок __CLASS__:", 1)
 
 
 def class_week(data, cls):
@@ -410,8 +410,8 @@ def class_scripts(data, changelog):
 
 
 def ios_sample(data):
-    """ios/Uroki7B.js держим рабочим для 7Б со свежими данными (его можно вставить в Scriptable как есть)."""
-    js = read("ios", "Uroki7B.js")
+    """ios/Zvonok.js держим рабочим для 7Б со свежими данными (его можно вставить в Scriptable как есть)."""
+    js = read("ios", "Zvonok.js")
     a = js.index("// ---------- данные")
     b = js.index("// ---------- конец данных ----------")
     j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
@@ -440,7 +440,7 @@ def ios_sample(data):
         ""])
     out = with_rules(js[:a] + block + js[b:])
     if out != js:
-        with open(os.path.join(ROOT, "ios", "Uroki7B.js"), "w", encoding="utf-8", newline="\n") as f:
+        with open(os.path.join(ROOT, "ios", "Zvonok.js"), "w", encoding="utf-8", newline="\n") as f:
             f.write(out)
 
 

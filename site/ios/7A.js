@@ -15,7 +15,7 @@ const AUTO_UPDATE = true;
 // ---------- данные (сайт подставляет сюда выбранный класс) ----------
 const CLASS = "7А";
 const THEME = ""; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее
-const VERSION = "79549ee255";
+const VERSION = "61e871f8fa";
 const UPDATE_KEY = ""; // открытый ключ подписи новых версий (пусто: сборка была без ключа)
 const BELLS = [[480,525],[530,575],[585,630],[650,695],[715,760],[770,815],[825,870],[880,925],[935,985]];
 const WEEK = {"1":[["Казахский яз. и лит.","42/21"],["Классный час","40"],["Алгебра","24/35"],["Физкультура","спортзал"],["История Казахстана","46"],["Практ. физика","48/50"],["География","54"]],"2":[["Физика","48/49"],["Физика","48/49"],["Геометрия","24/35"],["Геометрия","24/35"],["Английский язык","44/35"],["Программирование","56/57"],["Биология","25"]],"3":[["Русский язык","46"],["Физкультура","спортзал"],["Алгебра","24/35"],["Алгебра","24/35"],["Русская литература","46"],["Английский язык","45/47"]],"4":[["Физика","48/49"],["Физика","48/49"],["Алгебра","24/35"],["Математика","24/35"],["Русский язык","46"],["Всемирная история","54"],["Казахский яз. и лит.","42/21"],["Физкультура","спортзал"]],"5":[["Казахский яз. и лит.","42/21"],["Информатика","56/57"],["Геометрия","24/35"],["Русская литература","46"],["Худ. труд","11/1"],["Химия","40"],["Английский язык","25/20"]]};
@@ -290,7 +290,8 @@ async function loadChanges(fetch) {
 function parseTheme(code) {
   const t = {bg: "000000", ac: "FFFFFF", p: 1, n: 1, d: 1, sc: 0, tx: ""};
   code = String(code || "").trim();
-  if (!code.startsWith("ZV1") || code.length > 200) return t;
+  // своей темы нет: фирменный вид, кольцо и кабинет в цвете урока (в своей теме цвет урока как выбрали на сайте)
+  if (!code.startsWith("ZV1") || code.length > 200) { t.sc = 1; return t; }
   for (const part of code.split(";")) {
     const k = part.split("=")[0].trim(), v = (part.split("=")[1] || "").trim();
     if ((k === "bg" || k === "ac" || k === "tx") && /^[0-9a-fA-F]{6}$/.test(v)) t[k] = v.toUpperCase();
@@ -309,16 +310,19 @@ const TH = parseTheme(param.trim().startsWith("ZV1") ? param : THEME);
 const LIGHT = lum(TH.bg) > 0.5;
 const FG = TH.tx || (LIGHT ? "111111" : "FFFFFF");
 let ACC = Math.abs(lum(TH.ac) - lum(TH.bg)) < 0.25 ? FG : TH.ac; // при «цвете урока» меняется на цвет предмета
+let TINT = ""; // цвет урока для мягкого свечения фона сверху (только в учебный день, при «цвете урока»)
 const c = a => new Color("#" + FG, a);
+/** Цвет предмета под фон виджета или null (без «цвета урока» или неизвестный предмет). */
+function subjColor(subject, a) { const x = TH.sc && COLORS[subject]; return x ? new Color("#" + x[LIGHT ? 0 : 1], a) : null; }
 const acc = a => new Color("#" + ACC, a);
 const WHITE = a => new Color("#FFFFFF", a);
 
 function background(w) {
   const g = new LinearGradient();
-  const bg = TH.bg;
-  if (bg === "000000") { g.colors = ["1C1C21", "0A0A0C", "000000"].map(x => new Color("#" + x)); g.locations = [0, 0.55, 1]; }
-  else if (LIGHT) { g.colors = [mix(bg, "FFFFFF", 0.55), bg].map(x => new Color("#" + x)); g.locations = [0, 1]; }
-  else { g.colors = [mix(bg, "FFFFFF", 0.10), bg, mix(bg, "000000", 0.35)].map(x => new Color("#" + x)); g.locations = [0, 0.6, 1]; }
+  const bg = TH.bg, glow = (x, k) => TINT ? mix(x, TINT, k) : x; // сверху мягкий цвет урока, как на сайте и в Android
+  if (bg === "000000") { g.colors = [glow("1C1C21", 0.26), "0A0A0C", "000000"].map(x => new Color("#" + x)); g.locations = [0, 0.55, 1]; }
+  else if (LIGHT) { g.colors = [glow(mix(bg, "FFFFFF", 0.55), 0.16), bg].map(x => new Color("#" + x)); g.locations = [0, 1]; }
+  else { g.colors = [glow(mix(bg, "FFFFFF", 0.10), 0.24), bg, mix(bg, "000000", 0.35)].map(x => new Color("#" + x)); g.locations = [0, 0.6, 1]; }
   g.startPoint = new Point(0, 0); g.endPoint = new Point(0, 1);
   w.backgroundGradient = g;
 }
@@ -639,8 +643,9 @@ function large(m, now) {
     else if (next) { r.backgroundColor = c(0.05); r.cornerRadius = 10; }
     const t = fixed(r, 38); t.addSpacer(); T(t, hm(l.start), Font.semiboldRoundedSystemFont(12), past ? 0.32 : 0.62, c(1));
     r.addSpacer(8);
-    const mark = fixed(r, 3, 16); mark.cornerRadius = 1.5;
-    mark.backgroundColor = cur ? acc(1) : next ? c(0.62) : past ? c(0.16) : c(0.30);
+    // полоска урока в цвете предмета (прошедшие бледнее), без «цвета урока» как раньше
+    const mark = fixed(r, 4, 16); mark.cornerRadius = 2;
+    mark.backgroundColor = subjColor(l.subject, past ? 0.35 : cur || next ? 1 : 0.8) || (cur ? acc(1) : next ? c(0.62) : past ? c(0.16) : c(0.30));
     r.addSpacer(8);
     T(r, l.subject, cur ? Font.semiboldSystemFont(fs) : Font.mediumSystemFont(fs), a, c(1), 0.8);
     r.addSpacer();
@@ -664,8 +669,8 @@ function appHtml(m, now) {
   const core = [hm, two, iso, dm, dow, at, toMin, short, word, plural, clean, roomName, classWeek, lessonsOn, nShort,
     holiday, chDay, noLesson, dayOff, dayBells, dayLessons, compute, vacation, vacationText, model]
     .map(f => f.toString()).join("\n");
-  const data = {CLASS, BELLS, WEEK, DATA, CHANGES, DAYN, WHEN, DSHORT, MONTHS, SHORT, FG, ACC, BG: TH.bg};
-  const glow = "#" + mix(TH.bg, "FFFFFF", 0.10), fg = "#" + FG, ac = "#" + ACC, a = (hex, x) => hex + Math.round(x * 255).toString(16).padStart(2, "0");
+  const data = {CLASS, BELLS, WEEK, DATA, CHANGES, DAYN, WHEN, DSHORT, MONTHS, SHORT, FG, ACC, BG: TH.bg, COL: TH.sc ? COLORS : null, LT: LIGHT};
+  const glow = "#" + mix(mix(TH.bg, "FFFFFF", 0.10), TINT || TH.bg, TINT ? 0.3 : 0), fg = "#" + FG, ac = "#" + ACC, a = (hex, x) => hex + Math.round(x * 255).toString(16).padStart(2, "0");
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
@@ -734,7 +739,7 @@ function render(){
  const tm=$("tm");tm.className="num"+(m.timer?"":" d");tm.textContent=m.timer?fmt(m.target-now):m.big;
  $("sub").textContent=m.ringSub;
  const v=m.timer?Math.max(0.03,(now-s.start)/(s.target-s.start)):-1,C=2*Math.PI*110,arc=$("arc"),k=$("knob");
- arc.setAttribute("stroke-dasharray",v<0?"0 999":(v*C)+" "+C);k.style.display=v<0?"none":"";
+ arc.setAttribute("stroke-dasharray",v<0?"0 999":(v*C)+" "+C);arc.style.display=k.style.display=v<0?"none":""; // пустая дуга с круглым концом рисовала точку
  if(v>=0){const a=-Math.PI/2+2*Math.PI*Math.min(1,v);k.setAttribute("cx",124+110*Math.cos(a));k.setAttribute("cy",124+110*Math.sin(a))}
  $("title").textContent=m.title;$("room").textContent=m.room;$("room").style.display=m.room&&(s.kind==="LESSON"||s.kind==="BREAK"||s.kind==="BEFORE")?"":"none";
  $("chg").style.display=m.changed&&(s.kind==="LESSON"||s.kind==="BREAK"||s.kind==="BEFORE")?"":"none";
@@ -754,7 +759,7 @@ function render(){
   const cur=isT&&s.kind==="LESSON"&&s.cur.num===l.num,nx=isT&&(s.kind==="BREAK"||s.kind==="BEFORE")&&n&&n.num===l.num,past=isT&&!cur&&l.end<=nowMin;
   const r=document.createElement("div");r.className="les"+(cur?" cur":nx?" nx2":past?" past":"");
   const t=document.createElement("div");t.className="t num";t.innerHTML=hm(l.start)+"<small>"+hm(l.end)+"</small>";
-  const bb=document.createElement("div");bb.className="b";
+  const bb=document.createElement("div");bb.className="b";const sc=D.COL&&D.COL[l.subject];if(sc)bb.style.background="#"+sc[D.LT?0:1];
   const mm=document.createElement("div");mm.className="m";mm.textContent=l.subject;
   const sm=document.createElement("small");sm.textContent=(cur?"сейчас · ":nx?"следующий · ":"")+"урок "+l.num;mm.appendChild(sm);
   r.append(t,bb,mm);
@@ -938,6 +943,7 @@ if (TH.sc) {
   const subj = m.s.kind === "LESSON" ? m.s.cur && m.s.cur.subject : m.s.next && m.s.next.subject;
   const col = subj && COLORS[subj];
   if (col) ACC = col[LIGHT ? 0 : 1];
+  if (col && hasLessonToday(m)) TINT = col[1]; // в выходной фон не красим уроком понедельника
 }
 
 if (config.runsInWidget || config.runsInAccessoryWidget) {

@@ -11,18 +11,18 @@ android {
         minSdk 26
         targetSdk 34
         versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "4").toInteger()) // = номер сборки, для проверки обновлений
-        versionName "3.4"
+        versionName "4.0"
     }
 
     // Постоянный ключ (из секретов GitHub): каждая новая сборка ставится поверх старой.
     // Если ключа нет, сборка подписывается debug-ключом.
-    def ks = file('uroki7b.jks')
+    def ks = file('zvonok.jks')
     signingConfigs {
         release {
             if (ks.exists()) {
                 storeFile ks
                 storePassword System.getenv('KEYSTORE_PASSWORD')
-                keyAlias 'uroki7b'
+                keyAlias 'uroki7b' // имя ключа внутри keystore, менять нельзя: иначе обновления не встанут поверх
                 keyPassword System.getenv('KEYSTORE_PASSWORD')
             }
         }
