@@ -30,7 +30,10 @@ import java.util.List;
 /** Главный экран «Звонка»: кольцо-таймер, следующий урок и расписание дня таймлайном. */
 public class MainActivity extends Activity {
 
-    private static final int BG = Ui.BG, TEXT = Ui.TEXT, SOFT = Ui.SOFT, MUTED = Ui.MUTED, FAINT = Ui.FAINT;
+    // цвета темы: светлая, тёмная или как в системе (Ui.apply); при смене экран пересобирается
+    private int BG, TEXT, SOFT, MUTED, FAINT;
+    private int builtVersion;
+    private LinearLayout hero;
     private static final String[] MONTHS = {"января", "февраля", "марта", "апреля", "мая", "июня",
             "июля", "августа", "сентября", "октября", "ноября", "декабря"};
 
@@ -68,6 +71,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         permsDue = state == null; // подсказка про разрешения — при каждом запуске, пока чего-то не хватает
+        Ui.apply(this);
+        BG = Ui.BG; TEXT = Ui.TEXT; SOFT = Ui.SOFT; MUTED = Ui.MUTED; FAINT = Ui.FAINT;
+        builtVersion = Ui.version;
         ScrollView sv = new ScrollView(this);
         scroll = sv;
         sv.setBackgroundColor(BG);
@@ -84,11 +90,11 @@ public class MainActivity extends Activity {
         date = Ui.text(this, "", 13, MUTED, null);
         t.addView(date);
         head.addView(t);
-        badge = Ui.text(this, "", 15, BG, "sans-serif-medium");
+        badge = Ui.text(this, "", 15, Ui.ON_ACCENT, "sans-serif-medium");
         badge.setGravity(Gravity.CENTER);
         badge.setMinWidth(dp(48));
         badge.setPadding(dp(12), 0, dp(12), 0);
-        badge.setBackground(Ui.round(this, TEXT, 16, 0));
+        badge.setBackground(Ui.round(this, Ui.ACCENT, 16, 0));
         badge.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)));
         badge.setContentDescription("Выбрать класс");
         badge.setOnClickListener(v -> Ui.pickClass(this, this::rebuild));
@@ -105,21 +111,17 @@ public class MainActivity extends Activity {
         root.addView(head);
 
         // баннер обновления
-        update = Ui.text(this, "", 14, BG, "sans-serif-medium");
+        update = Ui.text(this, "", 14, Ui.ON_ACCENT, "sans-serif-medium");
         update.setPadding(dp(16), dp(12), dp(16), dp(12));
-        update.setBackground(Ui.round(this, TEXT, 16, 0));
+        update.setBackground(Ui.round(this, Ui.ACCENT, 16, 0));
         update.setLayoutParams(Ui.mw(this, 16));
         update.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SettingsActivity.APK_URL))));
         root.addView(update);
 
         // главная карточка с кольцом
-        LinearLayout hero = Ui.vertical(this);
+        hero = Ui.vertical(this);
         hero.setGravity(Gravity.CENTER_HORIZONTAL);
-        GradientDrawable hg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.parseColor("#141416"), Color.parseColor("#060607")});
-        hg.setCornerRadius(dp(32));
-        hg.setStroke(dp(1), Ui.LINE);
-        hero.setBackground(hg);
+        hero.setBackground(heroBg(null));
         hero.setPadding(dp(20), dp(18), dp(20), dp(22));
         hero.setLayoutParams(Ui.mw(this, 16));
 
@@ -128,7 +130,7 @@ public class MainActivity extends Activity {
         status = Ui.text(this, "", 10, SOFT, "sans-serif-medium");
         status.setLetterSpacing(0.14f);
         status.setPadding(dp(11), dp(6), dp(12), dp(6));
-        status.setBackground(Ui.round(this, Color.parseColor("#1E1E20"), 12, 0));
+        status.setBackground(Ui.round(this, Ui.RAISED, 12, 0));
         top.addView(status);
         top.addView(new View(this), Ui.weight(1));
         dots = Ui.horizontal(this); // капсулы уроков дня
@@ -243,7 +245,7 @@ public class MainActivity extends Activity {
         // пометка дня: каникулы или замены
         dayNote = Ui.text(this, "", 13, SOFT, null);
         dayNote.setPadding(dp(14), dp(10), dp(14), dp(10));
-        dayNote.setBackground(Ui.round(this, 0, 14, Color.parseColor("#2B2B30")));
+        dayNote.setBackground(Ui.round(this, (Ui.WARN & 0x00FFFFFF) | 0x26000000, 14, 0));
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         np.bottomMargin = dp(10);
@@ -294,8 +296,8 @@ public class MainActivity extends Activity {
             LinearLayout tl = Ui.twoLines(this, it.title, it.why);
             tl.setLayoutParams(Ui.weight(1));
             r.addView(tl);
-            TextView b = Ui.text(this, it.ok == null ? "Открыть" : "Включить", 12, it.ok == null ? TEXT : BG, "sans-serif-medium");
-            b.setBackground(it.ok == null ? Ui.round(this, 0, 12, Color.parseColor("#3A3A3A")) : Ui.round(this, TEXT, 12, 0));
+            TextView b = Ui.text(this, it.ok == null ? "Открыть" : "Включить", 12, it.ok == null ? TEXT : Ui.ON_ACCENT, "sans-serif-medium");
+            b.setBackground(it.ok == null ? Ui.round(this, 0, 12, Ui.LINE) : Ui.round(this, Ui.ACCENT, 12, 0));
             b.setPadding(dp(12), dp(6), dp(12), dp(6));
             LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             bp.leftMargin = dp(10);
@@ -309,7 +311,7 @@ public class MainActivity extends Activity {
         }
         ScrollView sv = new ScrollView(this);
         sv.addView(box);
-        dlg[0] = new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+        dlg[0] = new android.app.AlertDialog.Builder(this, Ui.dialogTheme())
                 .setTitle("Чтобы всё работало").setView(sv)
                 .setNegativeButton("Не сейчас", null)
                 .setPositiveButton("Все настройки", (d, w) -> startActivity(new Intent(this, SettingsActivity.class)))
@@ -319,6 +321,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        Ui.palette(this);
+        if (Ui.version != builtVersion) {
+            recreate();
+            return;
+        }
         if (Build.VERSION.SDK_INT >= 33 && !askedNotif
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             askedNotif = true;
@@ -403,10 +410,14 @@ public class MainActivity extends Activity {
         chrono.setVisibility(d.timer ? View.VISIBLE : View.GONE);
         big.setVisibility(d.timer ? View.GONE : View.VISIBLE);
         caption.setText(captionFor(s));
+        String subj = d.kind == Schedule.Kind.LESSON ? d.title
+                : d.kind == Schedule.Kind.BREAK || d.kind == Schedule.Kind.BEFORE ? d.nextSubject : null;
+        ring.setColor(subj == null ? Ui.ACCENT : Hues.vivid(subj, Ui.DARK));
         ring.setProgress(d.progress >= 0 ? d.progress / 100f : -1);
+        hero.setBackground(heroBg(d.timer ? subj : null));
 
         title.setText(d.title);
-        setChip(room, d.room);
+        setChip(room, d.room, subj, d.timer);
         sideH.setText(d.sideHead);
         sideV.setText(d.sideValue);
         statH.setText(d.statHead);
@@ -415,7 +426,7 @@ public class MainActivity extends Activity {
         nextCard.setVisibility(d.nextSubject.isEmpty() ? View.GONE : View.VISIBLE);
         nextH.setText(d.nextHead);
         nextS.setText(d.nextSubject);
-        setChip(nextR, d.nextRoom);
+        setChip(nextR, d.nextRoom, d.nextSubject, false);
         foot.setText(d.foot);
         foot.setVisibility(d.foot.isEmpty() ? View.GONE : View.VISIBLE);
         String v = Schedule.vacationText(Schedule.vacation(now));
@@ -458,8 +469,8 @@ public class MainActivity extends Activity {
         for (int i = 0; i < 6; i++) {
             DayOfWeek d = DayOfWeek.of(i + 1);
             boolean sel = d == selected;
-            dayBtn[i].setBackground(sel ? Ui.round(this, TEXT, 14, 0) : null);
-            dayBtn[i].setTextColor(sel ? BG : d == today ? TEXT : MUTED);
+            dayBtn[i].setBackground(sel ? Ui.round(this, Ui.ACCENT, 14, 0) : null);
+            dayBtn[i].setTextColor(sel ? Ui.ON_ACCENT : d == today ? TEXT : MUTED);
             dayBtn[i].setText(Schedule.dayShort(d) + (d == today && !sel ? " •" : ""));
         }
         dayBtn[5].setVisibility(Schedule.lessons(DayOfWeek.SATURDAY).isEmpty() ? View.GONE : View.VISIBLE);
@@ -472,8 +483,7 @@ public class MainActivity extends Activity {
         for (int i = 1; i <= d.dotTotal; i++) {
             boolean cur = i == d.dotCurrent;
             View c = new View(this);
-            c.setBackground(Ui.round(this, cur ? TEXT : i <= d.dotDone ? Color.parseColor("#5A5A60")
-                    : Color.parseColor("#262629"), 2, 0));
+            c.setBackground(Ui.round(this, cur ? Hues.vivid(d.title, Ui.DARK) : i <= d.dotDone ? Ui.FAINT : Ui.TRACK, 2, 0));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(cur ? 18 : 10), dp(4));
             lp.leftMargin = dp(4);
             dots.addView(c, lp);
@@ -507,6 +517,8 @@ public class MainActivity extends Activity {
             }
         }
         dayNote.setText(note);
+        dayNote.setTextColor(TEXT);
+        dayNote.setBackground(Ui.round(this, ((off != null ? Ui.OK : Ui.WARN) & 0x00FFFFFF) | 0x26000000, 14, 0));
         dayNote.setVisibility(note.isEmpty() ? View.GONE : View.VISIBLE);
         if (l.isEmpty()) {
             dayMeta.setText("");
@@ -551,7 +563,7 @@ public class MainActivity extends Activity {
         FrameLayout node = new FrameLayout(this);
         node.setLayoutParams(new LinearLayout.LayoutParams(dp(22), ViewGroup.LayoutParams.MATCH_PARENT));
         View line = new View(this);
-        line.setBackgroundColor(Color.parseColor("#232326"));
+        line.setBackgroundColor(Ui.LINE);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(2),
                 last ? dp(20) : ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER_HORIZONTAL);
         lp.topMargin = first ? dp(20) : 0;
@@ -561,8 +573,9 @@ public class MainActivity extends Activity {
             int size = cur ? 14 : 10;
             GradientDrawable g = new GradientDrawable();
             g.setShape(GradientDrawable.OVAL);
-            g.setColor(cur ? TEXT : next ? Color.parseColor("#8A8A8A") : BG);
-            g.setStroke(dp(2), cur || next ? TEXT : Color.parseColor("#3A3A3E"));
+            int hue = Hues.vivid(x.subject, Ui.DARK);
+            g.setColor(cur ? hue : past ? Ui.FAINT : Ui.BG);
+            g.setStroke(dp(next ? 3 : 2), past ? Ui.FAINT : hue);
             dot.setBackground(g);
             FrameLayout.LayoutParams np = new FrameLayout.LayoutParams(dp(size), dp(size), Gravity.CENTER_HORIZONTAL);
             np.topMargin = dp(cur ? 17 : 19);
@@ -578,16 +591,17 @@ public class MainActivity extends Activity {
         }
         LinearLayout box = Ui.horizontal(this);
         box.setPadding(dp(14), dp(12), dp(12), dp(12));
-        if (cur) box.setBackground(Ui.round(this, Ui.RAISED, 18, Color.parseColor("#2C2C30")));
-        else if (next) box.setBackground(Ui.round(this, Color.parseColor("#0F0F11"), 18, Ui.LINE));
+        if (cur) box.setBackground(Ui.round(this, Hues.soft(x.subject, Ui.DARK), 18, 0));
+        else if (next) box.setBackground(Ui.round(this, Ui.CARD, 18, Hues.vivid(x.subject, Ui.DARK)));
         LinearLayout.LayoutParams bp = Ui.weight(1);
         bp.leftMargin = dp(6);
         box.setLayoutParams(bp);
         LinearLayout mid = Ui.vertical(this);
         mid.setLayoutParams(Ui.weight(1));
         mid.addView(Ui.text(this, x.subject, 16, TEXT, cur ? "sans-serif-medium" : null));
-        TextView sub = Ui.text(this, cur ? "Сейчас · урок " + x.num : next ? "Следующий · урок " + x.num
-                : "Урок " + x.num + " · " + (x.end - x.start) + " мин", 12, cur ? SOFT : MUTED, null);
+        TextView sub = Ui.text(this, cur ? "Идёт, урок " + x.num : next ? "Следующий, урок " + x.num
+                : "Урок " + x.num + " · " + (x.end - x.start) + " мин", 12, cur || next ? Hues.strong(x.subject, Ui.DARK) : MUTED,
+                cur || next ? "sans-serif-medium" : null);
         sub.setPadding(0, dp(2), 0, 0);
         mid.addView(sub);
         if (progress >= 0) {
@@ -595,6 +609,8 @@ public class MainActivity extends Activity {
             pb.setMax(100);
             pb.setProgress(progress);
             pb.setProgressDrawable(getDrawable(R.drawable.progress_mono));
+            pb.setProgressTintList(android.content.res.ColorStateList.valueOf(Hues.vivid(x.subject, Ui.DARK)));
+            pb.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Ui.TRACK));
             LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3));
             pl.topMargin = dp(8);
             mid.addView(pb, pl);
@@ -602,14 +618,14 @@ public class MainActivity extends Activity {
         box.addView(mid);
         if (x.changed) {
             // замена: плашка с рамкой
-            TextView z = Ui.text(this, "замена", 10, SOFT, "sans-serif-medium");
+            TextView z = Ui.text(this, "замена", 10, Ui.WARN, "sans-serif-medium");
             z.setPadding(dp(6), dp(2), dp(6), dp(2));
-            z.setBackground(Ui.round(this, 0, 6, Color.parseColor("#8A8A91")));
+            z.setBackground(Ui.round(this, (Ui.WARN & 0x00FFFFFF) | 0x26000000, 6, 0));
             box.addView(z);
         }
         if (!x.room.isEmpty()) {
             TextView c = chip(cur);
-            c.setText(x.room);
+            setChip(c, x.room, x.subject, cur);
             box.addView(c);
         }
         r.addView(box);
@@ -630,10 +646,10 @@ public class MainActivity extends Activity {
     }
 
     private TextView chip(boolean now) {
-        TextView t = Ui.text(this, "", 13, now ? BG : TEXT, "sans-serif-medium");
+        TextView t = Ui.text(this, "", 14, TEXT, "sans-serif-medium");
+        t.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD));
         t.setPadding(dp(10), dp(4), dp(10), dp(4));
-        t.setBackground(now ? Ui.round(this, TEXT, 9, 0)
-                : Ui.round(this, Color.parseColor("#1A1A1C"), 9, Color.parseColor("#2C2C30")));
+        t.setBackground(Ui.round(this, Ui.RAISED, 10, 0));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.leftMargin = dp(10);
@@ -641,10 +657,28 @@ public class MainActivity extends Activity {
         return t;
     }
 
-    private void setChip(TextView c, String room) {
+    /** Кабинет в цвете предмета: идущий урок залит, остальные на мягком фоне. */
+    private void setChip(TextView c, String room, String subject, boolean now) {
         boolean has = room != null && !room.isEmpty();
         c.setVisibility(has ? View.VISIBLE : View.GONE);
-        if (has) c.setText(room);
+        if (!has) return;
+        c.setText(room);
+        if (subject == null || subject.isEmpty()) {
+            c.setTextColor(TEXT);
+            c.setBackground(Ui.round(this, Ui.RAISED, 10, 0));
+        } else {
+            c.setTextColor(now ? Hues.onStrong(Ui.DARK) : Hues.strong(subject, Ui.DARK));
+            c.setBackground(Ui.round(this, now ? Hues.strong(subject, Ui.DARK) : Hues.soft(subject, Ui.DARK), 10, 0));
+        }
+    }
+
+    /** Фон карточки таймера: мягкий цвет предмета сверху, как на сайте. */
+    private GradientDrawable heroBg(String subject) {
+        int top = subject == null ? Ui.CARD : Hues.soft(subject, Ui.DARK);
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{top, Ui.CARD, Ui.CARD});
+        g.setCornerRadius(dp(32));
+        g.setStroke(dp(1), Ui.LINE);
+        return g;
     }
 
     private int dp(int v) {

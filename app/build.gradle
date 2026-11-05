@@ -11,7 +11,7 @@ android {
         minSdk 26
         targetSdk 34
         versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "4").toInteger()) // = номер сборки, для проверки обновлений
-        versionName "3.3"
+        versionName "3.4-beta"
     }
 
     // Постоянный ключ (из секретов GitHub): каждая новая сборка ставится поверх старой.

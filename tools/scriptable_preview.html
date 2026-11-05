@@ -383,6 +383,8 @@ function makeEnv(nowIso, family, logs) {
     Request: class { constructor(url) { this.url = url; this.method = "GET"; this.headers = {}; this.timeoutInterval = 60; logs.push("Request " + url); }
       _f() { return CHANGES ? Promise.resolve(JSON.parse(CHANGES)) : Promise.reject(new Error("офлайн (предпросмотр)")); } load() { return this._f(); } loadString() { return this._f(); } loadJSON() { return this._f(); } loadImage() { return this._f(); } },
     FileManager: {local: () => fm, iCloud: () => fm},
+    module: {filename: "/icloud/Звонок.js"},
+    Notification: class { schedule() { logs.push("Notification: " + this.title + " / " + this.body); return Promise.resolve(); } },
     WebView: class { loadHTML(h) { html = h; return Promise.resolve(); } present() { return Promise.resolve(); } evaluateJavaScript() { return Promise.resolve(); } },
     Alert: class { addAction() {} addCancelAction() {} present() { return Promise.resolve(0); } presentAlert() { return Promise.resolve(0); } presentSheet() { return Promise.resolve(0); } },
     console: {log: (...a) => logs.push(a.join(" ")), warn: (...a) => logs.push("warn " + a.join(" ")), error: (...a) => logs.push("error " + a.join(" "))},
@@ -393,6 +395,7 @@ function makeEnv(nowIso, family, logs) {
     writeString: (p, s) => { files[p] = {s, t: new FakeDate()}; }, remove: p => { delete files[p]; },
     modificationDate: p => files[p] ? files[p].t : null, creationDate: p => files[p] ? files[p].t : null,
     isDirectory: () => false, createDirectory() {}, listContents: () => Object.keys(files), isFileDownloaded: () => true, downloadFileFromiCloud: () => Promise.resolve(),
+    isFileStoredIniCloud: p => p.startsWith("/icloud/"),
   };
   return {env, get widget() { return widget; }, get html() { return html; }};
 }

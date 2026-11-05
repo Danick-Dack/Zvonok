@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-LQ9B4uCrau3idbQ7YC7w5eLEAFWnJcsQYPgsI0lMnis='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" data-c="#0B0B0C" media="(prefers-color-scheme: dark)">
+<title>О проекте · Звонок</title>
+<meta name="description" content="«Звонок»: сколько до звонка, какой урок следующий и в каком кабинете. Расписание лицея №165 на телефоне, в виджетах iPhone и Android и на компьютере.">
+<link rel="canonical" href="https://danick-dack.github.io/Zvonok/about.html">
+<meta property="og:title" content="Звонок · расписание лицея №165">
+<meta property="og:description" content="Таймер до звонка, урок и кабинет, неделя с заменами и свободные кабинеты.">
+<meta property="og:image" content="https://danick-dack.github.io/Zvonok/og.png">
+<link rel="icon" href="data:image/png;base64,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">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>(function(){try{if(top!==self)void top.location.href}catch(e){document.documentElement.style.display="none"}})();(function(){try{var d=document.documentElement,g=function(k){return JSON.parse(localStorage.getItem("zv."+k))},a=g("accent"),s=g("scheme");if(typeof a==="string"&&/^[a-z]+$/.test(a)&&a!=="blue")d.setAttribute("data-accent",a);if(g("plain")===true)d.setAttribute("data-plain","");if(s==="light"||s==="dark"){d.setAttribute("data-theme",s);var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++)m[i].setAttribute("content",s==="dark"?"#0B0B0C":"#F4F4F1")}}catch(e){}})();</script>
+<style>:root{--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--font-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--r-sm:9px;--r-md:13px;--r-lg:18px;--r-xl:24px;--ease:cubic-bezier(.2,.7,.2,1);--header-h:56px;--tabbar-h:58px;--gutter:max(16px,env(safe-area-inset-left));--gutter-r:max(16px,env(safe-area-inset-right));--bg:#F4F4F1;--surface:#FFFFFF;--surface-2:#ECECE8;--surface-3:#E2E2DD;--line:#E3E3DE;--line-2:#D0D0CA;--text:#141414;--text-2:#3B3B38;--muted:#676762;--faint:#B4B4AE;--accent:#0062DA;--accent-ink:#FFFFFF;--accent-soft:rgba(0,98,218,.1);--ok:#1F7A36;--ok-soft:rgba(52,199,89,.14);--warn:#8F5A00;--warn-soft:rgba(255,204,0,.2);--bad:#D70015;--bad-soft:rgba(255,59,48,.12);--ring-track:#E6E6E1;--shadow:0 1px 2px rgba(20,20,20,.04),0 6px 20px rgba(20,20,20,.05);--bar-bg:rgba(244,244,241,.84);--scrim:rgba(12,12,12,.32);--qr-bg:#FFFFFF;--grid:rgba(0,88,214,.07);--margin:rgba(215,0,21,.3);color-scheme:light}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B0B0C;--surface:#151517;--surface-2:#1E1E21;--surface-3:#28282C;--line:#232326;--line-2:#333338;--text:#F3F3F1;--text-2:#C6C6C2;--muted:#8F8F8A;--faint:#4A4A4F;--accent:#409CFF;--accent-ink:#0B0B0C;--accent-soft:rgba(64,156,255,.16);--ok:#30DB5B;--ok-soft:rgba(48,209,88,.16);--warn:#FFD426;--warn-soft:rgba(255,214,10,.16);--bad:#FF6961;--bad-soft:rgba(255,69,58,.16);--ring-track:#232326;--shadow:none;--bar-bg:rgba(11,11,12,.82);--scrim:rgba(0,0,0,.56);--grid:rgba(255,255,255,.035);--margin:rgba(255,105,97,.2);color-scheme:dark}}:root[data-theme="dark"]{--bg:#0B0B0C;--surface:#151517;--surface-2:#1E1E21;--surface-3:#28282C;--line:#232326;--line-2:#333338;--text:#F3F3F1;--text-2:#C6C6C2;--muted:#8F8F8A;--faint:#4A4A4F;--accent:#409CFF;--accent-ink:#0B0B0C;--accent-soft:rgba(64,156,255,.16);--ok:#30DB5B;--ok-soft:rgba(48,209,88,.16);--warn:#FFD426;--warn-soft:rgba(255,214,10,.16);--bad:#FF6961;--bad-soft:rgba(255,69,58,.16);--ring-track:#232326;--shadow:none;--bar-bg:rgba(11,11,12,.82);--scrim:rgba(0,0,0,.56);--grid:rgba(255,255,255,.035);--margin:rgba(255,105,97,.2);color-scheme:dark}.hue-none{--sv:var(--accent);--st:var(--accent);--ss:var(--accent-soft);--sf:var(--accent);--si:var(--accent-ink)}:root[data-accent="indigo"]{--accent:#3D3BB8;--accent-ink:#FFFFFF;--accent-soft:rgba(61,59,184,.1)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-accent="indigo"]{--accent:#8B89FF;--accent-ink:#0B0B0C;--accent-soft:rgba(139,137,255,.16)}}:root[data-theme="dark"][data-accent="indigo"]{--accent:#8B89FF;--accent-ink:#0B0B0C;--accent-soft:rgba(139,137,255,.16)}:root[data-accent="purple"]{--accent:#8944AB;--accent-ink:#FFFFFF;--accent-soft:rgba(137,68,171,.1)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-accent="purple"]{--accent:#DA8FFF;--accent-ink:#0B0B0C;--accent-soft:rgba(218,143,255,.16)}}:root[data-theme="dark"][data-accent="purple"]{--accent:#DA8FFF;--accent-ink:#0B0B0C;--accent-soft:rgba(218,143,255,.16)}:root[data-accent="pink"]{--accent:#C70F45;--accent-ink:#FFFFFF;--accent-soft:rgba(199,15,69,.1)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-accent="pink"]{--accent:#FF6482;--accent-ink:#0B0B0C;--accent-soft:rgba(255,100,130,.16)}}:root[data-theme="dark"][data-accent="pink"]{--accent:#FF6482;--accent-ink:#0B0B0C;--accent-soft:rgba(255,100,130,.16)}:root[data-accent="red"]{--accent:#D70015;--accent-ink:#FFFFFF;--accent-soft:rgba(215,0,21,.1)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-accent="red"]{--accent:#FF6961;--accent-ink:#0B0B0C;--accent-soft:rgba(255,105,97,.16)}}:root[data-theme="dark"][data-accent="red"]{--accent:#FF6961;--accent-ink:#0B0B0C;--accent-soft:rgba(255,105,97,.16)}:root[data-accent="orange"]{--accent:#B83D00;--accent-ink:#FFFFFF;--accent-soft:rgba(184,61,0,.1)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-accent="orange"]{--accent:#FFB340;--accent-ink:#0B0B0C;--accent-soft:rgba(255,179,64,.16)}}:root[data-theme="dark"][data-accent="orange"]{--accent:#FFB340;--accent-ink:#0B0B0C;--accent-soft:rgba(255,179,64,.16)}:root[data-accent="green"]{--accent:#1F7A36;--accent-ink:#FFFFFF;--accent-soft:rgba(31,122,54,.1)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-accent="green"]{--accent:#30DB5B;--accent-ink:#0B0B0C;--accent-soft:rgba(48,219,91,.16)}}:root[data-theme="dark"][data-accent="green"]{--accent:#30DB5B;--accent-ink:#0B0B0C;--accent-soft:rgba(48,219,91,.16)}:root[data-accent="mint"]{--accent:#0B7570;--accent-ink:#FFFFFF;--accent-soft:rgba(11,117,112,.1)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-accent="mint"]{--accent:#66D4CF;--accent-ink:#0B0B0C;--accent-soft:rgba(102,212,207,.16)}}:root[data-theme="dark"][data-accent="mint"]{--accent:#66D4CF;--accent-ink:#0B0B0C;--accent-soft:rgba(102,212,207,.16)}:root[data-accent="mono"]{--accent:#141414;--accent-ink:#FFFFFF;--accent-soft:rgba(20,20,20,.1)}@media (prefers-color-scheme:dark){:root:not([data-theme="light"])[data-accent="mono"]{--accent:#F3F3F1;--accent-ink:#0B0B0C;--accent-soft:rgba(243,243,241,.16)}}:root[data-theme="dark"][data-accent="mono"]{--accent:#F3F3F1;--accent-ink:#0B0B0C;--accent-soft:rgba(243,243,241,.16)}:root .hue-red{--sv:#FF3B30;--st:#C40013;--ss:rgba(255,59,48,.2);--sf:#C40013;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-red{--sv:#FF453A;--st:#FF6961;--ss:rgba(255,69,58,.24);--sf:#FF6961;--si:#0B0B0C}}:root[data-theme="dark"] .hue-red{--sv:#FF453A;--st:#FF6961;--ss:rgba(255,69,58,.24);--sf:#FF6961;--si:#0B0B0C}:root .hue-orange{--sv:#FF9500;--st:#B83D00;--ss:rgba(255,149,0,.2);--sf:#B83D00;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-orange{--sv:#FF9F0A;--st:#FFB340;--ss:rgba(255,159,10,.24);--sf:#FFB340;--si:#0B0B0C}}:root[data-theme="dark"] .hue-orange{--sv:#FF9F0A;--st:#FFB340;--ss:rgba(255,159,10,.24);--sf:#FFB340;--si:#0B0B0C}:root .hue-yellow{--sv:#FFCC00;--st:#8F5A00;--ss:rgba(255,204,0,.2);--sf:#8F5A00;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-yellow{--sv:#FFD60A;--st:#FFD426;--ss:rgba(255,214,10,.24);--sf:#FFD426;--si:#0B0B0C}}:root[data-theme="dark"] .hue-yellow{--sv:#FFD60A;--st:#FFD426;--ss:rgba(255,214,10,.24);--sf:#FFD426;--si:#0B0B0C}:root .hue-green{--sv:#34C759;--st:#1F7A36;--ss:rgba(52,199,89,.2);--sf:#1F7A36;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-green{--sv:#30D158;--st:#30DB5B;--ss:rgba(48,209,88,.24);--sf:#30DB5B;--si:#0B0B0C}}:root[data-theme="dark"] .hue-green{--sv:#30D158;--st:#30DB5B;--ss:rgba(48,209,88,.24);--sf:#30DB5B;--si:#0B0B0C}:root .hue-mint{--sv:#00C7BE;--st:#0B7570;--ss:rgba(0,199,190,.2);--sf:#0B7570;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-mint{--sv:#63E6E2;--st:#66D4CF;--ss:rgba(99,230,226,.24);--sf:#66D4CF;--si:#0B0B0C}}:root[data-theme="dark"] .hue-mint{--sv:#63E6E2;--st:#66D4CF;--ss:rgba(99,230,226,.24);--sf:#66D4CF;--si:#0B0B0C}:root .hue-teal{--sv:#30B0C7;--st:#006F83;--ss:rgba(48,176,199,.2);--sf:#006F83;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-teal{--sv:#40CBE0;--st:#5DE6FF;--ss:rgba(64,203,224,.24);--sf:#5DE6FF;--si:#0B0B0C}}:root[data-theme="dark"] .hue-teal{--sv:#40CBE0;--st:#5DE6FF;--ss:rgba(64,203,224,.24);--sf:#5DE6FF;--si:#0B0B0C}:root .hue-cyan{--sv:#32ADE6;--st:#006A9A;--ss:rgba(50,173,230,.2);--sf:#006A9A;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-cyan{--sv:#64D2FF;--st:#70D7FF;--ss:rgba(100,210,255,.24);--sf:#70D7FF;--si:#0B0B0C}}:root[data-theme="dark"] .hue-cyan{--sv:#64D2FF;--st:#70D7FF;--ss:rgba(100,210,255,.24);--sf:#70D7FF;--si:#0B0B0C}:root .hue-blue{--sv:#007AFF;--st:#0058D6;--ss:rgba(0,122,255,.2);--sf:#0058D6;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-blue{--sv:#0A84FF;--st:#409CFF;--ss:rgba(10,132,255,.24);--sf:#409CFF;--si:#0B0B0C}}:root[data-theme="dark"] .hue-blue{--sv:#0A84FF;--st:#409CFF;--ss:rgba(10,132,255,.24);--sf:#409CFF;--si:#0B0B0C}:root .hue-indigo{--sv:#5856D6;--st:#3D3BB8;--ss:rgba(88,86,214,.2);--sf:#3D3BB8;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-indigo{--sv:#5E5CE6;--st:#8B89FF;--ss:rgba(94,92,230,.24);--sf:#8B89FF;--si:#0B0B0C}}:root[data-theme="dark"] .hue-indigo{--sv:#5E5CE6;--st:#8B89FF;--ss:rgba(94,92,230,.24);--sf:#8B89FF;--si:#0B0B0C}:root .hue-purple{--sv:#AF52DE;--st:#8944AB;--ss:rgba(175,82,222,.2);--sf:#8944AB;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-purple{--sv:#BF5AF2;--st:#DA8FFF;--ss:rgba(191,90,242,.24);--sf:#DA8FFF;--si:#0B0B0C}}:root[data-theme="dark"] .hue-purple{--sv:#BF5AF2;--st:#DA8FFF;--ss:rgba(191,90,242,.24);--sf:#DA8FFF;--si:#0B0B0C}:root .hue-pink{--sv:#FF2D55;--st:#BA0E40;--ss:rgba(255,45,85,.2);--sf:#BA0E40;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-pink{--sv:#FF375F;--st:#FF6482;--ss:rgba(255,55,95,.24);--sf:#FF6482;--si:#0B0B0C}}:root[data-theme="dark"] .hue-pink{--sv:#FF375F;--st:#FF6482;--ss:rgba(255,55,95,.24);--sf:#FF6482;--si:#0B0B0C}:root .hue-brown{--sv:#A2845E;--st:#765C3E;--ss:rgba(162,132,94,.2);--sf:#765C3E;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-brown{--sv:#AC8E68;--st:#C4A27A;--ss:rgba(172,142,104,.24);--sf:#C4A27A;--si:#0B0B0C}}:root[data-theme="dark"] .hue-brown{--sv:#AC8E68;--st:#C4A27A;--ss:rgba(172,142,104,.24);--sf:#C4A27A;--si:#0B0B0C}:root .hue-gray{--sv:#8E8E93;--st:#636366;--ss:rgba(142,142,147,.2);--sf:#636366;--si:#FFFFFF}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hue-gray{--sv:#8E8E93;--st:#AEAEB2;--ss:rgba(142,142,147,.24);--sf:#AEAEB2;--si:#0B0B0C}}:root[data-theme="dark"] .hue-gray{--sv:#8E8E93;--st:#AEAEB2;--ss:rgba(142,142,147,.24);--sf:#AEAEB2;--si:#0B0B0C}:root[data-plain] [class*="hue-"]{--sv:var(--accent);--st:var(--text);--ss:var(--surface-2);--sf:var(--accent);--si:var(--accent-ink)}*,*::before,*::after{box-sizing:border-box}*{margin:0}html{-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-tap-highlight-color:transparent;background:var(--bg)}body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--text);font:400 16px/1.5 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:clip}svg{display:block;flex:none}button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}button{cursor:pointer;background:none;border:0;padding:0;touch-action:manipulation}a{color:inherit;text-underline-offset:.2em;text-decoration-thickness:1px}a,button,select,summary,label{touch-action:manipulation}ul,ol{padding:0;list-style:none}h1,h2,h3{font-family:var(--font-display);letter-spacing:-.02em;line-height:1.15;font-weight:650}p{max-width:62ch}:focus{outline:none}:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}[hidden]{display:none!important}.num{font-variant-numeric:tabular-nums}.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.skip{position:fixed;left:12px;top:-80px;z-index:100;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;font-weight:600;text-decoration:none}.skip:focus{top:calc(12px + env(safe-area-inset-top))}@media (min-width:960px){html{background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;background-position:-1px -1px}body{background:transparent}}@media (min-width:1260px){body::after{content:"";position:fixed;top:0;bottom:0;left:calc(50% + 590px);width:2px;background:var(--margin);pointer-events:none;z-index:-1}}@media print{html{background:#fff}body::after{display:none}}.wrap{width:100%;max-width:1120px;margin:0 auto;padding-left:var(--gutter);padding-right:var(--gutter-r)}.narrow{max-width:760px}.muted{color:var(--muted)}.icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.icon.sm{width:18px;height:18px}@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}.top{position:sticky;top:0;z-index:30;background:var(--bar-bg);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}.top-in{display:flex;align-items:center;gap:6px;height:var(--header-h)}.brand{display:inline-flex;align-items:center;gap:9px;font:650 19px/1 var(--font-display);letter-spacing:-.025em;text-decoration:none;margin-right:auto;padding:6px 4px 6px 0;border-radius:10px}.brand svg{width:27px;height:27px;color:var(--text)}.mark-track{stroke:var(--ring-track)}.nav-top{display:none}.nav-top a{position:relative;text-decoration:none;color:var(--muted);font-weight:550;font-size:15px;padding:8px 12px;border-radius:10px;transition:color .15s,background .15s}.nav-top a:hover{color:var(--text);background:var(--surface-2)}.nav-top a[aria-current="page"]{color:var(--text)}.nav-top a[aria-current="page"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-9px;height:2px;border-radius:2px;background:var(--accent)}@media (min-width:760px){.nav-top{display:flex;gap:2px;margin-right:auto}.brand{margin-right:18px}}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:var(--r-md);font-weight:600;font-size:15px;line-height:1.2;text-decoration:none;white-space:nowrap;border:1px solid transparent;transition:background .15s,color .15s,border-color .15s,transform .1s}.btn:active{transform:scale(.98)}.btn-primary{background:var(--accent);color:var(--accent-ink)}.btn-primary:hover{filter:brightness(1.08)}.btn-accent{background:var(--accent);color:var(--accent-ink)}.btn-accent:hover{filter:brightness(1.06)}.btn-quiet{background:var(--surface-2);color:var(--text)}.btn-quiet:hover{background:var(--surface-3)}.btn-line{border-color:var(--line-2);color:var(--text)}.btn-line:hover{background:var(--surface-2)}.btn-danger{color:var(--bad);border-color:var(--bad-soft)}.btn-danger:hover{background:var(--bad-soft)}.btn-sm{min-height:36px;padding:7px 12px;font-size:14px;border-radius:var(--r-sm)}.btn-wide{width:100%}.btn[disabled]{background:var(--surface-2);color:var(--muted);cursor:default;transform:none;filter:none}.btn .icon{width:18px;height:18px}.icon-btn{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:12px;color:var(--text);transition:background .15s}.icon-btn:hover{background:var(--surface-2)}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.stack{display:grid;gap:12px}.cls-btn{position:relative;display:inline-flex;align-items:center;gap:4px;height:38px;padding:0 10px 0 13px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font:650 16px/1 var(--font-display);letter-spacing:-.01em;font-variant-numeric:tabular-nums}.cls-btn .icon{width:16px;height:16px;stroke-width:2.2}.cls-btn.empty{background:var(--surface-2);color:var(--text)}.seg{display:flex;gap:2px;padding:3px;border-radius:var(--r-md);background:var(--surface-2)}.seg button,.seg a{flex:1;min-height:38px;padding:7px 12px;border-radius:10px;font-weight:600;font-size:14.5px;color:var(--muted);text-align:center;text-decoration:none;white-space:nowrap;transition:background .15s,color .15s}.seg [aria-pressed="true"],.seg [aria-selected="true"],.seg [aria-current="page"]{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}:root[data-theme="dark"] .seg [aria-pressed="true"],:root[data-theme="dark"] .seg [aria-selected="true"]{background:var(--surface-3);box-shadow:none}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg [aria-pressed="true"],:root:not([data-theme="light"]) .seg [aria-selected="true"]{background:var(--surface-3);box-shadow:none}}.field{width:100%;min-width:0;min-height:46px;padding:11px 14px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid transparent;font-size:16px;line-height:1.3;transition:border-color .15s,background .15s;-webkit-appearance:none;appearance:none}.field::placeholder{color:var(--muted);opacity:1}.field:hover{background:var(--surface-3)}.field:focus{border-color:var(--text);background:var(--surface)}select.field{padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:18px}textarea.field{min-height:120px;resize:vertical;line-height:1.45}.label{display:block;font-size:14px;font-weight:600;color:var(--text-2);margin-bottom:8px}.search{position:relative}.search .icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;width:20px;height:20px}.search .field{padding-left:42px}.switch{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;cursor:pointer}.switch input{-webkit-appearance:none;appearance:none;flex:none;width:50px;height:30px;border-radius:999px;background:var(--surface-3);position:relative;cursor:pointer;transition:background .2s}.switch input::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s var(--ease)}.switch input:checked{background:var(--ok)}.switch input:checked::after{transform:translateX(20px)}.switch input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.switch small{display:block;color:var(--muted);font-size:13.5px}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);padding:20px;box-shadow:var(--shadow)}.card-title{font-size:19px;margin-bottom:6px}.card p+p{margin-top:8px}.note{color:var(--muted);font-size:14px;line-height:1.45}.note a{color:var(--text)}.room{display:inline-flex;align-items:center;flex:none;min-height:30px;padding:5px 10px;border-radius:10px;background:var(--surface-2);color:var(--text);font:700 15px/1.1 var(--font);font-variant-numeric:tabular-nums;white-space:nowrap}.room i{font-style:normal;font-weight:400;color:var(--muted);margin:0 3px}[class*="hue-"] .room,.room[class*="hue-"]{background:var(--ss);color:var(--st)}.room.now{background:var(--sf,var(--accent));color:var(--si,var(--accent-ink))}.room.now i{color:inherit;opacity:.65}.room.lg{min-height:42px;padding:8px 13px;border-radius:13px;font-size:20px}.room.gym{font-weight:600}.tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--text-2);white-space:nowrap}.tag.hot{background:var(--accent-soft);color:var(--accent)}.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.bad{background:var(--bad-soft);color:var(--bad)}.sheet{border:0;padding:0;background:var(--surface);color:var(--text);width:calc(100% - 32px);max-width:440px;max-height:min(86vh,720px);border-radius:var(--r-xl);box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:auto;overscroll-behavior:contain}.sheet::backdrop{background:var(--scrim)}.sheet[open]{animation:sheet-in .26s var(--ease)}.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 18px 4px 22px}.sheet-head h2{font-size:21px}.sheet-body{padding:12px 22px 22px}.grabber{display:none}@keyframes sheet-in{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}@media (max-width:759px){.sheet{width:100%;max-width:none;margin:auto 0 0;border-radius:24px 24px 0 0;max-height:88vh;padding-bottom:env(safe-area-inset-bottom)}.sheet[open]{animation:sheet-up .3s var(--ease)}.grabber{display:block;width:38px;height:5px;border-radius:3px;background:var(--line-2);margin:8px auto 0}.sheet-head{padding-top:10px}}@keyframes sheet-up{from{transform:translateY(100%)}to{transform:none}}.grades{display:grid;gap:10px}.grade{display:grid;grid-template-columns:28px repeat(4,minmax(0,1fr));gap:8px;align-items:center}.grade b{font:600 14px/1 var(--font);color:var(--muted);font-variant-numeric:tabular-nums}.grade button{min-height:50px;border-radius:var(--r-md);background:var(--surface-2);font:650 17px/1 var(--font-display);font-variant-numeric:tabular-nums;transition:background .15s,transform .1s}.grade button:hover{background:var(--surface-3)}.grade button:active{transform:scale(.97)}.grade button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}.grades .own{grid-template-columns:28px 1fr}.own-link{display:flex;align-items:center;min-height:50px;padding:0 16px;border-radius:var(--r-md);border:1px dashed var(--line-2);color:var(--text-2);font-weight:600;text-decoration:none}.own-link:hover{background:var(--surface-2)}.zv-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;transform:translate(-50%,16px);opacity:0;pointer-events:none;background:var(--text);color:var(--bg);padding:11px 16px;border-radius:14px;font-size:15px;font-weight:550;max-width:calc(100% - 32px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.2);transition:opacity .2s,transform .25s var(--ease)}.zv-toast.on{opacity:1;transform:translate(-50%,0)}.faq details{border-bottom:1px solid var(--line)}.faq summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:15px 0;cursor:pointer;font-weight:600;font-size:16px}.faq summary::-webkit-details-marker{display:none}.faq summary .icon{width:18px;height:18px;color:var(--muted);transition:transform .2s var(--ease)}.faq details[open] summary .icon{transform:rotate(180deg)}.faq details p{padding:0 0 16px;color:var(--text-2)}.foot{padding:36px 0 44px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:24px}.foot nav{display:flex;flex-wrap:wrap;gap:4px 18px;margin-bottom:10px}.foot nav a{color:var(--text-2);text-decoration:none;font-weight:550}.foot nav a:hover{text-decoration:underline}.foot p+p{margin-top:4px}.page-head{padding:28px 0 18px}.page-head h1{font-size:clamp(30px,6vw,40px);letter-spacing:-.03em}.page-head p{color:var(--muted);margin-top:8px;font-size:17px}.sec-title{font-size:21px;margin-bottom:12px}.cls-btn::after{content:"";position:absolute;inset:-3px -2px}.seg button,.seg a{position:relative}.seg button::after,.seg a::after{content:"";position:absolute;inset:-3px 0}.page{padding-bottom:28px}.filters{margin:4px 0 22px;max-width:420px}.log{display:grid;gap:12px}.log-date{font-size:14px;font-weight:600;color:var(--muted);margin:14px 0 2px}.log-date:first-child{margin-top:0}.rel{padding:18px 20px}.rel .row{gap:6px}.rel h3{font-size:18px;margin-top:10px;letter-spacing:-.015em}.rel ul{margin-top:8px;display:grid;gap:6px}.rel li{position:relative;padding-left:16px;color:var(--text-2);font-size:15px}.rel li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--line-2)}.rel.newest{border-color:var(--text)}.promise{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:var(--r-lg);background:var(--surface-2);margin-bottom:22px}.promise .icon{margin-top:2px;flex:none}.promise b{display:block}.promise p{color:var(--muted);font-size:14.5px;margin-top:2px}.form{display:grid;gap:20px}.count{text-align:right;font-size:13px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}.count.hi{color:var(--accent)}.err{color:var(--accent);font-size:14.5px;font-weight:550}.sent{text-align:center;padding:36px 20px}.sent .icon{width:56px;height:56px;margin:0 auto 14px;color:var(--accent);stroke-width:1.6}.sent b{display:block;font-size:22px;margin-bottom:16px}.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}.lost{padding:56px 0 40px}.lost-bell svg{width:72px;height:72px;margin-bottom:18px;animation:ring-shake 2.4s ease-in-out 3}@keyframes ring-shake{0%,70%,100%{transform:rotate(0)}74%{transform:rotate(-14deg)}78%{transform:rotate(12deg)}82%{transform:rotate(-8deg)}86%{transform:rotate(5deg)}}.lost-run{position:relative;min-height:56px}.lost-run .btn{position:relative;transition:transform .25s var(--ease)}.lost h1{font-size:clamp(34px,8vw,52px);letter-spacing:-.035em}.lost p{color:var(--muted);font-size:17px;margin:10px 0 22px}.about{padding-top:clamp(28px,6vw,64px);padding-bottom:40px}.ab-hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(24px,5vw,56px);align-items:center}.ab-eyebrow{font-size:13px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}.ab-copy h1{font:800 clamp(34px,5.4vw,58px)/1.04 var(--font-display);letter-spacing:-.035em;margin-top:12px;text-wrap:balance}.ab-lead{font-size:clamp(16px,1.7vw,19px);line-height:1.55;color:var(--text-2);margin-top:18px;max-width:34em}.ab-cta{margin-top:26px;gap:10px}.ab-facts{margin-top:16px;font-size:14px;color:var(--muted)}.ab-live{padding:22px 22px 18px;position:relative;overflow:hidden}.ab-live::before{content:"";position:absolute;inset:0 0 auto;height:110px;background:linear-gradient(var(--ss,var(--accent-soft)),transparent);pointer-events:none}.ab-live>*{position:relative}.ab-live-top{display:flex;align-items:center;gap:8px;font-weight:650;font-size:14px;color:var(--text-2)}.ab-dot{width:8px;height:8px;border-radius:50%;background:var(--sv,var(--accent));flex:none}.ab-dot.off{background:var(--faint)}.ab-cls{margin-left:auto}.ab-cls select{font:inherit;font-weight:700;color:var(--text);background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:6px 10px;min-height:36px;cursor:pointer}.ab-timer{font:300 clamp(56px,6vw,76px)/1 var(--font-display);letter-spacing:-.04em;font-variant-numeric:tabular-nums;margin-top:18px}.ab-timer.word{font-weight:700;font-size:clamp(30px,3.4vw,40px);letter-spacing:-.025em}.ab-cap{color:var(--muted);font-weight:550;margin-top:6px;min-height:1.4em}.ab-bar{height:6px;border-radius:999px;background:var(--surface-3);margin-top:16px;overflow:hidden}.ab-bar i{display:block;height:100%;width:100%;transform-origin:0 50%;transform:scaleX(0);background:var(--sv,var(--accent));border-radius:inherit}.ab-bar.off{visibility:hidden}.ab-now{display:flex;align-items:center;gap:10px;margin-top:16px;min-height:34px}.ab-now b{font-size:22px;letter-spacing:-.015em}.ab-room{margin-left:auto;font:700 15px/1 var(--font);font-variant-numeric:tabular-nums;padding:7px 10px;border-radius:10px;background:var(--ss,var(--surface-2));color:var(--st,var(--text))}.ab-room:empty{display:none}.ab-live .note{margin-top:8px;min-height:1.45em}.ab-live-note{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}.ab-sec{margin-top:clamp(48px,8vw,88px)}.ab-sec h2{font:800 clamp(24px,3vw,32px)/1.15 var(--font-display);letter-spacing:-.025em}.ab-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:22px}.ab-tile{padding:20px;border-radius:var(--r-xl);background:var(--surface);border:1px solid var(--line)}.ab-tile h3,.ab-plat h3{font-size:17px;letter-spacing:-.01em;margin-top:14px}.ab-tile p,.ab-plat p{color:var(--muted);font-size:14.5px;line-height:1.5;margin-top:6px}.ab-ic{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--ss);color:var(--st)}.ab-ic .icon{width:22px;height:22px}.ab-plat{display:flex;flex-direction:column;color:inherit;text-decoration:none;transition:border-color .15s,transform .15s}.ab-plat h3{margin-top:0}.ab-plat:hover{border-color:var(--accent)}.ab-plat:active{transform:scale(.99)}.ab-go{margin-top:auto;padding-top:14px;font-weight:650;color:var(--accent)}.ab-go::after{content:" →"}.ab-story{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:center;padding:28px;border-radius:var(--r-xl);background:var(--surface);border:1px solid var(--line)}.ab-story p{color:var(--text-2);line-height:1.6;margin-top:10px;max-width:40em}.ab-age{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:170px;padding:18px 20px;border-radius:var(--r-lg);background:var(--surface-2)}.ab-age-n{font:300 54px/1 var(--font-display);letter-spacing:-.04em;font-variant-numeric:tabular-nums}.ab-age-t{font-weight:650;margin-top:6px}.ab-age-s{font-size:12.5px;color:var(--muted);margin-top:4px}@media (max-width:900px){.ab-hero{grid-template-columns:1fr}.ab-grid,.ab-three{grid-template-columns:1fr 1fr}}@media (max-width:600px){.ab-grid,.ab-three{grid-template-columns:1fr}.ab-story{grid-template-columns:1fr;padding:22px}.ab-age{display:grid;grid-template-columns:auto 1fr;column-gap:14px;align-items:center;justify-items:start;text-align:left;min-width:0}.ab-age-n{grid-row:span 2;font-size:44px}.ab-age-t{margin-top:0;align-self:end}.ab-age-s{margin-top:2px;align-self:start}}@media (prefers-reduced-motion:reduce){.ab-plat{transition:none}}</style>
+</head>
+<body>
+<a class="skip" href="#main">К содержимому</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6v16.8a8.4 8.4 0 0 0 0-16.8z" fill="currentColor"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M6.2 16.4V11a5.8 5.8 0 0 1 11.6 0v5.4l1.6 1.8H4.6z"/><path d="M10 20.4a2.1 2.1 0 0 0 4 0"/></symbol><symbol id="i-door" viewBox="0 0 24 24"><path d="M6 20.6V4.8a1.2 1.2 0 0 1 1.2-1.2h9.6A1.2 1.2 0 0 1 18 4.8v15.8M3.8 20.6h16.4"/><circle cx="14.6" cy="12.4" r=".7" fill="currentColor"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.4" width="14" height="10" rx="2.4"/><path d="M8.2 10.4V8a3.8 3.8 0 0 1 7.6 0v2.4"/></symbol><symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.8 14.6A8.2 8.2 0 0 1 9.4 4.2a8.2 8.2 0 1 0 10.4 10.4z"/></symbol><symbol id="i-now" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.6V12l2.9 1.9"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.6" y="2.8" width="10.8" height="18.4" rx="2.6"/><path d="M10.6 18.2h2.8"/></symbol><symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.8"/><path d="M12 2.8v2.1M12 19.1v2.1M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M2.8 12h2.1M19.1 12h2.1M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5"/></symbol><symbol id="i-week" viewBox="0 0 24 24"><rect x="3.6" y="5" width="16.8" height="15.4" rx="3"/><path d="M3.6 9.8h16.8M8.2 3v3.6M15.8 3v3.6"/></symbol></svg>
+<header class="top"><div class="wrap top-in"><a class="brand" href="./" aria-label="Звонок, главная"><svg viewBox="25 25 58 58" aria-hidden="true"><circle class="mark-track" cx="54" cy="54" r="25" fill="none" stroke-width="5.5"/><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M54 29a25 25 0 1 1-25 25" stroke-width="5.5"/><path d="M54 41v13l7.5 4.3" stroke-width="5"/></g><circle cx="54" cy="54" r="3.4" fill="currentColor"/></svg><span>Звонок</span></a><nav class="nav-top" aria-label="Разделы"><a href="./#now">Сейчас</a><a href="./#week">Неделя</a><a href="./#rooms">Кабинеты</a><a href="./#more">Ещё</a></nav><button class="icon-btn" id="schemeBtn" type="button" aria-label="Тема"></button></div></header>
+<main id="main" class="wrap about" tabindex="-1">
+  <section class="ab-hero" aria-labelledby="abH">
+    <div class="ab-copy">
+      <p class="ab-eyebrow">Лицей №165 · 7–11 классы</p>
+      <h1 id="abH">Сколько до звонка, видно с&nbsp;одного взгляда</h1>
+      <p class="ab-lead">Таймер до конца урока, что дальше и в какой кабинет идти. Расписание на неделю с заменами и свободные кабинеты. На телефоне, в виджетах iPhone и Android и на компьютере.</p>
+      <div class="row ab-cta">
+        <a class="btn btn-primary" href="./#now" data-app>Открыть расписание</a>
+        <a class="btn btn-line" href="./#install" data-app>Поставить на телефон</a>
+      </div>
+      <p class="ab-facts">Бесплатно · без рекламы и регистрации · работает без интернета</p>
+    </div>
+    <div class="card ab-live" id="abLive">
+      <div class="ab-live-top">
+        <span class="ab-dot" id="abDot" aria-hidden="true"></span>
+        <span id="abStatus">Сейчас</span>
+        <label class="ab-cls"><span class="sr-only">Класс</span><select id="abCls"></select></label>
+      </div>
+      <div class="ab-timer" id="abTimer">—</div>
+      <div class="ab-cap" id="abCap"></div>
+      <div class="ab-bar" aria-hidden="true"><i id="abBar"></i></div>
+      <div class="ab-now"><b id="abSubj"></b><span class="ab-room" id="abRoom"></span></div>
+      <p class="note" id="abNext"></p>
+      <p class="ab-live-note">Это живое расписание: оно считается прямо сейчас, как на телефоне.</p>
+    </div>
+  </section>
+
+  <section class="ab-sec" aria-labelledby="abFeat">
+    <h2 id="abFeat">Что умеет</h2>
+    <div class="ab-grid">
+      <article class="ab-tile"><span class="ab-ic hue-blue"><svg class="icon"><use href="#i-now"/></svg></span><h3>Таймер до звонка</h3><p>Крупно, сколько осталось до конца урока или перемены, и что будет дальше.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-purple"><svg class="icon"><use href="#i-week"/></svg></span><h3>Неделя с заменами</h3><p>Расписание класса на неделю. Замены, отменённые уроки и сокращённые дни видны сразу.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-green"><svg class="icon"><use href="#i-door"/></svg></span><h3>Свободные кабинеты</h3><p>Где сейчас пусто, кто сидит в нужном кабинете и когда он освободится.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-orange"><svg class="icon"><use href="#i-phone"/></svg></span><h3>Виджеты на iPhone</h3><p>Экран блокировки и рабочий стол через Scriptable. Новые версии ставятся сами.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-teal"><svg class="icon"><use href="#i-bell"/></svg></span><h3>Приложение для Android</h3><p>Уведомление с таймером, виджеты, плитка в шторке и экран блокировки. Почти не тратит заряд.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-indigo"><svg class="icon"><use href="#i-lock"/></svg></span><h3>Без интернета и слежки</h3><p>Открывается без сети. Класс и настройки хранятся только на твоём телефоне.</p></article>
+    </div>
+  </section>
+
+  <section class="ab-sec" aria-labelledby="abGet">
+    <h2 id="abGet">Где пользоваться</h2>
+    <div class="ab-grid ab-three">
+      <a class="card ab-plat" href="https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk"><h3>Android</h3><p>Скачай приложение: таймер в уведомлении и виджеты на рабочем столе.</p><span class="ab-go">Скачать APK</span></a>
+      <a class="card ab-plat" href="iphone.html"><h3>iPhone</h3><p>Виджеты на экран блокировки и рабочий стол, ответы Siri. Пошаговый гайд с анимацией.</p><span class="ab-go">Как поставить</span></a>
+      <a class="card ab-plat" href="./#now" data-app><h3>Компьютер и любой телефон</h3><p>Открой расписание в браузере или поставь сайт на главный экран как приложение.</p><span class="ab-go">Открыть расписание</span></a>
+    </div>
+  </section>
+
+  <section class="ab-sec ab-story" aria-labelledby="abWho">
+    <div>
+      <h2 id="abWho">Кто сделал</h2>
+      <p>«Звонок» сделал ученик лицея №165 для своих: чтобы не искать расписание в чатах и не гадать, в какой кабинет идти. Проект неофициальный, код открыт.</p>
+      <div class="row" style="margin-top:14px">
+        <a class="btn btn-line btn-sm" href="changelog.html">Что нового</a>
+        <a class="btn btn-line btn-sm" href="feedback.html">Написать нам</a>
+        <a class="btn btn-line btn-sm" href="poster.html">Плакат для класса</a>
+        <a class="btn btn-line btn-sm" href="https://github.com/Danick-Dack/Zvonok" target="_blank" rel="noopener noreferrer">Исходный код</a>
+      </div>
+    </div>
+    <div class="ab-age" aria-label="Сколько живёт проект"><span class="ab-age-n" id="abAgeN">0</span><span class="ab-age-t" id="abAgeT">дней «Звонку»</span><span class="ab-age-s" id="abAgeS"></span></div>
+  </section>
+</main>
+<footer class="foot"><div class="wrap"><nav aria-label="Ссылки"><a href="./">Расписание</a><a href="about.html">О проекте</a><a href="make.html">Конструктор</a><a href="iphone.html">iPhone</a><a href="changelog.html">Что нового</a><a href="feedback.html">Написать нам</a></nav><p>«Звонок» сделал ученик лицея №165 для своих. Это неофициальный проект.</p></div></footer>
+<div class="zv-toast" id="zvToast" role="status" aria-live="polite"></div>
+<script>"use strict";
+/* Звонок · общее для всех страниц: DOM, хранилище, время, тема, офлайн */
+
+const $ = id => document.getElementById(id);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+// Наш карманный createElement. Текст кладём через textContent, поэтому никакой HTML из расписания или замен
+// не выполнится. Работает уже давно и всем нравится, трогать осторожно.
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k === "style") e.style.cssText = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return e;
+}
+const SVGNS = "http://www.w3.org/2000/svg";
+/** Иконка из спрайта страницы (сборка кладёт в страницу только нужные значки). */
+function icon(name, cls) {
+  const s = document.createElementNS(SVGNS, "svg"), u = document.createElementNS(SVGNS, "use");
+  s.setAttribute("class", "icon" + (cls ? " " + cls : "")); s.setAttribute("aria-hidden", "true");
+  u.setAttribute("href", "#i-" + name); s.append(u);
+  return s;
+}
+
+// localStorage, который не падает: в приватном режиме Safari и в браузере Telegram он любит кидаться исключениями.
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("zv." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("zv." + k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem("zv." + k); } catch (e) {} }
+};
+
+/* Цвета виджетов из конструктора. Код темы уходит внутрь скрипта для iPhone и в приложение на Android,
+   поэтому из хранилища берём только известные поля с правильными значениями, остальное по умолчанию. */
+const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 0, tx: ""};
+function cleanTheme(raw) {
+  const o = raw && typeof raw === "object" ? raw : {}, t = Object.assign({}, TH_DEFAULT);
+  const hex = v => typeof v === "string" && /^[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;
+  const int = (v, lo, hi) => { const n = typeof v === "string" && /^\d{1,3}$/.test(v) ? +v : v; return Number.isInteger(n) && n >= lo && n <= hi ? n : null; };
+  if (hex(o.bg)) t.bg = hex(o.bg);
+  if (hex(o.ac)) t.ac = hex(o.ac);
+  if (o.tx === "" || hex(o.tx)) t.tx = hex(o.tx) || "";
+  if (int(o.op, 30, 100) != null) t.op = int(o.op, 30, 100);
+  if (int(o.r, 0, 60) != null) t.r = int(o.r, 0, 60);
+  for (const k of ["s", "p", "n", "d", "sc"]) if (int(o[k], 0, 1) != null) t[k] = int(o[k], 0, 1);
+  return t;
+}
+/** Код темы «ZV1;bg=…;ac=…» в одном порядке полей для iPhone и Android. */
+const themeString = t => `ZV1;bg=${t.bg};ac=${t.ac};op=${t.op};r=${t.r};s=${t.s};p=${t.p};n=${t.n};d=${t.d};sc=${t.sc}` + (t.tx ? `;tx=${t.tx}` : "");
+
+let toastT;
+function toast(t) {
+  let e = $("zvToast");
+  if (!e) { e = h("div", {class: "zv-toast", id: "zvToast", role: "status", "aria-live": "polite"}); document.body.append(e); }
+  e.textContent = t; e.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove("on"), 2400);
+}
+// Копирование. Где нет Clipboard API (файл из Telegram, старый Android), выделяем текст по старинке.
+async function copyText(text, msg) {
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+    const t = h("textarea", {readonly: true, style: "position:fixed;top:0;left:0;opacity:0;font-size:16px"});
+    t.value = text; document.body.append(t); t.focus(); t.select(); t.setSelectionRange(0, text.length);
+    try { ok = document.execCommand("copy"); } catch (x) {}
+    t.remove();
+  }
+  toast(ok ? (msg || "Скопировано") : "Не получилось скопировать. Выдели текст и скопируй вручную");
+  return ok;
+}
+
+/* ---------- слова и время ---------- */
+/** 1 урок, 3 урока, 7 уроков. */
+function word(n, one, few, many) { const a = n % 10, b = n % 100; return n + " " + (a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many); }
+const plural = n => word(n, "урок", "урока", "уроков");
+const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+const DAYN = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+const DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const WHEN = ["в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу", "в воскресенье"];
+const dow = d => (d.getDay() + 6) % 7; // 0 = понедельник
+const two = n => String(n).padStart(2, "0");
+const iso = d => d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate());
+const dm = d => d.getDate() + " " + MONTHS[d.getMonth()];
+const toMin = t => { const m = /^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(t || ""); if (!m) return -1; const H = +m[1], M = +m[2]; return H < 24 && M < 60 ? H * 60 + M : -1; };
+const hm = m => Math.floor(m / 60) + ":" + two(m % 60);
+/** Время в мс: полночь даты плюс min минут. */
+function at(date, min) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d.getTime() + min * 60000; }
+/* «Звонку» столько дней: первая версия вышла 1 ноября 2026 (первый коммит) */
+const BORN = new Date(2026, 10, 1);
+const projectAge = now => Math.max(1, Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - BORN) / 864e5));
+/** Тексты счётчика для «Ещё» и сайта о проекте: {n, days: «дней», born: «1 ноября 2026»}. */
+function projectAgeText(now) {
+  const n = projectAge(now);
+  return {n, days: word(n, "день", "дня", "дней").slice(String(n).length + 1), born: dm(BORN) + " " + BORN.getFullYear()};
+}
+const clean = s => String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40);
+const esc = t => String(t).replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[ch]);
+
+/* ---------- тема: как в системе, светлая или тёмная ---------- */
+const SCHEMES = ["auto", "light", "dark"];
+function scheme() { const s = store.get("scheme", "auto"); return SCHEMES.includes(s) ? s : "auto"; }
+function isDark() {
+  const s = scheme();
+  return s === "dark" || (s === "auto" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+}
+function applyScheme(s) {
+  if (s) store.set("scheme", s);
+  s = scheme();
+  const root = document.documentElement;
+  if (s === "auto") delete root.dataset.theme; else root.dataset.theme = s;
+  // цвет полосы браузера и статус-бара iPhone под тему
+  $$('meta[name="theme-color"]').forEach(m => {
+    if (s === "auto") m.setAttribute("content", m.dataset.c);
+    else m.setAttribute("content", s === "dark" ? "#0B0B0C" : "#F4F4F1");
+  });
+  document.dispatchEvent(new CustomEvent("zv:scheme"));
+}
+/* цвет акцента: им отмечено то, что идёт сейчас. Первый в списке по умолчанию */
+const ACCENTS = [{"id":"blue","name":"Синий","light":"#0062DA","dark":"#409CFF"},{"id":"indigo","name":"Индиго","light":"#3D3BB8","dark":"#8B89FF"},{"id":"purple","name":"Фиолетовый","light":"#8944AB","dark":"#DA8FFF"},{"id":"pink","name":"Розовый","light":"#C70F45","dark":"#FF6482"},{"id":"red","name":"Красный","light":"#D70015","dark":"#FF6961"},{"id":"orange","name":"Оранжевый","light":"#B83D00","dark":"#FFB340"},{"id":"green","name":"Зелёный","light":"#1F7A36","dark":"#30DB5B"},{"id":"mint","name":"Мятный","light":"#0B7570","dark":"#66D4CF"},{"id":"mono","name":"Без цвета","light":"#141414","dark":"#F3F3F1"}] || [{id: "red", name: "Звонок", light: "#C8320F", dark: "#FF5A36"}];
+function accent() { const a = store.get("accent", ACCENTS[0].id); return ACCENTS.some(x => x.id === a) ? a : ACCENTS[0].id; }
+function applyAccent(a) {
+  if (a) store.set("accent", a);
+  a = accent();
+  if (a === ACCENTS[0].id) delete document.documentElement.dataset.accent; else document.documentElement.dataset.accent = a;
+  document.dispatchEvent(new CustomEvent("zv:scheme"));
+}
+if (window.matchMedia) {
+  const mq = matchMedia("(prefers-color-scheme: dark)");
+  const on = () => { if (scheme() === "auto") document.dispatchEvent(new CustomEvent("zv:scheme")); };
+  if (mq.addEventListener) mq.addEventListener("change", on); else if (mq.addListener) mq.addListener(on);
+}
+
+/* ---------- платформа ---------- */
+const UA = navigator.userAgent || "";
+const IOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const ANDROID = /Android/i.test(UA);
+const STANDALONE = (!!window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+if (STANDALONE) document.documentElement.classList.add("standalone");
+if (IOS) document.documentElement.classList.add("ios");
+const ONLINE_SITE = /^https?:$/.test(location.protocol);
+
+/** Service worker: сайт работает без интернета и обновляется сам, данные в браузере не трогает. */
+function registerSW() {
+  if (!ONLINE_SITE || !("serviceWorker" in navigator)) return;
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+
+/* Звонок · расписание: уроки, звонки, каникулы, замены, кабинеты.
+   Правила дня (каникулы, замены, «что сейчас») в rules.js: тот же файл сборка вставляет в скрипт iPhone.
+   Та же логика в приложении Android (Schedule.java). */
+
+const DATA = {"school":"Лицей №165","term":"2 четверть 2026–2027","updated":"2026-10-30","term_end":"2026-12-27","holidays":[["2026-12-16","2026-12-16","День Независимости"],["2026-12-28","2027-01-10","Зимние каникулы"],["2027-03-08","2027-03-08","Международный женский день"],["2027-03-22","2027-03-28","Весенние каникулы"],["2027-05-01","2027-05-01","Праздник единства народа Казахстана"],["2027-05-03","2027-05-03","Выходной за 1 мая"],["2027-05-07","2027-05-07","День защитника Отечества"],["2027-05-09","2027-05-10","День Победы"],["2027-05-26","2027-08-31","Летние каникулы"]],"bells":[["8:00","8:45"],["8:50","9:35"],["9:45","10:30"],["10:50","11:35"],["11:55","12:40"],["12:50","13:35"],["13:45","14:30"],["14:40","15:25"],["15:35","16:25"]],"subjects":{"alg":"Алгебра","geom":"Геометрия","mat":"Математика","fiz":"Физика","prf":"Практ. физика","kaz":"Казахский яз. и лит.","rus":"Русский язык","rlit":"Русская литература","eng":"Английский язык","istk":"История Казахстана","vist":"Всемирная история","geo":"География","bio":"Биология","him":"Химия","inf":"Информатика","prog":"Программирование","fk":"Физкультура","hud":"Худ. труд","kl":"Классный час","prav":"Основы права","nvp":"НВП","avto":"Автодело"},"classes":{"7А":[["kaz 42/21","kl 40","alg 24/35","fk с/з","istk 46","prf 48/50","geo 54"],["fiz 48/49","fiz 48/49","geom 24/35","geom 24/35","eng 44/35","prog 56/57","bio 25"],["rus 46","fk с/з","alg 24/35","alg 24/35","rlit 46","eng 45/47"],["fiz 48/49","fiz 48/49","alg 24/35","mat 24/35","rus 46","vist 54","kaz 42/21","fk с/з"],["kaz 42/21","inf 56/57","geom 24/35","rlit 46","hud 11/1","him 40","eng 25/20"]],"7Б":[["kl 40","kaz 42/21","istk 46","alg 24/35","mat 24/35","fk с/з","fk с/з","prf 48/73"],["geom 24/35","eng 44/47","fiz 48/49","fiz 48/49","prog 56/57","bio 25","hud 11/1"],["alg 24/35","alg 24/35","eng 45/47","geo 54","fk с/з","rus 46"],["kaz 42/21","alg 24/35","rus 46","rlit 46","fiz 48/49","fiz 48/49","vist 54"],["geom 24/35","geom 24/35","kaz 42/21","eng 25/47","him 40","inf 56/57","rlit 46"]],"7В":[["alg 24/35","alg 24/35","kaz 42/21","istk 46","fk с/з","geo 54","prf 48/73","kl 40"],["hud 11/1","geom 24/35","eng 44/47","bio 25","fiz 48/50","fiz 48/50","prog 56/57"],["fk с/з","rus 46","rlit 46","eng 45/47","alg 24/35"],["rus 46","kaz 42/21","fiz 48/49","fiz 48/49","alg 24/35","mat 24/35","fk с/з","vist 54"],["inf 56/57","kaz 42/21","eng 25/47","geom 24/35","geom 24/35","rlit 46","him 40"]],"8А":[["fiz 48/50","kl 25","rus 55","kaz 42/21","istk 41","alg 22/24","alg 22/24","fk с/з"],["eng 47/44","bio 25","kaz 42/43","him 40","geom 22/24","geom 22/24"],["eng 47/45","rlit 55","vist 41","fk с/з","prog 56/57","alg 22/24","fiz 48/50","prf 48/50"],["alg 22/24","inf 56/57","rus 55","rlit 55","eng 47/40","fk с/з"],["fiz 48/50","fiz 48/50","hud 11/1","kaz 42/21","geo 54","geom 22/24","mat 22/24"]],"8Б":[["kl 25","fiz 48/50","fk с/з","rus 55","alg 58/22","kaz 42/21","rlit 55"],["bio 25","kaz 42/43","geom 58/22","eng 47/44","vist 41","hud 11/1","him 40"],["rlit 55","eng 47/45","alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","fk с/з","prog 56/57"],["fk с/з","alg 58/22","mat 58/22","inf 56/57","rus 55","eng 47/40"],["geom 58/22","geom 58/22","istk 41","geo 54","fiz 48/50","prf 48/50","kaz 42/21"]],"8В":[["alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","kaz 42/21","rus 45","kl 41"],["kaz 42/43","hud 11/1","bio 25","geom 58/22","rlit 45","him 40","eng 35/44"],["alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","eng 47/45","fk с/з","prog 56/57"],["inf 56/57","vist 41","rus 45","fk с/з","fk с/з","mat 58/22"],["geo 54","eng 20/25","geom 58/22","geom 58/22","kaz 42/21","rlit 45","prf 48/50","istk 41"]],"8Г":[["rus 45","fk с/з","alg 58/22","mat 58/22","fiz 48/50","istk 41","kaz 42/21","kl 25"],["geom 58/22","geom 58/22","hud 11/1","kaz 42/43","bio 25","eng 35/44","rlit 45","him 40"],["fiz 48/50","fiz 48/50","fk с/з","vist 41","alg 58/22","prog 56/57","eng 47/45"],["rus 45","fk с/з","inf 56/57","alg 58/22","alg 58/22","rlit 45"],["eng 20/25","geo 54","fiz 48/50","prf 48/50","geom 58/22","kaz 42/21"]],"9А":[["alg 36/59","alg 36/59","istk 41","fiz 73/72","kl 40","kaz 44/43","rus 45","prog 56/57"],["fk с/з","inf 56/57","geom 36/59","fiz 73/72","fiz 73/72","rus 45","prav 41","eng 47/28"],["geo 54","him 40","kaz 44/43","alg 36/59","alg 36/59","fk с/з","bio 25"],["vist 41","rlit 45","kaz 44/43","eng 47/1","fiz 73/72","prf 73/72","mat 36/59"],["rlit 45","eng 47/40","fk с/з","hud 11/1","geom 36/59","geom 36/59"]],"9Б":[["kl 46","istk 41","fiz 73/72","rus 45","kaz 44/43","alg 36/59","prog 56/57"],["inf 56/57","fiz 73/72","fiz 73/72","fk с/з","eng 47/46","geom 36/59","geom 36/59","hud 11/1"],["kaz 44/43","alg 36/59","mat 36/59","him 40","geo 54","bio 25","fk с/з"],["alg 36/59","alg 36/59","eng 47/1","fiz 73/72","vist 41","prav 53","rlit 45"],["eng 47/40","rlit 45","kaz 44/43","geom 36/59","rus 45","fk с/з","prf 73/72"]],"9В":[["istk 41","kaz 44/43","alg 36/59","mat 36/59","fiz 73/72","fiz 73/72","prog 56/57","kl 46"],["fiz 73/72","fk с/з","inf 56/57","hud 11/1","geom 36/59","eng 47/46","rlit 46"],["alg 36/59","geo 54","him 40","kaz 44/43","bio 25","prav 28","rus 46","fk с/з"],["eng 47/35","fiz 73/72","prf 73/72","kaz 44/43","alg 36/59","alg 36/59","rlit 46"],["geom 36/59","geom 36/59","rus 46","vist 41","fk с/з","eng 47/28"]],"9Г":[["fiz 73/72","fiz 73/72","kaz 44/43","istk 41","alg 36/59","prog 56/57","kl 40"],["geom 36/59","geom 36/59","fk с/з","inf 56/57","hud 11/1","fiz 73/72","eng 47/28","rlit 46"],["him 40","kaz 44/43","geo 54","rus 46","fk с/з","alg 36/59","mat 36/59","bio 25"],["fiz 73/72","eng 47/1","alg 36/59","alg 36/59","kaz 44/43","vist 41","prav 41"],["rus 46","rlit 46","geom 36/59","fk с/з","eng 47/73","prf 73/72"]],"10А":[["inf 56/57","geo 54","alg 28/34","eng 47/20","bio 25","rlit 55","kl 28","prog 57"],["fk с/з","geom 28/34","geom 28/34","istk 41","kaz 42/43","rus 55","prf 50/72"],["fiz 73/72","fiz 73/72","nvp 1","alg 28/34","alg 28/34","prav 41","avto 71","avto 71"],["rlit 55","him 40","kaz 42/21","kaz 42/21","alg 28/34","mat 28/34","eng 20/50","fk с/з","prog 56"],["fk с/з","istk 41","fiz 73/72","fiz 73/72","geom 28/34","vist 41","inf 56/57"]],"10Б":[["rlit 55","eng 47/20","kl 25","bio 25","geo 54","alg 58/34","alg 58/34"],["istk 41","prav 54","fk с/з","rus 55","geom 58/34","geom 58/34","kaz 42/43","prf 50/72"],["kaz 42/21","kaz 42/21","fiz 73/72","fiz 73/72","him 40","alg 58/34","mat 58/34","nvp 1"],["alg 58/34","rlit 55","istk 41","vist 41","fk с/з","inf 56/57","prog 56/57"],["fiz 73/72","fiz 73/72","inf 56/57","eng 20/40","fk с/з","geom 58/34","avto 71","avto 71"]],"10В":[["alg 28/34","alg 28/34","eng 47/20","geo 54","rlit 55","kl 40","bio 25","prf 53/50"],["geom 28/34","istk 41","fiz 53/50","fiz 53/50","rus 55","kaz 42/43","fk с/з","inf 56/57"],["alg 28/34","vist 41","rlit 55","nvp 1","prav 41","him 40"],["fiz 53/50","fiz 53/50","alg 28/34","mat 28/34","kaz 42/21","kaz 42/21","fk с/з","prog 56/57"],["geom 28/34","geom 28/34","eng 20/40","inf 56/57","istk 41","fk с/з","avto 71","avto 71"]],"10Г":[["eng 47/20","rlit 55","geo 54","alg 28/34","mat 28/34","bio 25","prf 53/50","kl 54"],["fiz 53/50","fiz 53/50","istk 41","geom 28/34","fk с/з","fk с/з","rus 55","kaz 42/43"],["vist 41","alg 28/34","alg 28/34","kaz 42/21","kaz 42/21","nvp 1","avto 71","avto 71"],["him 40","alg 28/34","fiz 53/50","fiz 53/50","inf 56/57","eng 20/50","rlit 55","prog 56/57"],["istk 41","fk с/з","geom 28/34","geom 28/34","inf 56/57","prav 55"]],"11А":[["kl 43","inf 57/56","fiz 53/49","fiz 53/49","alg 30/27","mat 30/27","prav 46","kaz 44/43"],["istk 54","rus 45","geom 30/27","geom 30/27","fk с/з","fk с/з","prf 53/49","avto 71","avto 71"],["alg 30/27","alg 30/27","fiz 53/49","inf 57/56","nvp 1","geo 54","him 40"],["kaz 44/43","vist 54","eng 20/40","bio 25","rlit 45","alg 30/27"],["istk 55","fiz 53/49","geom 30/27","rlit 45","eng 20/25","kaz 44/43","fk с/з","prog 57/56"]],"11Б":[["kl 54","rlit 45","alg 30/27","alg 30/27","inf 57/56","fiz 53/49","kaz 44/43"],["him 40","fk с/з","rus 45","istk 54","geom 30/27","geom 30/27","prav 54","prf 53/49"],["nvp 1","inf 57/56","alg 30/27","mat 30/27","fiz 53/49","fiz 53/49","geo 54"],["alg 30/27","kaz 44/43","vist 54","eng 20/40","bio 25","fk с/з","avto 71","avto 71"],["fiz 53/49","kaz 44/43","fk с/з","geom 30/27","istk 55","eng 20/25","rlit 45","prog 57/56"]],"11В":[["fiz 53/49","fiz 53/49","inf 57/56","kaz 44/43","rlit 45","prav 46","alg 30/27","kl 28"],["rus 45","geom 30/27","him 40","fk с/з","istk 54","prf 53/49","avto 71","avto 71"],["inf 57/56","nvp 1","eng 25/20","fiz 53/49","kaz 44/43","alg 30/27","mat 30/27"],["eng 25/20","alg 30/27","alg 30/27","rlit 45","vist 54","bio 25"],["geom 30/27","geom 30/27","fiz 53/49","istk 55","kaz 44/43","geo 54","fk с/з","fk с/з","prog 57/56"]],"11Г":[["alg 30/27","alg 30/27","rlit 45","inf 57/56","fiz 53/49","kl 28","avto 71","avto 71"],["geom 30/27","him 40","istk 54","rus 45","prf 53/49","prav 54","fk с/з","fk с/з"],["fiz 53/49","fiz 53/49","inf 57/56","eng 25/20","alg 30/27","kaz 44/43","nvp 1"],["vist 54","eng 25/20","bio 25","alg 30/27","mat 30/27","kaz 44/43"],["kaz 44/43","istk 55","rlit 45","fiz 53/49","geom 30/27","geom 30/27","geo 54","fk с/з","prog 57/56"]]}};
+let CHANGES = cleanChanges({"updated":"2026-11-02","format":"Замены и сокращённые уроки. Ключ: дата ГГГГ-ММ-ДД. note: пометка для всех. off: уроков нет ни у кого (например «Актированный день»). bells: свои звонки на этот день, как в schedule.json. classes: класс → номер урока → {\"subject\": код или название, \"room\": кабинет} или \"нет урока\". После правки: py tools/build_site.py","days":{}} || {days: {}}); // cleanChanges в rules.js
+const BELLS = DATA.bells.map(b => [toMin(b[0]), toMin(b[1])]);
+const CLASSES = Object.keys(DATA.classes).sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b, "ru"));
+const roomName = r => r === "с/з" ? "спортзал" : r;
+/* у каждого предмета свой цвет: название → оттенок (сборка берёт из tools/build_site.py) */
+const SUBJ_HUE = {"Алгебра":"blue","Геометрия":"blue","Математика":"blue","Физика":"purple","Практ. физика":"purple","Казахский яз. и лит.":"yellow","Русский язык":"red","Русская литература":"red","Английский язык":"cyan","История Казахстана":"brown","Всемирная история":"brown","География":"mint","Биология":"green","Химия":"teal","Информатика":"indigo","Программирование":"indigo","Физкультура":"orange","Худ. труд":"pink","Классный час":"gray","Основы права":"brown","НВП":"green","Автодело":"orange"} || {};
+const HUE_IDS = ["blue", "purple", "yellow", "red", "cyan", "brown", "mint", "green", "teal", "indigo", "orange", "pink"];
+/** Оттенок предмета. Для своих предметов из конструктора подбираем по похожему названию или по буквам. */
+function hueOf(subject) {
+  const s = String(subject || "").trim();
+  if (!s) return "none";
+  if (SUBJ_HUE[s]) return SUBJ_HUE[s];
+  const low = s.toLowerCase().slice(0, 5);
+  for (const name in SUBJ_HUE) if (name.toLowerCase().startsWith(low)) return SUBJ_HUE[name];
+  let x = 0;
+  for (const ch of s.toLowerCase()) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
+  return HUE_IDS[x % HUE_IDS.length];
+}
+const LAT = {"А": "a", "Б": "b", "В": "v", "Г": "g"};
+const slugOf = c => c.replace(/[АБВГ]/g, x => LAT[x]).toLowerCase();
+
+/** Обычная неделя класса: 7 дней, в каждом уроки {num, start, end, subject, room}. */
+const CW = {};
+function classWeek(cls) {
+  if (CW[cls]) return CW[cls];
+  const days = DATA.classes[cls] || [];
+  return CW[cls] = Array.from({length: 7}, (_, d) => (days[d] || []).map((raw, i) => {
+    if (!raw || !BELLS[i]) return null;
+    const sp = raw.indexOf(" "), code = sp < 0 ? raw : raw.slice(0, sp), room = sp < 0 ? "" : raw.slice(sp + 1);
+    return {num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: DATA.subjects[code] || code, room: roomName(room)};
+  }).filter(Boolean));
+}
+/** Своё расписание из конструктора: {bells: [[с, по]], days: [[[предмет, кабинет]]]}. */
+function customWeek(c) {
+  const bells = (c.bells || DATA.bells).map(b => [toMin(b && b[0]), toMin(b && b[1])]);
+  return Array.from({length: 7}, (_, d) => ((c.days || [])[d] || []).map((l, i) => {
+    if (!l || !clean(l[0]) || !bells[i] || bells[i][0] < 0 || bells[i][1] <= bells[i][0]) return null;
+    return {num: i + 1, start: bells[i][0], end: bells[i][1], subject: clean(l[0]), room: roomName(clean(l[1]))};
+  }).filter(Boolean));
+}
+
+/* Каникулы, замены, звонки на дату, уроки на дату и что происходит сейчас: rules.js (общий с виджетом iPhone). */
+/** Номера отменённых уроков класса на дату. */
+const cancelled = (c, d) => { const ch = chDay(d), fix = ch && (ch.classes || {})[c] || {}; return Object.keys(fix).filter(n => noLesson(fix[n])).map(Number); };
+
+/** 24:16 или 1:02:03. Округляем вверх: 0:00 должен совпасть со звонком, а не наступить на секунду раньше. */
+function fmtTimer(ms) {
+  const t = Math.max(0, Math.ceil(ms / 1000)), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), S = t % 60;
+  return (H ? H + ":" + two(M) : M) + ":" + two(S);
+}
+
+/* ---------- кабинеты ---------- */
+/** "42/21" это две группы в двух кабинетах. */
+const splitRooms = r => (r || "").split("/").map(x => x.trim()).filter(Boolean);
+const ROOM_SET = new Set();
+CLASSES.forEach(c => classWeek(c).forEach(list => list.forEach(l => splitRooms(l.room).forEach(r => ROOM_SET.add(r)))));
+const ROOMS = [...ROOM_SET].sort((a, b) => (parseInt(a) || 999) - (parseInt(b) || 999) || a.localeCompare(b, "ru"));
+/** Кто где сидит в эту дату (с заменами). В каникулы показываем обычный день недели. */
+function roomDay(date) {
+  const off = dayOff(date), d = dow(date), use = {};
+  CLASSES.forEach(c => (off ? classWeek(c)[d] : dayLessons(c, date)).forEach(l => splitRooms(l.room)
+    .forEach(r => (use[r] = use[r] || []).push({num: l.num, cls: c, subject: l.subject, start: l.start, end: l.end}))));
+  return use;
+}
+const lowFirst = t => /^[А-ЯЁ][а-яё]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t;
+/** Короткий ответ: кто сейчас в кабинете и когда он освободится. */
+function roomNow(room, use, nowMin) {
+  const u = (use[room] || []).slice().sort((a, b) => a.num - b.num), cur = u.filter(x => nowMin >= x.start && nowMin < x.end);
+  const who = list => [...new Set(list.map(x => x.cls))].join(", ") + ", " + lowFirst(list[0].subject);
+  if (cur.length) {
+    let n = cur[0].num, end = cur[0].end;
+    for (let x; (x = u.find(y => y.num === n + 1)); n++) end = x.end; // уроки подряд: занят до конца цепочки
+    return {busy: true, text: "Сейчас " + who(cur) + ". Освободится в " + hm(end)};
+  }
+  const nx = u.find(x => x.start >= nowMin);
+  return {busy: false, text: nx ? "Сейчас свободен. Дальше " + who(u.filter(x => x.num === nx.num)) + " в " + hm(nx.start) : "Свободен до конца дня"};
+}
+
+/* Звонок · правила дня: каникулы, замены, сокращённые звонки и что происходит в момент now.
+   Один файл на сайт и на виджет iPhone. Сборка (tools/build_site.py) вставляет его в скрипт Scriptable
+   между метками, поэтому правила у сайта и виджета не расходятся. Править только здесь.
+   Только объявления функций: виджет передаёт их в свой экран через toString().
+   Снаружи нужны: DATA {holidays, subjects, term_end}, CHANGES, BELLS, classWeek(c), iso, dow, toMin, clean,
+   roomName, hm, dm, at, word, DAYN и WHEN (с понедельника). */
+
+/** Замены с сайта: оставляем только то, что правила умеют читать. Кривое поле в changes.json выпадает,
+ *  а не роняет расписание у всех (на сайте и в виджете одинаково). */
+function cleanChanges(j) {
+  const out = {days: {}}, str = v => typeof v === "string", obj = v => !!v && typeof v === "object" && !Array.isArray(v);
+  if (!obj(j)) return out;
+  if (str(j.updated)) out.updated = j.updated;
+  const days = obj(j.days) ? j.days : {};
+  for (const date of Object.keys(days)) {
+    const c = days[date];
+    if (!/^\d{4}-\d\d-\d\d$/.test(date) || !obj(c)) continue;
+    const day = {};
+    if (str(c.note)) day.note = c.note;
+    if (str(c.off)) day.off = c.off;
+    if (Array.isArray(c.bells)) day.bells = c.bells.map(b => Array.isArray(b) && str(b[0]) && str(b[1]) ? [b[0], b[1]] : null);
+    if (obj(c.classes)) {
+      day.classes = {};
+      for (const cls of Object.keys(c.classes)) {
+        const fix = c.classes[cls], f = {};
+        if (!obj(fix)) continue;
+        for (const n of Object.keys(fix)) {
+          const v = fix[n];
+          if (!/^\d{1,2}$/.test(n)) continue;
+          if (v === null || str(v)) f[n] = v;
+          else if (obj(v)) f[n] = {subject: str(v.subject) ? v.subject : undefined, room: str(v.room) || typeof v.room === "number" ? String(v.room) : undefined};
+        }
+        day.classes[cls] = f;
+      }
+    }
+    out.days[date] = day;
+  }
+  return out;
+}
+/** Каникулы и праздники: [с, по, название]. */
+function holiday(d) { const t = iso(d); return (DATA.holidays || []).find(x => t >= x[0] && t <= x[1]) || null; }
+/** Замены на дату: data/changes.json (копия на момент сборки, свежая подтягивается с сайта). */
+function chDay(d) { return (CHANGES.days || {})[iso(d)] || null; }
+/** null, «нет» или «нет урока» в заменах: урока нет. */
+function noLesson(v) { return v === null || (typeof v === "string" && /^нет/i.test(v.trim())); }
+/** День без уроков у всех: каникулы, праздник или «off» в заменах. [с, по, название] */
+function dayOff(d) { const x = holiday(d), c = chDay(d); return x || (c && c.off ? [iso(d), iso(d), clean(c.off)] : null); }
+/** Звонки на дату: свои на день целиком из замен или обычные. Урока без звонка в этот день нет. */
+function dayBells(d) {
+  const c = chDay(d);
+  if (!c || !Array.isArray(c.bells)) return BELLS;
+  return c.bells.map((x, i) => { const s = x ? toMin(x[0]) : -1, e = x ? toMin(x[1]) : -1; return s >= 0 && e > s ? [s, e] : BELLS[i] || null; });
+}
+/** Уроки класса на конкретную дату: с каникулами, заменами и сокращёнными звонками. */
+function dayLessons(c, d) {
+  if (dayOff(d)) return [];
+  const base = classWeek(c)[dow(d)], ch = chDay(d);
+  if (!ch) return base;
+  const bells = dayBells(d), fix = (ch.classes || {})[c] || {}, short = bells !== BELLS;
+  const nums = [...new Set(base.map(l => l.num).concat(Object.keys(fix).map(Number).filter(n => n > 0)))].sort((a, b) => a - b);
+  return nums.map(n => {
+    let l = base.find(x => x.num === n);
+    const f = fix[n];
+    if (f !== undefined && noLesson(f)) return null;
+    if (f && typeof f === "object") l = {num: n, changed: true,
+      subject: f.subject ? DATA.subjects[f.subject] || clean(f.subject) : l ? l.subject : "",
+      room: f.room != null ? roomName(clean(f.room)) : l ? l.room : ""};
+    if (!l || !l.subject || !bells[n - 1]) return null;
+    return Object.assign({}, l, {start: bells[n - 1][0], end: bells[n - 1][1], short});
+  }).filter(Boolean);
+}
+
+/**
+ * Что происходит в момент now. src = {at(date) → уроки на дату, real: учитывать каникулы}.
+ * kind: LESSON (идёт урок), BREAK (перемена), BEFORE (до первого урока), AFTER (уроки кончились), OFF (уроков нет).
+ */
+function compute(now, src) {
+  const s = {}, list = src.at(now), sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  if (list.length) {
+    const first = list[0], last = list[list.length - 1];
+    s.count = list.length; s.end = hm(last.end); s.list = list;
+    if (sec < first.start * 60) {
+      return Object.assign(s, {kind: "BEFORE", next: first, start: at(now, first.start - 60), target: at(now, first.start), soon: sec >= (first.start - 60) * 60});
+    }
+    for (let i = 0; i < list.length; i++) {
+      const l = list[i];
+      if (sec < l.end * 60) {
+        if (sec >= l.start * 60) Object.assign(s, {kind: "LESSON", cur: l, idx: i, next: list[i + 1] || null, start: at(now, l.start), target: at(now, l.end)});
+        else Object.assign(s, {kind: "BREAK", cur: list[i - 1], idx: i - 1, next: l, start: at(now, list[i - 1].end), target: at(now, l.start)});
+        return s;
+      }
+    }
+    s.kind = "AFTER";
+  } else { s.kind = "OFF"; s.holiday = src.real ? dayOff(now) : null; }
+  for (let d = 1; d <= 120; d++) {
+    const date = new Date(now); date.setDate(date.getDate() + d);
+    const l = src.at(date);
+    if (!l.length) continue;
+    const far = d > 6;
+    Object.assign(s, {next: l[0], nList: l, nDate: date, nDays: d, nCount: l.length, nEnd: hm(l[l.length - 1].end),
+      nLabel: d === 1 ? "Завтра" : far ? dm(date) : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : far ? dm(date) : WHEN[dow(date)], target: at(date, l[0].start)});
+    break;
+  }
+  return s;
+}
+/** Сколько учебных дней до ближайших каникул (сегодня считается, если уроки ещё не кончились). */
+function vacation(now, src) {
+  if (!src.real || holiday(now) || (DATA.term_end && iso(now) > DATA.term_end)) return null;
+  const t = iso(now), v = (DATA.holidays || []).filter(x => /каникул/i.test(x[2]) && x[0] > t).sort((a, b) => a[0] < b[0] ? -1 : 1)[0];
+  if (!v) return null;
+  const d = new Date(now), nowMin = now.getHours() * 60 + now.getMinutes();
+  let n = 0, today = false;
+  for (let i = 0; i < 400 && iso(d) < v[0]; i++, d.setDate(d.getDate() + 1)) {
+    const l = src.at(d);
+    if (!l.length || (i === 0 && nowMin >= l[l.length - 1].end)) continue;
+    n++; if (i === 0) today = true;
+  }
+  return n > 60 ? null : {n, today, name: v[2], from: v[0]}; // больше 60 дней: рано считать
+}
+function vacationText(v) {
+  if (!v) return "";
+  if (!v.n) return "Дальше " + v.name.toLowerCase();
+  if (v.n === 1 && v.today) return "Сегодня последний учебный день, потом " + v.name.toLowerCase();
+  return "До каникул " + word(v.n, "учебный день", "учебных дня", "учебных дней");
+}
+
+/* Звонок · общее для отдельных страниц: кнопка темы в шапке и работа без интернета */
+(function initPage() {
+  const b = $("schemeBtn");
+  if (!b) return;
+  // значки темы для сборки: icon("auto") icon("sun") icon("moon")
+  const UI = {auto: ["auto", "как в системе"], light: ["sun", "светлая"], dark: ["moon", "тёмная"]};
+  const draw = () => { const s = scheme(); b.replaceChildren(icon(UI[s][0])); b.setAttribute("aria-label", "Тема: " + UI[s][1] + ". Сменить"); b.title = "Тема: " + UI[s][1]; };
+  b.onclick = () => { const s = SCHEMES[(SCHEMES.indexOf(scheme()) + 1) % SCHEMES.length]; applyScheme(s); draw(); toast("Тема: " + UI[s][1]); };
+  document.addEventListener("zv:scheme", draw);
+  addEventListener("storage", e => { if (e.key === "zv.scheme") { applyScheme(); draw(); } if (e.key === "zv.accent") applyAccent(); });
+  draw();
+})();
+registerSW();
+
+/* Звонок · сайт о проекте: живая карточка «Сейчас» (то же расписание, что в приложении), счётчик дней проекта.
+   На компьютере сайт открывается с этой страницы; «Открыть расписание» запоминается, и дальше сразу приложение. */
+let abCls = DATA.classes[store.get("class", null)] ? store.get("class", null) : "7Б";
+const abSrc = {at: d => dayLessons(abCls, d), real: true};
+let abT = 0;
+
+function abTick() {
+  clearTimeout(abT);
+  if (document.hidden) return; // свернули вкладку: ничего не считаем
+  const now = new Date(), s = compute(now, abSrc), n = s.next;
+  const live = s.kind === "LESSON" || s.kind === "BREAK" || (s.kind === "BEFORE" && s.soon);
+  const show = s.kind === "LESSON" ? s.cur : n;
+  $("abLive").className = "card ab-live hue-" + hueOf(show && show.subject);
+  $("abDot").className = "ab-dot" + (live ? "" : " off");
+  let status, cap = "", note = "";
+  if (s.kind === "LESSON") {
+    status = "Урок " + (s.idx + 1) + " из " + s.count; cap = "до звонка в " + hm(s.cur.end);
+    note = n ? "Дальше в " + hm(n.start) + ": " + n.subject + (n.room ? ", " + n.room : "") : "Последний урок, потом домой";
+  } else if (s.kind === "BREAK") {
+    status = n.start - s.cur.end > 25 ? "Окно" : "Перемена"; cap = "до урока в " + hm(n.start); note = "Впереди ещё " + plural(s.count - s.idx - 1) + ", до " + s.end;
+  } else if (s.kind === "BEFORE") {
+    status = s.soon ? "Скоро уроки" : "Сегодня " + plural(s.count); cap = s.soon ? "до первого урока" : "первый урок";
+    note = "Сегодня " + plural(s.count) + ", до " + s.end;
+  } else {
+    status = s.kind === "AFTER" ? "Уроки закончились" : s.holiday ? s.holiday[2] : "Выходной";
+    cap = n ? (s.nDays === 1 ? "завтра" : s.nWhen) + " первый урок" : "";
+    note = n ? (s.nDays === 1 ? "Завтра" : s.nLabel) + ": " + plural(s.nCount) + ", до " + s.nEnd : "Уроков пока нет";
+  }
+  $("abStatus").textContent = status;
+  const tm = $("abTimer");
+  tm.textContent = live ? fmtTimer(s.target - now) : n ? hm(n.start) : "Отдыхай";
+  tm.classList.toggle("word", !live && !n);
+  $("abCap").textContent = cap;
+  $("abBar").parentElement.classList.toggle("off", !live);
+  if (live) $("abBar").style.transform = "scaleX(" + Math.max(0, Math.min(1, (now - s.start) / (s.target - s.start))).toFixed(3) + ")";
+  $("abSubj").textContent = show ? show.subject : "";
+  $("abRoom").textContent = show ? show.room : "";
+  $("abNext").textContent = note;
+  // секунды нужны только идущему таймеру; без него хватает раза в минуту (звонки всегда в начале минуты)
+  const ms = Date.now();
+  abT = setTimeout(abTick, live ? 1000 - ms % 1000 + 15 : 60000 - ms % 60000 + 15);
+}
+
+function abAge() {
+  const age = projectAgeText(new Date());
+  $("abAgeN").textContent = age.n;
+  $("abAgeT").textContent = age.days + " «Звонку»";
+  $("abAgeS").textContent = "первая версия: " + age.born;
+}
+
+const sel = $("abCls");
+CLASSES.forEach(c => sel.append(h("option", {value: c, text: c})));
+sel.value = abCls;
+sel.onchange = () => { abCls = sel.value; store.set("class", abCls); abTick(); };
+// пришли за расписанием: на компьютере дальше сразу приложение, без этой страницы
+$$("[data-app]").forEach(a => a.addEventListener("click", () => store.set("pcApp", true)));
+// вернулись на вкладку: класс могли сменить в расписании, показываем тот же
+document.addEventListener("visibilitychange", () => {
+  const c = store.get("class", null);
+  if (!document.hidden && DATA.classes[c] && c !== abCls) { abCls = c; sel.value = c; }
+  abTick();
+});
+abAge();
+abTick();
+</script>
+</body>
+</html>

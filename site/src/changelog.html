@@ -3,83 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="@CSP@">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#000000">
-<meta name="color-scheme" content="dark">
-<meta name="description" content="Что нового в «Звонке»: все изменения сайта, приложения для Android и виджетов для iPhone.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" data-c="#0B0B0C" media="(prefers-color-scheme: dark)">
+<title>Что нового · Звонок</title>
+<meta name="description" content="Что нового в «Звонке»: изменения сайта, приложения для Android и виджетов для iPhone.">
+<link rel="canonical" href="@SITE_URL@changelog.html">
 <link rel="icon" href="@FAVICON@">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Что нового · Звонок</title>
-<style>
-@COMMON_CSS@
-.tl{position:relative;display:grid;gap:12px;padding-left:26px;margin-top:18px}
-.tl:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line2);border-radius:2px}
-.day{position:relative;margin-top:14px}
-.day:before{content:"";position:absolute;left:-25px;top:4px;width:9px;height:9px;border-radius:50%;background:#5a5a60}
-.day.first:before{background:#fff}
-.day:first-child{margin-top:0}
-.rel .tags{display:flex;gap:6px;flex-wrap:wrap}
-.rel h2{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-top:10px;line-height:1.3}
-.rel ul{list-style:none;margin-top:8px}
-.rel li{color:var(--soft);font-size:15px;padding-left:16px;position:relative;margin-top:4px}
-.rel li:before{content:"•";position:absolute;left:0;color:var(--muted)}
-.rel.newest{border-color:var(--line2)}
-.ask{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:40px}
-@media(max-width:600px){.tl{padding-left:0}.tl:before,.day:before{display:none}.sh h1{font-size:34px}}
-</style>
+<link rel="manifest" href="manifest.webmanifest">
+<script>@HEAD_JS@</script>
+<style>@CSS@</style>
 </head>
 <body>
-<div class="glow"></div>
+<a class="skip" href="#main">К содержимому</a>
+@ICONS@
 @HEADER@
-<main class="wrap">
-  <div class="sh"><h1>Что <b>нового</b></h1><p>Тут всё, что поменялось в «Звонке». Сверху самое свежее.</p></div>
-  <div class="seg" id="flt" role="group" aria-label="Что показывать"></div>
-  <div class="tl" id="list"></div>
-  <div class="ask"><span class="note">Нашёл ошибку или есть идея?</span><a class="btn d sm" href="feedback.html">Написать нам</a></div>
+<main id="main" class="wrap narrow page" tabindex="-1">
+  <div class="page-head"><h1>Что нового</h1><p>Всё, что поменялось в «Звонке». Сверху самое свежее.</p></div>
+  <div class="seg filters" id="flt" role="group" aria-label="Что показывать"></div>
+  <div class="log" id="list"></div>
+  <p class="note" style="margin-top:28px">Есть идея или что-то сломалось? <a href="feedback.html">Напиши нам</a>.</p>
 </main>
-<footer class="wrap">
-  <p class="links"><a href="./">Расписание</a> · <a href="feedback.html">Написать нам</a></p>
-  <p>«Звонок» сделал ученик лицея №165 для своих. Это неофициальный проект.</p>
-</footer>
-<script>
-"use strict";
-const LOG = /*@CHANGELOG@*/[];
-const NAMES = {site: "Сайт", android: "Android", ios: "iPhone"};
-const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
-const $ = id => document.getElementById(id);
-function h(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-let filter = "";
-try { filter = sessionStorage.getItem("zv.logFilter") || ""; } catch (e) {}
-function render() {
-  const flt = $("flt"); flt.textContent = "";
-  [["", "Все"], ["site", "Сайт"], ["android", "Android"], ["ios", "iPhone"]].forEach(([k, n]) => {
-    const b = h("button", k === filter ? "on" : "", n);
-    b.onclick = () => { filter = k; try { sessionStorage.setItem("zv.logFilter", k); } catch (e) {} render(); };
-    flt.append(b);
-  });
-  const list = $("list"); list.textContent = "";
-  let last = "", first = true;
-  LOG.forEach((r, i) => {
-    if (filter && !r.platforms.includes(filter)) return;
-    if (r.date !== last) {
-      const [y, m, d] = r.date.split("-").map(Number);
-      list.append(h("div", "caps day" + (first ? " first" : ""), d + " " + MONTHS[m - 1] + " " + y));
-      last = r.date;
-    }
-    const c = h("article", "card rel" + (i === 0 ? " newest" : "")), tags = h("div", "tags");
-    if (i === 0) tags.append(h("span", "chip now", "Новое"));
-    r.platforms.forEach(p => tags.append(h("span", "chip", NAMES[p] + (p === "android" && r.version ? " " + r.version : ""))));
-    const ul = h("ul");
-    r.items.forEach(t => ul.append(h("li", null, t)));
-    c.append(tags, h("h2", null, r.title), ul);
-    list.append(c);
-    first = false;
-  });
-  if (!list.children.length) list.append(h("p", "note", "Тут пока пусто."));
-}
-render();
-if (/^https?:$/.test(location.protocol) && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-</script>
+@FOOTER@
+<div class="zv-toast" id="zvToast" role="status" aria-live="polite"></div>
+<script>@JS@</script>
 </body>
 </html>

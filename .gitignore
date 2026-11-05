@@ -8,3 +8,6 @@ local.properties
 tools/_site_under_test.html
 tools/_*_under_test.html
 tools/_site_for_preview.html
+.tmp/
+__pycache__/
+tools/_sig_fixture.js

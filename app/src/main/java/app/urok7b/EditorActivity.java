@@ -239,7 +239,7 @@ public class EditorActivity extends Activity {
     private void pickClass() {
         List<String> cls = Schedule.classes(this);
         String[] items = cls.toArray(new String[0]);
-        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+        new AlertDialog.Builder(this, Ui.dialogTheme())
                 .setTitle("Взять за основу класс")
                 .setItems(items, (dlg, which) -> {
                     takeClass(items[which]);
@@ -341,7 +341,7 @@ public class EditorActivity extends Activity {
         EditText in = Ui.field(this, "", "ZVS1:...");
         in.setSingleLine(false);
         in.setMaxLines(4);
-        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+        new AlertDialog.Builder(this, Ui.dialogTheme())
                 .setTitle("Вставить код расписания")
                 .setView(in)
                 .setPositiveButton("Загрузить", (d, w) -> {

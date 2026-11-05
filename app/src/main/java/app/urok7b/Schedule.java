@@ -206,6 +206,7 @@ public final class Schedule {
                 String k = it.next();
                 SUBJECTS.put(k, subj.getString(k));
             }
+            Hues.names(SUBJECTS);
             JSONObject cls = root.getJSONObject("classes");
             for (Iterator<String> it = cls.keys(); it.hasNext(); ) {
                 String k = it.next();

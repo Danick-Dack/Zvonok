@@ -1,0 +1,64 @@
+/* Звонок · дизайн-токены.
+   Спокойная основа (бумага и чернила) и цвет со смыслом:
+   у каждого предмета свой оттенок (.hue-*, их собирает сборка), главный цвет отмечает «сейчас» и действия,
+   зелёный значит свободно и каникулы, жёлтый замены, красный отмены.
+   Контраст текста проверяет tools/site_test.html (WCAG AA). */
+:root{
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --r-sm:9px; --r-md:13px; --r-lg:18px; --r-xl:24px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  --header-h:56px;
+  --tabbar-h:58px;
+  --gutter:max(16px,env(safe-area-inset-left));
+  --gutter-r:max(16px,env(safe-area-inset-right));
+
+  /* светлая: тёплая бумага */
+  --bg:#F4F4F1; --surface:#FFFFFF; --surface-2:#ECECE8; --surface-3:#E2E2DD;
+  --line:#E3E3DE; --line-2:#D0D0CA;
+  --text:#141414; --text-2:#3B3B38; --muted:#676762; --faint:#B4B4AE;
+  --accent:#0062DA; --accent-ink:#FFFFFF; --accent-soft:rgba(0,98,218,.1);
+  --ok:#1F7A36; --ok-soft:rgba(52,199,89,.14); --warn:#8F5A00; --warn-soft:rgba(255,204,0,.2); --bad:#D70015; --bad-soft:rgba(255,59,48,.12);
+  --ring-track:#E6E6E1;
+  --shadow:0 1px 2px rgba(20,20,20,.04),0 6px 20px rgba(20,20,20,.05);
+  --bar-bg:rgba(244,244,241,.84);
+  --scrim:rgba(12,12,12,.32);
+  --qr-bg:#FFFFFF;
+  --grid:rgba(0,88,214,.07); --margin:rgba(215,0,21,.3);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B0B0C; --surface:#151517; --surface-2:#1E1E21; --surface-3:#28282C;
+    --line:#232326; --line-2:#333338;
+    --text:#F3F3F1; --text-2:#C6C6C2; --muted:#8F8F8A; --faint:#4A4A4F;
+    --accent:#409CFF; --accent-ink:#0B0B0C; --accent-soft:rgba(64,156,255,.16);
+    --ok:#30DB5B; --ok-soft:rgba(48,209,88,.16); --warn:#FFD426; --warn-soft:rgba(255,214,10,.16); --bad:#FF6961; --bad-soft:rgba(255,69,58,.16);
+    --ring-track:#232326;
+    --shadow:none;
+    --bar-bg:rgba(11,11,12,.82);
+    --scrim:rgba(0,0,0,.56);
+    --grid:rgba(255,255,255,.035); --margin:rgba(255,105,97,.2);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B0B0C; --surface:#151517; --surface-2:#1E1E21; --surface-3:#28282C;
+  --line:#232326; --line-2:#333338;
+  --text:#F3F3F1; --text-2:#C6C6C2; --muted:#8F8F8A; --faint:#4A4A4F;
+  --accent:#409CFF; --accent-ink:#0B0B0C; --accent-soft:rgba(64,156,255,.16);
+  --ok:#30DB5B; --ok-soft:rgba(48,209,88,.16); --warn:#FFD426; --warn-soft:rgba(255,214,10,.16); --bad:#FF6961; --bad-soft:rgba(255,69,58,.16);
+  --ring-track:#232326;
+  --shadow:none;
+  --bar-bg:rgba(11,11,12,.82);
+  --scrim:rgba(0,0,0,.56);
+  --grid:rgba(255,255,255,.035); --margin:rgba(255,105,97,.2);
+  color-scheme:dark;
+}
+
+/* по умолчанию у урока нейтральный оттенок; свой даёт класс .hue-* */
+.hue-none{--sv:var(--accent);--st:var(--accent);--ss:var(--accent-soft);--sf:var(--accent);--si:var(--accent-ink)}
+/* главный цвет на выбор и цвета предметов (сборка подставляет из tools/build_site.py) */
+/*@ACCENTS@*/
+/* «Цвета предметов» выключены: всё в главном цвете */
+:root[data-plain] [class*="hue-"]{--sv:var(--accent);--st:var(--text);--ss:var(--surface-2);--sf:var(--accent);--si:var(--accent-ink)}

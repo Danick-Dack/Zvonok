@@ -152,7 +152,7 @@ final class Updates {
         SharedPreferences p = Updater.prefs(a);
         if (p.getBoolean(KEY_ASKED, false)) return;
         p.edit().putBoolean(KEY_ASKED, true).apply();
-        new android.app.AlertDialog.Builder(a, android.R.style.Theme_Material_Dialog_Alert)
+        new android.app.AlertDialog.Builder(a, Ui.dialogTheme())
                 .setTitle("Проверять обновления?")
                 .setMessage("Когда приложение открыто, оно раз в сутки спросит GitHub, вышла ли новая версия, "
                         + "и раз в 3 часа скачает с сайта замены в расписании. О тебе ничего не отправляется. Это можно изменить в настройках.")

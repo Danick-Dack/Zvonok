@@ -6,7 +6,7 @@
   py tools/preview_iphone.py 7Б home --param "ZV1;bg=0B1220;ac=60A5FA"
   py tools/preview_iphone.py 7Б lock --changes my_changes.json   # что скачает скрипт вместо changes.json
 
-Сначала собери сайт: py tools/build_site.py (скрипт берётся из site/index.html через scriptFor()).
+Сначала собери сайт: py tools/build_site.py (скрипт берётся из site/iphone.html через scriptFor()).
 Картинки: .tmp/team/iphone_<лист>.png
 """
 import os
@@ -44,8 +44,8 @@ def main():
     if not CHROME:
         sys.exit("Chrome не найден (переменная CHROME)")
 
-    # копия сайта без CSP рядом с инструментом: нужен доступ к scriptFor() из iframe
-    page = open(os.path.join(ROOT, "site", "index.html"), encoding="utf-8").read()
+    # копия страницы iPhone без CSP рядом с инструментом: нужен доступ к scriptFor() из iframe
+    page = open(os.path.join(ROOT, "site", "iphone.html"), encoding="utf-8").read()
     page = re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]*>', "", page)
     site = os.path.join(ROOT, "tools", "_site_for_preview.html")
     open(site, "w", encoding="utf-8").write(page)

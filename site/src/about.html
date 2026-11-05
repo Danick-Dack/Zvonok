@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="@CSP@">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" data-c="#0B0B0C" media="(prefers-color-scheme: dark)">
+<title>О проекте · Звонок</title>
+<meta name="description" content="«Звонок»: сколько до звонка, какой урок следующий и в каком кабинете. Расписание лицея №165 на телефоне, в виджетах iPhone и Android и на компьютере.">
+<link rel="canonical" href="@SITE_URL@about.html">
+<meta property="og:title" content="Звонок · расписание лицея №165">
+<meta property="og:description" content="Таймер до звонка, урок и кабинет, неделя с заменами и свободные кабинеты.">
+<meta property="og:image" content="@SITE_URL@og.png">
+<link rel="icon" href="@FAVICON@">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>@HEAD_JS@</script>
+<style>@CSS@</style>
+</head>
+<body>
+<a class="skip" href="#main">К содержимому</a>
+@ICONS@
+@HEADER@
+<main id="main" class="wrap about" tabindex="-1">
+  <section class="ab-hero" aria-labelledby="abH">
+    <div class="ab-copy">
+      <p class="ab-eyebrow">Лицей №165 · 7–11 классы</p>
+      <h1 id="abH">Сколько до звонка, видно с&nbsp;одного взгляда</h1>
+      <p class="ab-lead">Таймер до конца урока, что дальше и в какой кабинет идти. Расписание на неделю с заменами и свободные кабинеты. На телефоне, в виджетах iPhone и Android и на компьютере.</p>
+      <div class="row ab-cta">
+        <a class="btn btn-primary" href="./#now" data-app>Открыть расписание</a>
+        <a class="btn btn-line" href="./#install" data-app>Поставить на телефон</a>
+      </div>
+      <p class="ab-facts">Бесплатно · без рекламы и регистрации · работает без интернета</p>
+    </div>
+    <div class="card ab-live" id="abLive">
+      <div class="ab-live-top">
+        <span class="ab-dot" id="abDot" aria-hidden="true"></span>
+        <span id="abStatus">Сейчас</span>
+        <label class="ab-cls"><span class="sr-only">Класс</span><select id="abCls"></select></label>
+      </div>
+      <div class="ab-timer" id="abTimer">—</div>
+      <div class="ab-cap" id="abCap"></div>
+      <div class="ab-bar" aria-hidden="true"><i id="abBar"></i></div>
+      <div class="ab-now"><b id="abSubj"></b><span class="ab-room" id="abRoom"></span></div>
+      <p class="note" id="abNext"></p>
+      <p class="ab-live-note">Это живое расписание: оно считается прямо сейчас, как на телефоне.</p>
+    </div>
+  </section>
+
+  <section class="ab-sec" aria-labelledby="abFeat">
+    <h2 id="abFeat">Что умеет</h2>
+    <div class="ab-grid">
+      <article class="ab-tile"><span class="ab-ic hue-blue"><svg class="icon"><use href="#i-now"/></svg></span><h3>Таймер до звонка</h3><p>Крупно, сколько осталось до конца урока или перемены, и что будет дальше.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-purple"><svg class="icon"><use href="#i-week"/></svg></span><h3>Неделя с заменами</h3><p>Расписание класса на неделю. Замены, отменённые уроки и сокращённые дни видны сразу.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-green"><svg class="icon"><use href="#i-door"/></svg></span><h3>Свободные кабинеты</h3><p>Где сейчас пусто, кто сидит в нужном кабинете и когда он освободится.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-orange"><svg class="icon"><use href="#i-phone"/></svg></span><h3>Виджеты на iPhone</h3><p>Экран блокировки и рабочий стол через Scriptable. Новые версии ставятся сами.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-teal"><svg class="icon"><use href="#i-bell"/></svg></span><h3>Приложение для Android</h3><p>Уведомление с таймером, виджеты, плитка в шторке и экран блокировки. Почти не тратит заряд.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-indigo"><svg class="icon"><use href="#i-lock"/></svg></span><h3>Без интернета и слежки</h3><p>Открывается без сети. Класс и настройки хранятся только на твоём телефоне.</p></article>
+    </div>
+  </section>
+
+  <section class="ab-sec" aria-labelledby="abGet">
+    <h2 id="abGet">Где пользоваться</h2>
+    <div class="ab-grid ab-three">
+      <a class="card ab-plat" href="@APK_URL@"><h3>Android</h3><p>Скачай приложение: таймер в уведомлении и виджеты на рабочем столе.</p><span class="ab-go">Скачать APK</span></a>
+      <a class="card ab-plat" href="iphone.html"><h3>iPhone</h3><p>Виджеты на экран блокировки и рабочий стол, ответы Siri. Пошаговый гайд с анимацией.</p><span class="ab-go">Как поставить</span></a>
+      <a class="card ab-plat" href="./#now" data-app><h3>Компьютер и любой телефон</h3><p>Открой расписание в браузере или поставь сайт на главный экран как приложение.</p><span class="ab-go">Открыть расписание</span></a>
+    </div>
+  </section>
+
+  <section class="ab-sec ab-story" aria-labelledby="abWho">
+    <div>
+      <h2 id="abWho">Кто сделал</h2>
+      <p>«Звонок» сделал ученик лицея №165 для своих: чтобы не искать расписание в чатах и не гадать, в какой кабинет идти. Проект неофициальный, код открыт.</p>
+      <div class="row" style="margin-top:14px">
+        <a class="btn btn-line btn-sm" href="changelog.html">Что нового</a>
+        <a class="btn btn-line btn-sm" href="feedback.html">Написать нам</a>
+        <a class="btn btn-line btn-sm" href="poster.html">Плакат для класса</a>
+        <a class="btn btn-line btn-sm" href="https://github.com/Danick-Dack/Zvonok" target="_blank" rel="noopener noreferrer">Исходный код</a>
+      </div>
+    </div>
+    <div class="ab-age" aria-label="Сколько живёт проект"><span class="ab-age-n" id="abAgeN">0</span><span class="ab-age-t" id="abAgeT">дней «Звонку»</span><span class="ab-age-s" id="abAgeS"></span></div>
+  </section>
+</main>
+@FOOTER@
+<div class="zv-toast" id="zvToast" role="status" aria-live="polite"></div>
+<script>@JS@</script>
+</body>
+</html>

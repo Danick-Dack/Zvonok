@@ -3,124 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://formsubmit.co https://api.web3forms.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="@CSP@">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#000000">
-<meta name="color-scheme" content="dark">
-<meta name="description" content="Напиши, что придумал или что сломалось в «Звонке».">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" data-c="#0B0B0C" media="(prefers-color-scheme: dark)">
+<title>Написать нам · Звонок</title>
+<meta name="description" content="Идея, ошибка в расписании или вопрос про «Звонок». Анонимно, без аккаунта.">
+<link rel="canonical" href="@SITE_URL@feedback.html">
 <link rel="icon" href="@FAVICON@">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Написать нам · Звонок</title>
-<style>
-@COMMON_CSS@
-.promise{display:flex;gap:14px;background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:18px;padding:16px 18px}
-.promise svg{flex:none;width:20px;height:20px;margin-top:2px}
-.promise b{display:block;font-size:17px;font-weight:650}
-.promise p{color:var(--soft);font-size:15px;margin-top:2px}
-.lbl{margin:26px 0 10px}
-textarea.f{min-height:160px;resize:vertical;line-height:1.45}
-.cnt{text-align:right;font-size:12px;color:var(--muted);margin-top:6px}
-.cnt.hi{color:#ff8a8a}
-.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:20px}
-.row .f{width:auto;flex:1;min-width:160px}
-#send{width:100%;margin-top:22px}
-.err{color:#ffb4b4;font-size:14px;margin-top:12px}
-.done{text-align:center;padding:34px 18px}
-.done svg{width:64px;height:64px}
-.done b{display:block;font-size:22px;font-weight:600;margin:14px 0 18px}
-.hint{margin-top:28px}
-</style>
+<link rel="manifest" href="manifest.webmanifest">
+<script>@HEAD_JS@</script>
+<style>@CSS@</style>
 </head>
 <body>
-<div class="glow"></div>
+<a class="skip" href="#main">К форме</a>
+@ICONS@
 @HEADER@
-<main class="wrap">
-  <div class="sh"><h1>Написать <b>нам</b></h1><p>Идея, ошибка или просто спасибо. Мы читаем всё.</p></div>
-  <div class="promise" id="promise">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-    <div><b id="pTitle">Анонимно</b><p id="pText">Мы не узнаём ни имя, ни телефон, ни аккаунт. Приходит только то, что ты напишешь ниже.</p></div>
+<main id="main" class="wrap narrow page" tabindex="-1">
+  <div class="page-head"><h1>Написать нам</h1><p>Идея, ошибка в расписании или просто спасибо. Читаем всё.</p></div>
+  <div class="promise"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><div><b id="pTitle">Анонимно</b><p>Имя и телефон не приходят, только твой текст. Письмо уходит через сервис отправки Web3Forms, поэтому не пиши в нём личного.</p></div></div>
+  <form class="form" id="form" novalidate>
+    <div><span class="label" id="kindL">Что это</span><div class="seg" id="kind" role="group" aria-labelledby="kindL"></div></div>
+    <div>
+      <label class="label" for="text">Сообщение</label>
+      <textarea class="field" id="text" maxlength="1000" rows="6" placeholder="Идея, ошибка или вопрос" required></textarea>
+      <div class="count" id="cnt" aria-live="off">0 / 1000</div>
+    </div>
+    <div><label class="label" for="cls">Класс, если хочешь</label><select class="field" id="cls"></select></div>
+    <div class="hp" aria-hidden="true"><label for="site">Сайт</label><input id="site" name="site" tabindex="-1" autocomplete="off"></div>
+    <button class="btn btn-primary btn-wide" id="send" type="submit" disabled>Отправить</button>
+    <p class="err" id="err" role="alert" hidden></p>
+  </form>
+  <div class="card sent" id="done" hidden tabindex="-1">
+    <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
+    <b>Спасибо, получили</b>
+    <button class="btn btn-quiet" id="again" type="button">Написать ещё</button>
   </div>
-  <div id="form">
-    <div class="caps lbl">Что это?</div>
-    <div class="seg" id="kind" role="group" aria-label="Что это"></div>
-    <div class="caps lbl">Текст</div>
-    <textarea class="f" id="text" maxlength="1000" placeholder="Напиши, что придумал или что сломалось" aria-label="Текст сообщения"></textarea>
-    <div class="cnt" id="cnt">0 / 1000</div>
-    <div class="row"><label class="caps" for="cls" style="margin:0">Класс (не обязательно)</label><select class="f" id="cls"></select></div>
-    <button class="btn w" id="send" disabled>Отправить</button>
-    <div class="err" id="err" role="alert" hidden></div>
-  </div>
-  <div class="card done" id="done" hidden>
-    <svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="54" cy="54" r="40" fill="none" stroke="#2a2a2a" stroke-width="7"/><path d="M54 14A40 40 0 1 1 14 54" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="M38 55l11 11 22-24" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <b>Спасибо! Получили.</b>
-    <button class="btn d sm" id="again">Отправить ещё</button>
-  </div>
-  <p class="note hint">Ошибка в расписании? Лучше сообщи прямо из <a href="./#schedule">расписания</a>, там уже будет класс и урок.</p>
 </main>
-<footer class="wrap">
-  <p class="links"><a href="./">Расписание</a> · <a href="changelog.html">Что нового</a></p>
-  <p>«Звонок» сделал ученик лицея №165 для своих. Это неофициальный проект.</p>
-</footer>
-<script>
-"use strict";
-// анонимные сообщения уходят письмом на почту проекта, без аккаунтов. Шлём только тип, текст и класс
-// основной путь Web3Forms (ключ публичный по замыслу сервиса, письма идут только на почту проекта), запасной FormSubmit
-const W3F_KEY = "47a818a4-abad-4577-951b-19ed93e1ae86";
-const FALLBACK = "https://formsubmit.co/ajax/zvonok165lyceumalmaty@gmail.com";
-const CLASSES = /*@CLASSES@*/[];
-const MAX = 1000, PAUSE = 30000;
-const KINDS = ["Идея", "Ошибка", "Другое"];
-const $ = id => document.getElementById(id);
-const store = {
-  get(k, d) { try { const v = localStorage.getItem("zv." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem("zv." + k, JSON.stringify(v)); } catch (e) {} }
-};
-let kind = KINDS[0], waitT;
-
-function renderKind() {
-  const box = $("kind"); box.textContent = "";
-  KINDS.forEach(k => { const b = document.createElement("button"); b.textContent = k; b.className = k === kind ? "on" : ""; b.onclick = () => { kind = k; renderKind(); }; box.append(b); });
-}
-const sel = $("cls");
-[["", "Не указывать"]].concat(CLASSES.map(c => [c, c])).forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.append(o); });
-const txt = $("text");
-txt.value = store.get("fbDraft", "");
-function left() { return Math.max(0, store.get("fbLast", 0) + PAUSE - Date.now()); }
-function update() {
-  const n = txt.value.length, w = left();
-  $("cnt").textContent = n + " / " + MAX; $("cnt").classList.toggle("hi", n >= 950);
-  $("send").disabled = txt.value.trim().length < 3 || w > 0;
-  if (w > 0) { $("send").textContent = "Ещё " + Math.ceil(w / 1000) + " с"; clearTimeout(waitT); waitT = setTimeout(update, 1000 - w % 1000 + 20); }
-  else if (/^Ещё/.test($("send").textContent)) $("send").textContent = "Отправить";
-}
-txt.oninput = () => { store.set("fbDraft", txt.value); $("err").hidden = true; update(); };
-function fail(t) { $("err").textContent = t; $("err").hidden = false; }
-async function send() {
-  const text = txt.value.trim().slice(0, MAX);
-  if (text.length < 3) return;
-  if (left() > 0) { fail("Подожди полминуты и отправь ещё раз."); update(); return; }
-  if (navigator.onLine === false) { fail("Не получилось отправить, нет интернета. Текст сохранён, попробуй позже."); return; }
-  const fields = {"Тип": kind, "Сообщение": text, "Класс": sel.value || "не указан"};
-  const post = (url, body) => fetch(url, {method: "POST", headers: {"Content-Type": "application/json", Accept: "application/json"}, body: JSON.stringify(body), credentials: "omit", referrerPolicy: "origin"})
-    .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok || j.success === false || j.success === "false") throw new Error(r.status); }));
-  $("send").disabled = true;
-  try {
-    try {
-      await post("https://api.web3forms.com/submit", Object.assign({access_key: W3F_KEY, subject: "Звонок: " + kind, from_name: "Звонок · анонимно"}, fields));
-    } catch (e) {
-      await post(FALLBACK, Object.assign({_subject: "Звонок: " + kind, _template: "box", _captcha: "false"}, fields));
-    }
-    store.set("fbLast", Date.now()); store.set("fbDraft", ""); txt.value = "";
-    $("form").hidden = true; $("done").hidden = false;
-  } catch (e) {
-    fail("Не получилось отправить. Текст сохранён, попробуй чуть позже.");
-  }
-  update();
-}
-$("send").onclick = send;
-$("again").onclick = () => { $("done").hidden = true; $("form").hidden = false; update(); txt.focus(); };
-renderKind(); update();
-if (/^https?:$/.test(location.protocol) && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-</script>
+@FOOTER@
+<div class="zv-toast" id="zvToast" role="status" aria-live="polite"></div>
+<script>@JS@</script>
 </body>
 </html>

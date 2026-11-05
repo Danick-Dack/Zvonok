@@ -3,47 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<meta http-equiv="Content-Security-Policy" content="@CSP@">
+<meta name="robots" content="noindex">
+<title>Плакат для класса · Звонок</title>
 <link rel="icon" href="@FAVICON@">
-<title>Звонок · плакат</title>
-<style>
-@page{size:A4;margin:0}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:#000;color:#fff;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-.page{width:210mm;min-height:297mm;margin:0 auto;padding:22mm 20mm;display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.k{font-size:13pt;letter-spacing:.2em;text-transform:uppercase;color:#8a8a91;font-weight:600}
-h1{font-size:96pt;font-weight:250;letter-spacing:-.05em;line-height:.95;margin-top:10mm}
-h1 b{font-weight:700}
-.lead{font-size:20pt;color:#d0d0d4;margin-top:8mm;max-width:150mm;line-height:1.35}
-.timer{font-size:64pt;font-weight:200;margin-top:14mm;font-variant-numeric:tabular-nums}
-.timer small{display:block;font-size:12pt;letter-spacing:.2em;color:#8a8a91;font-weight:600}
-.row{display:flex;gap:12mm;align-items:center;margin-top:auto}
-.qr{background:#fff;border-radius:8mm;padding:5mm;width:70mm;height:70mm;flex:none}
-ul{list-style:none;font-size:15pt;line-height:1.7;color:#d0d0d4}
-ul li:before{content:"· ";color:#5a5a62}
-.url{font-size:15pt;margin-top:6mm;font-weight:600}
-.f{font-size:10pt;color:#5a5a62;margin-top:12mm}
-</style>
+<style>@CSS@</style>
 </head>
 <body>
-<div class="page">
-  <div class="k">Лицей №165 · для всех классов</div>
-  <h1>Звонок<b>.</b></h1>
-  <p class="lead">Сколько до звонка, какой следующий урок и в каком кабинете. Прямо на экране блокировки.</p>
-  <div class="timer"><small>До звонка</small>24:16</div>
-  <div class="row">
-    <div class="qr">@QR@</div>
+<div class="tools">
+  <label for="pc">Класс на плакате</label>
+  <select id="pc"></select>
+  <button id="print" type="button">Распечатать</button>
+  <a href="./">На сайт</a>
+</div>
+<article class="sheet-a4">
+  <div class="k">Лицей №165</div>
+  <h1>@MARK@Звонок</h1>
+  <p class="lead">Сколько до звонка, какой урок дальше и в каком кабинете.</p>
+  <div class="mid">
+    <div class="qr" id="qr" role="img" aria-label="QR-код"></div>
     <div>
+      <div class="for" id="for">Все классы</div>
       <ul>
         <li>Все классы с 7А по 11Г</li>
-        <li>Android: уведомление и виджеты</li>
-        <li>iPhone: сайт как приложение</li>
-        <li>Работает офлайн, без рекламы</li>
+        <li>Android: таймер прямо в уведомлении и виджеты</li>
+        <li>iPhone: на экран «Домой», виджет и напоминания</li>
+        <li>Без интернета, рекламы и регистрации</li>
       </ul>
-      <div class="url">@SITE_URL@</div>
     </div>
   </div>
-  <div class="f">Наведи камеру на QR-код. Неофициальный проект ученика лицея.</div>
-</div>
+  <div class="url" id="url">@SITE_URL@</div>
+  <div class="f">Наведи камеру телефона на QR-код. Неофициальный проект ученика лицея.</div>
+</article>
+<script>@JS@</script>
 </body>
 </html>

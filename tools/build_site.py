@@ -1,48 +1,128 @@
 """
 Сборка сайта «Звонок» в папку site/.
 
-  python tools/build_site.py
+  py tools/build_site.py
 
-Берёт data/schedule.json, site/src/index.html, ios/Uroki7B.js и собирает:
-  site/index.html          : весь сайт одним файлом (работает офлайн, даже как файл из Telegram)
-  site/poster.html         : плакат A4 с QR-кодом для класса
-  site/cal/*.ics           : календарь каждого класса с напоминанием за 3 минуты до урока
-  site/changes.json        : замены и сокращённые уроки (копия data/changes.json)
-  site/schedule.json       : всё расписание (копия data/schedule.json) для приложения
-  site/og.png              : картинка для превью ссылки в мессенджерах
-  site/changelog.html      : «Что нового» из data/changelog.json
-  site/feedback.html       : «Написать нам» (анонимно, письмом через FormSubmit)
-  site/manifest.webmanifest, site/sw.js, иконки: чтобы сайт ставился «как приложение»
+Исходники лежат в site/src/: страницы (*.html), стили (css/) и скрипты (js/). Сборка встраивает их
+в каждую страницу, поэтому любая страница работает без интернета и даже как файл из Telegram.
+Встроенные скрипты разрешены в CSP по SHA-256, а не через 'unsafe-inline'.
+
+Данные: data/schedule.json (расписание), data/changes.json (замены), data/changelog.json («Что нового»),
+ios/Uroki7B.js (скрипт виджетов iPhone для Scriptable).
+
+Что получается:
+  site/index.html            главная: таймер, неделя, кабинеты, установка (одним файлом)
+  site/make.html             конструктор: своё расписание и цвета виджетов
+  site/iphone.html           iPhone: видеогайд, скрипт виджета для своего класса, Siri
+  site/changelog.html        «Что нового»
+  site/feedback.html         «Написать нам» (анонимно)
+  site/poster.html           плакат A4 с QR-кодом класса
+  site/404.html              короткие ссылки вида …/Zvonok/10a
+  site/cal/*.ics             календарь каждого класса с напоминанием за 3 минуты до урока
+  site/changes.json, site/schedule.json   данные для сайта, приложения Android и скрипта iPhone
+  site/manifest.webmanifest, site/sw.js, иконки, site/og.png   приложение с экрана «Домой» и превью ссылки
 Нужны пакеты: qrcode, pillow (pip install qrcode pillow).
 """
 import base64
+import datetime
+import hashlib
 import io
 import json
+import math
 import os
 import re
 
 import qrcode
 import qrcode.image.svg
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+import ed25519
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = os.path.join(ROOT, "site", "src")
+OUT = os.path.join(ROOT, "site")
 SITE_URL = "https://danick-dack.github.io/Zvonok/"
 APK_URL = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk"
-OUT = os.path.join(ROOT, "site")
+
+# фирменные цвета (как в css/tokens.css)
+INK, PAPER = (11, 11, 12), (244, 244, 241)
+
+# Цвета предметов: у каждого предмета свой оттенок, урок узнаётся с одного взгляда.
+# Оттенок: (яркий на светлом, текст на светлом, яркий на тёмном, текст на тёмном). Близко к системным цветам iPhone.
+# Текстовые варианты дают контраст не ниже 4,5:1 с фоном (WCAG AA); яркие идут на кольца, точки и полосы.
+HUES = {
+    "red":    ("#FF3B30", "#C40013", "#FF453A", "#FF6961"),
+    "orange": ("#FF9500", "#B83D00", "#FF9F0A", "#FFB340"),
+    "yellow": ("#FFCC00", "#8F5A00", "#FFD60A", "#FFD426"),
+    "green":  ("#34C759", "#1F7A36", "#30D158", "#30DB5B"),
+    "mint":   ("#00C7BE", "#0B7570", "#63E6E2", "#66D4CF"),
+    "teal":   ("#30B0C7", "#006F83", "#40CBE0", "#5DE6FF"),
+    "cyan":   ("#32ADE6", "#006A9A", "#64D2FF", "#70D7FF"),
+    "blue":   ("#007AFF", "#0058D6", "#0A84FF", "#409CFF"),
+    "indigo": ("#5856D6", "#3D3BB8", "#5E5CE6", "#8B89FF"),
+    "purple": ("#AF52DE", "#8944AB", "#BF5AF2", "#DA8FFF"),
+    "pink":   ("#FF2D55", "#BA0E40", "#FF375F", "#FF6482"),
+    "brown":  ("#A2845E", "#765C3E", "#AC8E68", "#C4A27A"),
+    "gray":   ("#8E8E93", "#636366", "#8E8E93", "#AEAEB2"),
+}
+# предмет → оттенок: родственные предметы рядом по цвету (математика синяя, языки тёплые, науки холодные)
+SUBJECT_HUE = {"alg": "blue", "geom": "blue", "mat": "blue", "fiz": "purple", "prf": "purple", "kaz": "yellow",
+               "rus": "red", "rlit": "red", "eng": "cyan", "istk": "brown", "vist": "brown", "geo": "mint", "bio": "green",
+               "him": "teal", "inf": "indigo", "prog": "indigo", "fk": "orange", "hud": "pink", "kl": "gray", "prav": "brown",
+               "nvp": "green", "avto": "orange"}
+
+# главный цвет на выбор: кнопки, вкладки, отметки «сейчас». Первый по умолчанию.
+# (ключ, название, светлая тема: цвет и текст на нём, тёмная: цвет и текст на нём)
+ACCENTS = [
+    ("blue", "Синий", "#0062DA", "#FFFFFF", "#409CFF", "#0B0B0C"),
+    ("indigo", "Индиго", "#3D3BB8", "#FFFFFF", "#8B89FF", "#0B0B0C"),
+    ("purple", "Фиолетовый", "#8944AB", "#FFFFFF", "#DA8FFF", "#0B0B0C"),
+    ("pink", "Розовый", "#C70F45", "#FFFFFF", "#FF6482", "#0B0B0C"),
+    ("red", "Красный", "#D70015", "#FFFFFF", "#FF6961", "#0B0B0C"),
+    ("orange", "Оранжевый", "#B83D00", "#FFFFFF", "#FFB340", "#0B0B0C"),
+    ("green", "Зелёный", "#1F7A36", "#FFFFFF", "#30DB5B", "#0B0B0C"),
+    ("mint", "Мятный", "#0B7570", "#FFFFFF", "#66D4CF", "#0B0B0C"),
+    ("mono", "Без цвета", "#141414", "#FFFFFF", "#F3F3F1", "#0B0B0C"),
+]
+ACCENT = (64, 156, 255)  # синий из тёмной темы: для картинок
 
 
-LOGO = ('<svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="54" cy="54" r="24" fill="none" stroke="#2a2a2a" stroke-width="6"/>'
-        '<path d="M54 30A24 24 0 1 1 30 54" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>'
-        '<path d="M54 42v12l8 5" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>')
-NAV = [("./#schedule", "Расписание"), ("./#rooms", "Кабинеты"), ("./#install", "Установить"), ("./#faq", "Вопросы"),
-       ("changelog.html", "Что нового"), ("feedback.html", "Написать нам")]
+def rgba(hexc, a):
+    r, g, b = (int(hexc[i:i + 2], 16) for i in (1, 3, 5))
+    return "rgba(%d,%d,%d,%s)" % (r, g, b, a)
 
 
-def header(active):
-    """Шапка для отдельных страниц: тот же логотип и меню, что на главной."""
-    links = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == active else "", t) for h, t in NAV)
-    return ('<header><div class="wrap bar"><a class="logo" href="./" aria-label="Звонок">%s Звонок</a><nav>%s</nav></div></header>'
-            % (LOGO, links))
+def themed(sel, light, dark):
+    """Правило для светлой темы и для тёмной (по системе и вручную)."""
+    return "\n".join([
+        "%s{%s}" % (sel % ":root", light),
+        '@media (prefers-color-scheme:dark){%s{%s}}' % (sel % ':root:not([data-theme="light"])', dark),
+        "%s{%s}" % (sel % ':root[data-theme="dark"]', dark)])
+
+
+def accent_css():
+    """CSS для выбранного главного цвета и цветов предметов."""
+    out = []
+    for key, _, la, li, da, di in ACCENTS[1:]:
+        out.append(themed('%%s[data-accent="%s"]' % key,
+                          "--accent:%s;--accent-ink:%s;--accent-soft:%s" % (la, li, rgba(la, ".1")),
+                          "--accent:%s;--accent-ink:%s;--accent-soft:%s" % (da, di, rgba(da, ".16"))))
+    for key, (lv, lt, dv, dt) in HUES.items():
+        # --sv яркий (кольцо, точки), --st текст, --ss мягкий фон, --sf заливка, --si текст на заливке
+        out.append(themed("%%s .hue-%s" % key,
+                          "--sv:%s;--st:%s;--ss:%s;--sf:%s;--si:#FFFFFF" % (lv, lt, rgba(lv, ".2"), lt),
+                          "--sv:%s;--st:%s;--ss:%s;--sf:%s;--si:#0B0B0C" % (dv, dt, rgba(dv, ".24"), dt)))
+    return "\n".join(out)
+
+
+def subject_colors(data):
+    """Название предмета → [яркий на светлом, яркий на тёмном] без «#» (для виджета iPhone)."""
+    return {name: [HUES[h][0][1:], HUES[h][2][1:]] for name, h in subject_hues(data).items()}
+
+
+def subject_hues(data):
+    """Название предмета → оттенок (для своих расписаний сайт подберёт оттенок по названию сам)."""
+    return {name: SUBJECT_HUE.get(code, "gray") for code, name in data["subjects"].items()}
 
 
 def read(*p):
@@ -51,41 +131,149 @@ def read(*p):
 
 
 def write(name, text):
-    with open(os.path.join(OUT, name), "w", encoding="utf-8", newline="\n") as f:
+    path = os.path.join(OUT, name)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
 
 
-def qr_svg(url):
-    img = qrcode.make(url, image_factory=qrcode.image.svg.SvgPathImage, box_size=10, border=2,
-                      error_correction=qrcode.constants.ERROR_CORRECT_M)
-    buf = io.BytesIO()
-    img.save(buf)
-    svg = buf.getvalue().decode("utf-8")
-    svg = re.sub(r"<\?xml[^>]*\?>", "", svg).strip()
-    svg = re.sub(r'width="[^"]*"\s+height="[^"]*"', 'width="100%" height="100%"', svg, count=1)
-    return svg
+def js_literal(obj):
+    """JSON для вставки внутрь <script>: без «</script>» и невидимых разделителей строк."""
+    t = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    return (t.replace("</", "<" + chr(92) + "/")
+            .replace(chr(0x2028), chr(92) + "u2028")
+            .replace(chr(0x2029), chr(92) + "u2029"))
 
 
-def icon(size, pad_ratio=0.0):
-    """Иконка: чёрный квадрат, тонкое кольцо-таймер с белой дугой и стрелками."""
+def min_css(css):
+    """Без комментариев и лишних пробелов. Строки в кавычках не трогаем."""
+    parts = re.split(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', css)
+    out = []
+    for i, p in enumerate(parts):
+        if i % 2:
+            out.append(p)
+            continue
+        p = re.sub(r"/\*.*?\*/", "", p, flags=re.S)
+        p = re.sub(r"\s+", " ", p)
+        p = re.sub(r"\s*([{};,>])\s*", r"\1", p)
+        p = re.sub(r":\s+", ":", p)
+        p = p.replace(";}", "}")
+        out.append(p)
+    return "".join(out).strip()
+
+
+def bundle_css(names):
+    css = "\n".join(read("site", "src", "css", n + ".css") for n in names)
+    return min_css(css.replace("/*@ACCENTS@*/", accent_css()))
+
+
+def bundle_js(names):
+    js = "\n".join(read("site", "src", "js", n + ".js") for n in names)
+    return js.replace("/*@ACCENTS@*/null", js_literal([{"id": a[0], "name": a[1], "light": a[2], "dark": a[4]} for a in ACCENTS]))
+
+
+# ---------- значки: один спрайт на страницу, <svg><use href="#i-…"></svg> ----------
+ICONS = {
+    "now": '<circle cx="12" cy="12" r="8.6"/><path d="M12 7.6V12l2.9 1.9"/>',
+    "week": '<rect x="3.6" y="5" width="16.8" height="15.4" rx="3"/><path d="M3.6 9.8h16.8M8.2 3v3.6M15.8 3v3.6"/>',
+    "door": '<path d="M6 20.6V4.8a1.2 1.2 0 0 1 1.2-1.2h9.6A1.2 1.2 0 0 1 18 4.8v15.8M3.8 20.6h16.4"/><circle cx="14.6" cy="12.4" r=".7" fill="currentColor"/>',
+    "more": '<circle cx="5.6" cy="12" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/><circle cx="18.4" cy="12" r="1.1" fill="currentColor"/>',
+    "search": '<circle cx="10.6" cy="10.6" r="6.2"/><path d="M15.2 15.2l4.8 4.8"/>',
+    "down": '<path d="M6.5 9.5l5.5 5.5 5.5-5.5"/>',
+    "right": '<path d="M9.5 6.5l5.5 5.5-5.5 5.5"/>',
+    "close": '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+    "sun": '<circle cx="12" cy="12" r="3.8"/><path d="M12 2.8v2.1M12 19.1v2.1M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M2.8 12h2.1M19.1 12h2.1M4.9 19.1l1.5-1.5M17.6 6.4l1.5-1.5"/>',
+    "moon": '<path d="M19.8 14.6A8.2 8.2 0 0 1 9.4 4.2a8.2 8.2 0 1 0 10.4 10.4z"/>',
+    "auto": '<circle cx="12" cy="12" r="8.4"/><path d="M12 3.6v16.8a8.4 8.4 0 0 0 0-16.8z" fill="currentColor"/>',
+    "share": '<path d="M12 3.4v11.2M8.2 7.2L12 3.4l3.8 3.8"/><path d="M8.4 10.6H6.6a1.6 1.6 0 0 0-1.6 1.6v6.8a1.6 1.6 0 0 0 1.6 1.6h10.8a1.6 1.6 0 0 0 1.6-1.6v-6.8a1.6 1.6 0 0 0-1.6-1.6h-1.8"/>',
+    "addsq": '<rect x="4" y="4" width="16" height="16" rx="4.2"/><path d="M12 8.4v7.2M8.4 12h7.2"/>',
+    "download": '<path d="M12 4v11M7.6 10.8L12 15.2l4.4-4.4M5 19.8h14"/>',
+    "copy": '<rect x="8.4" y="8.4" width="11.6" height="11.6" rx="2.6"/><path d="M15.6 8.4V6.6A2.6 2.6 0 0 0 13 4H6.6A2.6 2.6 0 0 0 4 6.6V13a2.6 2.6 0 0 0 2.6 2.6h1.8"/>',
+    "check": '<path d="M5.2 12.6l4.3 4.3 9.3-9.6"/>',
+    "out": '<path d="M13.6 4.2h6.2v6.2M19.6 4.4l-8.4 8.4M18 14v4.6a1.4 1.4 0 0 1-1.4 1.4H5.4A1.4 1.4 0 0 1 4 18.6V7.4A1.4 1.4 0 0 1 5.4 6H10"/>',
+    "bell": '<path d="M6.2 16.4V11a5.8 5.8 0 0 1 11.6 0v5.4l1.6 1.8H4.6z"/><path d="M10 20.4a2.1 2.1 0 0 0 4 0"/>',
+    "edit": '<path d="M4.4 19.6h4L19 9l-4-4L4.4 15.6z"/><path d="M13.4 6.6l4 4"/>',
+    "phone": '<rect x="6.6" y="2.8" width="10.8" height="18.4" rx="2.6"/><path d="M10.6 18.2h2.8"/>',
+    "siri": '<path d="M12 3.6a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0v-5a3 3 0 0 1 3-3z"/><path d="M6.4 11.4a5.6 5.6 0 0 0 11.2 0M12 17v3.4"/>',
+    "plus": '<path d="M12 5.4v13.2M5.4 12h13.2"/>',
+    "help": '<circle cx="12" cy="12" r="8.6"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>',
+    "info": '<circle cx="12" cy="12" r="8.6"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r=".6" fill="currentColor"/>',
+    "lock": '<rect x="5" y="10.4" width="14" height="10" rx="2.4"/><path d="M8.2 10.4V8a3.8 3.8 0 0 1 7.6 0v2.4"/>',
+    "trash": '<path d="M5 7h14M10 4.4h4M7 7l.8 12.2a1.4 1.4 0 0 0 1.4 1.3h5.6a1.4 1.4 0 0 0 1.4-1.3L17 7"/>',
+}
+
+
+def icon_sprite(page):
+    used = sorted(set(re.findall(r'href="#i-([a-z]+)"', page)) | set(re.findall(r'icon\("([a-z]+)"', page)))
+    missing = [u for u in used if u not in ICONS]
+    assert not missing, "нет значков: %s" % missing
+    syms = "".join('<symbol id="i-%s" viewBox="0 0 24 24">%s</symbol>' % (n, ICONS[n]) for n in used)
+    return '<svg width="0" height="0" style="position:absolute" aria-hidden="true">' + syms + "</svg>"
+
+
+# фирменный знак: часы-таймер. Тёмное кольцо, белая дуга на три четверти и стрелки, одним цветом.
+# Те же размеры, что у иконки приложения Android (app/src/main/res/drawable/ic_launcher_fg.xml, сетка 108×108).
+MARK = ('<svg viewBox="25 25 58 58" aria-hidden="true"><circle class="mark-track" cx="54" cy="54" r="25" fill="none" stroke-width="5.5"/>'
+        '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M54 29a25 25 0 1 1-25 25" stroke-width="5.5"/>'
+        '<path d="M54 41v13l7.5 4.3" stroke-width="5"/></g><circle cx="54" cy="54" r="3.4" fill="currentColor"/></svg>')
+
+
+def clock(d, cx, cy, k, fg=(255, 255, 255), track=(44, 44, 48), hands=True):
+    """Часы на картинке PIL: сетка 108×108 с центром в (cx, cy), масштаб k пикселей на единицу сетки."""
+    r, w = 25 * k, 5.5 * k
+    box = [cx - r - w / 2, cy - r - w / 2, cx + r + w / 2, cy + r + w / 2]  # PIL рисует линию внутрь рамки
+    d.ellipse(box, outline=track, width=round(w))
+    d.arc(box, start=-90, end=180, fill=fg, width=round(w))
+    dot = lambda x, y, rr: d.ellipse([x - rr, y - rr, x + rr, y + rr], fill=fg)
+    dot(cx, cy - r, w / 2)                        # скруглённые концы дуги
+    dot(cx - r, cy, w / 2)
+    if hands:
+        p = lambda x, y: (cx + (x - 54) * k, cy + (y - 54) * k)
+        hw = 5 * k
+        d.line([p(54, 41), p(54, 54), p(61.5, 58.3)], fill=fg, width=round(hw), joint="curve")
+        for x, y in ((54, 41), (61.5, 58.3)):
+            dot(*p(x, y), hw / 2)
+        dot(cx, cy, 3.4 * k)
+
+
+# ---------- картинки ----------
+def icon(size, maskable=False, bg=INK):
+    """Иконка: тёмный квадрат и белые часы (как в приложении Android). Для маски Android часы мельче."""
     s = size * 4
-    im = Image.new("RGBA", (s, s), (0, 0, 0, 255))
-    d = ImageDraw.Draw(im)
-    c = s / 2
-    r = s * (0.30 - pad_ratio * 0.3)
-    w = max(4, int(s * 0.045))
-    box = [c - r, c - r, c + r, c + r]
-    d.ellipse(box, outline=(42, 42, 42, 255), width=w)
-    d.arc(box, start=-90, end=180, fill=(255, 255, 255, 255), width=w)
-    # стрелки
-    d.line([(c, c - r * 0.5), (c, c)], fill=(255, 255, 255, 255), width=w)
-    d.line([(c, c), (c + r * 0.34, c + r * 0.22)], fill=(255, 255, 255, 255), width=w)
-    d.ellipse([c - w * 0.9, c - w * 0.9, c + w * 0.9, c + w * 0.9], fill=(255, 255, 255, 255))
+    im = Image.new("RGB", (s, s), bg)
+    clock(ImageDraw.Draw(im), s / 2, s / 2, s / 108 * (1.0 if maskable else 1.2))
     return im.resize((size, size), Image.LANCZOS)
 
 
+def font(size, bold=False, light=False):
+    names = (["seguisb.ttf", "segoeuib.ttf", "DejaVuSans-Bold.ttf", "arialbd.ttf"] if bold
+             else ["segoeuisl.ttf", "segoeuil.ttf", "DejaVuSans-ExtraLight.ttf", "DejaVuSans.ttf", "arial.ttf"] if light
+             else ["segoeui.ttf", "DejaVuSans.ttf", "arial.ttf"])
+    for n in names:
+        for d in (r"C:\Windows\Fonts", "/usr/share/fonts/truetype/dejavu", "/Library/Fonts"):
+            f = os.path.join(d, n)
+            if os.path.exists(f):
+                return ImageFont.truetype(f, size)
+    return ImageFont.load_default(size)
+
+
+def og_image():
+    """Превью ссылки 1200×630: часы-таймер и название. Белое на тёмном, как иконка."""
+    W, H = 1200, 630
+    im = Image.new("RGB", (W, H), INK)
+    d = ImageDraw.Draw(im)
+    clock(d, 905, 315, 8.2, track=(36, 36, 40))
+    d.text((76, 118), "Лицей №165", font=font(30, bold=True), fill=(143, 143, 138))
+    d.text((68, 160), "Звонок", font=font(132, bold=True), fill=(243, 243, 241))
+    d.text((80, 352), "Сколько до звонка,", font=font(40), fill=(198, 198, 194))
+    d.text((80, 402), "какой урок дальше", font=font(40), fill=(198, 198, 194))
+    d.text((80, 452), "и в каком кабинете", font=font(40), fill=(198, 198, 194))
+    d.text((80, 546), SITE_URL.replace("https://", "").rstrip("/"), font=font(24, bold=True), fill=(96, 96, 100))
+    return im
+
+
 def qr_code(url):
-    """QR как строка «размер:hex» (сайт рисует его сам): 19 классов весят ~3 КБ вместо ~60 КБ SVG."""
+    """QR как строка «размер:hex» (страница рисует его сама): 19 классов весят ~3 КБ вместо ~60 КБ SVG."""
     q = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=2)
     q.add_data(url)
     q.make(fit=True)
@@ -95,46 +283,76 @@ def qr_code(url):
     return "%d:%s" % (len(m), "".join("%x" % int(bits[i:i + 4], 2) for i in range(0, len(bits), 4)))
 
 
-def font(size, bold=False):
-    names = (["seguisb.ttf", "segoeuib.ttf", "DejaVuSans-Bold.ttf", "arialbd.ttf"] if bold
-             else ["segoeuisl.ttf", "segoeuil.ttf", "DejaVuSans-ExtraLight.ttf", "DejaVuSans.ttf", "arial.ttf"])
-    dirs = [r"C:\Windows\Fonts", "/usr/share/fonts/truetype/dejavu", "/Library/Fonts"]
-    for n in names:
-        for d in dirs:
-            f = os.path.join(d, n)
-            if os.path.exists(f):
-                return ImageFont.truetype(f, size)
-    return ImageFont.load_default(size)
+def png_data_uri(im):
+    buf = io.BytesIO()
+    im.save(buf, "PNG", optimize=True)
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def og_image():
-    """Превью ссылки 1200×630: чёрный фон, кольцо-таймер и название."""
-    W, H = 1200, 630
-    im = Image.new("RGB", (W, H), (0, 0, 0))
-    glow = Image.new("L", (W, H), 0)
-    ImageDraw.Draw(glow).ellipse([700, -300, 1500, 500], fill=34)
-    from PIL import ImageFilter
-    im.paste((255, 255, 255), (0, 0), glow.filter(ImageFilter.GaussianBlur(120)))
-    d = ImageDraw.Draw(im)
-    cx, cy, r, w = 930, 315, 170, 16
-    box = [cx - r, cy - r, cx + r, cy + r]
-    d.ellipse(box, outline=(40, 40, 42), width=w)
-    d.arc(box, start=-90, end=170, fill=(255, 255, 255), width=w)
-    t = font(84)
-    d.text((cx, cy - 8), "24:16", font=t, fill=(255, 255, 255), anchor="mm")
-    d.text((cx, cy + 62), "ДО ЗВОНКА", font=font(22, True), fill=(138, 138, 145), anchor="mm")
-    d.text((80, 150), "ЛИЦЕЙ №165", font=font(26, True), fill=(138, 138, 145))
-    d.text((72, 190), "Звонок.", font=font(150), fill=(255, 255, 255))
-    d.text((80, 390), "Сколько до звонка,", font=font(40), fill=(199, 199, 204))
-    d.text((80, 440), "какой урок дальше и где кабинет", font=font(40), fill=(199, 199, 204))
-    d.text((80, 540), SITE_URL.replace("https://", "").rstrip("/"), font=font(24, True), fill=(90, 90, 98))
-    return im
+# заставки iPhone при запуске с экрана «Домой»: размер экрана в pt и плотность
+SPLASH = [(375, 667, 2), (414, 736, 3), (375, 812, 3), (414, 896, 2), (414, 896, 3), (390, 844, 3), (428, 926, 3),
+          (393, 852, 3), (430, 932, 3), (402, 874, 3), (420, 912, 3), (440, 956, 3)]
+
+
+def splash_images():
+    """PNG-заставки в site/splash/ и <link> для них (светлая и тёмная, как тема телефона)."""
+    os.makedirs(os.path.join(OUT, "splash"), exist_ok=True)
+    links = []
+    for w, h, k in SPLASH:
+        for dark in (False, True):
+            W, H = w * k, h * k
+            bg = INK if dark else PAPER
+            im = Image.new("RGB", (W, H), bg)
+            ic = icon(round(96 * k), bg=bg) if dark else icon(round(96 * k))
+            # на светлой заставке иконка остаётся тёмной плиткой со скруглением, как на экране «Домой»
+            mask = Image.new("L", ic.size, 0)
+            ImageDraw.Draw(mask).rounded_rectangle([0, 0, ic.size[0] - 1, ic.size[1] - 1], radius=round(22 * k), fill=255)
+            im.paste(ic, ((W - ic.size[0]) // 2, (H - ic.size[1]) // 2 - round(20 * k)), mask)
+            name = "splash/%dx%d%s.png" % (W, H, "d" if dark else "")
+            im.save(os.path.join(OUT, name), optimize=True)
+            links.append('<link rel="apple-touch-startup-image" href="%s" media="screen and (device-width:%dpx) and (device-height:%dpx) and '
+                         '(-webkit-device-pixel-ratio:%d) and (orientation:portrait) and (prefers-color-scheme:%s)">'
+                         % (name, w, h, k, "dark" if dark else "light"))
+    return "\n".join(links)
+
+
+# ---------- скрипт iPhone (Scriptable) ----------
+def sign_key():
+    """Закрытый ключ подписи новых версий скрипта (Ed25519, 32 байта в base64): переменная IOS_SIGN_KEY
+    (секрет GitHub Actions) или файл ~/.zvonok/ios-sign.key. В репозитории ключа нет и быть не должно.
+    Без ключа скрипты собираются без подписи и без открытого ключа внутри: виджеты обновляются как раньше."""
+    raw = os.environ.get("IOS_SIGN_KEY", "").strip()
+    if not raw:
+        f = os.path.join(os.path.expanduser("~"), ".zvonok", "ios-sign.key")
+        raw = open(f, encoding="utf-8").read().strip() if os.path.exists(f) else ""
+    if not raw:
+        print("скрипт iPhone: ключа подписи нет (IOS_SIGN_KEY), версии без подписи")
+        return None
+    seed = base64.b64decode(raw)
+    if len(seed) != 32:
+        raise SystemExit("IOS_SIGN_KEY: нужен закрытый ключ Ed25519, 32 байта в base64")
+    return seed
+
+
+SIGN_SEED = None   # заполняет main()
+UPDATE_KEY = ""    # открытый ключ, вписывается в скрипт
+
+
+RULES_A = "// ---------- правила дня (сборка вставляет сюда site/src/js/rules.js, править там) ----------"
+RULES_B = "// ---------- конец правил дня ----------"
+
+
+def with_rules(js):
+    """Правила дня одни на сайт и виджет: между метками в скрипте всегда текущий site/src/js/rules.js."""
+    a = js.index(RULES_A) + len(RULES_A)
+    b = js.index(RULES_B)
+    return js[:a] + "\n" + read("site", "src", "js", "rules.js").strip() + "\n" + js[b:]
 
 
 def scriptable_template(data):
-    """Скрипт для Scriptable (iPhone): общие данные (каникулы, предметы, сайт) вписываем сразу,
-    а класс, звонки, неделю и тему сайт подставит сам (метки __CLASS__, __BELLS__, __WEEK__, __THEME__)."""
-    js = read("ios", "Uroki7B.js")
+    """Скрипт для Scriptable: общие данные (каникулы, предметы, сайт) вписываем сразу,
+    а класс, звонки, неделю и тему страница подставит сама (метки __CLASS__, __BELLS__, __WEEK__, __THEME__)."""
+    js = with_rules(read("ios", "Uroki7B.js"))
     a = js.index("// ---------- данные")
     b = js.index("// ---------- конец данных ----------")
     j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
@@ -142,16 +360,53 @@ def scriptable_template(data):
         "// ---------- данные (сайт подставляет сюда выбранный класс) ----------",
         'const CLASS = "__CLASS__";',
         'const THEME = "__THEME__"; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее',
+        'const VERSION = "__VERSION__";',
+        'const UPDATE_KEY = "%s"; // открытый ключ подписи новых версий (пусто: сборка была без ключа)' % UPDATE_KEY,
         "const BELLS = __BELLS__;",
         "const WEEK = __WEEK__;",
         "const HOLIDAYS = " + j(data["holidays"]) + ";",
         "const TERM_END = " + j(data["term_end"]) + ";",
         "const SUBJECTS = " + j(data["subjects"]) + ";",
+        "const COLORS = " + j(subject_colors(data)) + "; // цвета предметов: для светлого и тёмного фона",
         "const SITE = " + j(SITE_URL) + ";",
         ""])
     js = js[:a] + block + js[b:]
-    js = js.replace("// Звонок 7Б:", "// Звонок __CLASS__:")
-    return js
+    return js.replace("// Звонок 7Б:", "// Звонок __CLASS__:")
+
+
+def class_week(data, cls):
+    """Неделя класса для скрипта iPhone: {"1": [[предмет, кабинет], ...]} (1 = понедельник)."""
+    week = {}
+    for d, day in enumerate(data["classes"][cls]):
+        arr = []
+        for raw in day:
+            code, _, room = (raw or "").partition(" ")
+            arr.append([data["subjects"].get(code, code), "спортзал" if room == "с/з" else room] if raw else ["", ""])
+        if arr:
+            week[str(d + 1)] = arr
+    return week
+
+
+def class_scripts(data, changelog):
+    """site/ios/<класс>.js и site/ios/versions.json: виджет iPhone сам скачивает свежую версию для своего класса."""
+    tpl = scriptable_template(data)
+    j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+    bells = [[int(x.split(":")[0]) * 60 + int(x.split(":")[1]) for x in pair] for pair in data["bells"]]
+    os.makedirs(os.path.join(OUT, "ios"), exist_ok=True)
+    versions, sigs = {}, {}
+    for c in data["classes"]:
+        js = (tpl.replace("__BELLS__", j(bells)).replace("__WEEK__", j(class_week(data, c)))
+              .replace("__THEME__", "").replace("__CLASS__", c))
+        ver = hashlib.sha256(js.encode("utf-8")).hexdigest()[:10]
+        versions[slug(c)] = ver
+        final = js.replace("__VERSION__", ver)
+        write("ios/%s.js" % slug(c), final)
+        if SIGN_SEED:  # подпись ровно тех байт, что лежат на сайте: виджет проверит её перед тем, как поставить версию
+            sigs[slug(c)] = base64.b64encode(ed25519.sign(SIGN_SEED, final.encode("utf-8"))).decode()
+    note = next((r["title"] for r in changelog if "ios" in r["platforms"]), "")
+    write("ios/versions.json", json.dumps(dict({"note": note, "classes": versions}, **({"sig": sigs} if sigs else {})),
+                                          ensure_ascii=False, indent=1))
+    return versions
 
 
 def ios_sample(data):
@@ -173,27 +428,23 @@ def ios_sample(data):
         "// ---------- данные (сайт подставляет сюда выбранный класс) ----------",
         'const CLASS = "7Б";',
         'const THEME = ""; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее',
+        'const VERSION = "";',
+        'const UPDATE_KEY = "%s"; // открытый ключ подписи новых версий (пусто: сборка была без ключа)' % UPDATE_KEY,
         "const BELLS = " + j(bells) + ";",
         "const WEEK = " + j(week) + ";",
         "const HOLIDAYS = " + j(data["holidays"]) + ";",
         "const TERM_END = " + j(data["term_end"]) + ";",
         "const SUBJECTS = " + j(data["subjects"]) + ";",
+        "const COLORS = " + j(subject_colors(data)) + "; // цвета предметов: для светлого и тёмного фона",
         "const SITE = " + j(SITE_URL) + ";",
         ""])
-    out = js[:a] + block + js[b:]
+    out = with_rules(js[:a] + block + js[b:])
     if out != js:
         with open(os.path.join(ROOT, "ios", "Uroki7B.js"), "w", encoding="utf-8", newline="\n") as f:
             f.write(out)
 
 
-def js_literal(obj):
-    """JSON для вставки внутрь <script>: без «</script>» и невидимых разделителей строк."""
-    t = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
-    return (t.replace("</", "<" + chr(92) + "/")
-            .replace(chr(0x2028), chr(92) + "u2028")
-            .replace(chr(0x2029), chr(92) + "u2029"))
-
-
+# ---------- календари классов ----------
 LAT = {"А": "A", "Б": "B", "В": "V", "Г": "G"}
 FIRST_MONDAY = (2026, 11, 2)
 
@@ -249,7 +500,6 @@ def calendar(data, changes, cls):
     """Календарь класса: уроки повторяются раз в неделю до конца четверти, кроме каникул и праздников.
     Дни с заменами вырезаны из повторов и добавлены отдельными событиями. За 3 минуты до урока
     iPhone показывает напоминание."""
-    import datetime
     base = datetime.date(*FIRST_MONDAY)
     end = datetime.date.fromisoformat(data["term_end"])
     stamp = datetime.datetime.strptime(data["updated"], "%Y-%m-%d").strftime("%Y%m%dT000000Z")
@@ -299,79 +549,157 @@ def calendar(data, changes, cls):
     return "\r\n".join(ics_fold(l) for l in lines) + "\r\n"
 
 
+# ---------- страницы ----------
+NAV = [("./#now", "Сейчас"), ("./#week", "Неделя"), ("./#rooms", "Кабинеты"), ("./#more", "Ещё")]
+
+
+def header(active=None):
+    """Шапка отдельных страниц: тот же знак и меню, что на главной."""
+    links = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == active else "", t) for h, t in NAV)
+    return ('<header class="top"><div class="wrap top-in"><a class="brand" href="./" aria-label="Звонок, главная">%s<span>Звонок</span></a>'
+            '<nav class="nav-top" aria-label="Разделы">%s</nav>'
+            '<button class="icon-btn" id="schemeBtn" type="button" aria-label="Тема"></button></div></header>' % (MARK, links))
+
+
+FOOTER = ('<footer class="foot"><div class="wrap"><nav aria-label="Ссылки"><a href="./">Расписание</a><a href="about.html">О проекте</a><a href="make.html">Конструктор</a>'
+          '<a href="iphone.html">iPhone</a><a href="changelog.html">Что нового</a><a href="feedback.html">Написать нам</a></nav>'
+          '<p>«Звонок» сделал ученик лицея №165 для своих. Это неофициальный проект.</p></div></footer>')
+
+# На компьютере в браузере главная сначала показывает сайт о проекте (about.html). Расписание: кнопка там
+# (запоминается), ссылки с #вкладкой, ?app и установленное приложение. Проверка до отрисовки, без мигания.
+# Не чаще раза за сеанс вкладки: логотип на странице о проекте ведёт в расписание, а если без сети вместо
+# about.html придёт запасная главная (старый воркер без этой страницы), второй раз она не перенаправит.
+HEAD_PC = ('(function(){try{var L=location,S=sessionStorage;if(/^http/.test(L.protocol)&&!L.hash&&!new URLSearchParams(L.search).has("app")'
+           '&&!(navigator.standalone||matchMedia("(display-mode: standalone)").matches)'
+           '&&matchMedia("(hover: hover) and (pointer: fine) and (min-width: 1024px)").matches'
+           '&&localStorage.getItem("zv.pcApp")!=="true"&&!S.getItem("zv.toAbout")){S.setItem("zv.toAbout","1");L.replace("about.html")}}catch(e){}})();')
+
+# тема и цвет до первой отрисовки, чтобы страница не мигала светлой.
+# Обе вставки в <head> в своих функциях: их переменные не должны пересекаться с let/const скрипта страницы.
+HEAD_JS = ('(function(){try{if(top!==self)void top.location.href}catch(e){document.documentElement.style.display="none"}})();'
+           '(function(){try{var d=document.documentElement,g=function(k){return JSON.parse(localStorage.getItem("zv."+k))},a=g("accent"),s=g("scheme");'
+           'if(typeof a==="string"&&/^[a-z]+$/.test(a)&&a!=="' + ACCENTS[0][0] + '")d.setAttribute("data-accent",a);if(g("plain")===true)d.setAttribute("data-plain","");'
+           'if(s==="light"||s==="dark"){d.setAttribute("data-theme",s);'
+           'var m=document.querySelectorAll(\'meta[name="theme-color"]\');for(var i=0;i<m.length;i++)m[i].setAttribute("content",s==="dark"?"#0B0B0C":"#F4F4F1")}}catch(e){}})();')
+
+
+def csp(page, connect="'self'"):
+    """CSP по хешам: выполняются только скрипты, которые собрала сборка."""
+    hashes = []
+    for m in re.finditer(r"<script(?![^>]*application/ld\+json)[^>]*>(.*?)</script>", page, re.S):
+        hashes.append("'sha256-%s'" % base64.b64encode(hashlib.sha256(m.group(1).encode("utf-8")).digest()).decode())
+    return ("default-src 'self'; script-src %s; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+            "connect-src %s; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+            % (" ".join(sorted(set(hashes))), connect))
+
+
+def page(name, css, js, extra=None, connect="'self'", common=None):
+    t = read("site", "src", name)
+    common = common or {}
+    js_text = bundle_js(js) if js else ""
+    for k, v in (extra or {}).items():
+        assert k in js_text or k in t, k
+        js_text = js_text.replace(k, v)
+        t = t.replace(k, v)
+    t = t.replace("@JS@", js_text)
+    rep = {"@CSS@": bundle_css(css) if css else "", "@HEAD_JS@": HEAD_JS, "@HEADER@": header(), "@FOOTER@": FOOTER, "@MARK@": MARK}
+    rep.update(common)
+    for k, v in rep.items():
+        t = t.replace(k, v)
+    t = t.replace("@ICONS@", icon_sprite(t))
+    t = t.replace("@CSP@", csp(t, connect))
+    left = re.findall(r"@[A-Z_]{3,}@", t)
+    assert not left, (name, left)
+    write(name, t)
+    return t
+
+
 def main():
+    global SIGN_SEED, UPDATE_KEY
+    SIGN_SEED = sign_key()
+    UPDATE_KEY = base64.b64encode(ed25519.public_key(SIGN_SEED)).decode() if SIGN_SEED else ""
     data = json.loads(read("data", "schedule.json"))
     changes = json.loads(read("data", "changes.json"))
+    changelog = json.loads(read("data", "changelog.json"))
     ios_sample(data)
-    tpl = read("site", "src", "index.html")
+    classes = sorted(data["classes"], key=lambda c: (int(re.match(r"\d+", c)[0]), c))
+    favicon = png_data_uri(icon(64))
+    qrs = dict([("", qr_code(SITE_URL))] + [(c, qr_code(SITE_URL + "#" + slug(c).lower())) for c in classes])
+    startup = splash_images()
+    jsonld = js_literal({
+        "@context": "https://schema.org", "@type": "WebApplication", "name": "Звонок", "url": SITE_URL, "inLanguage": "ru",
+        "description": "Расписание лицея №165: сколько до звонка, какой урок следующий и в каком кабинете.",
+        "applicationCategory": "EducationalApplication", "operatingSystem": "Android, iOS, Web", "isAccessibleForFree": True,
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "KZT"}})
+    common = {"@FAVICON@": favicon, "@SITE_URL@": SITE_URL, "@APK_URL@": APK_URL, "@STARTUP@": startup, "@JSONLD@": jsonld}
+    data_js = {"/*@DATA@*/null": js_literal(data), "/*@CHANGES@*/null": js_literal(changes), "/*@HUES@*/null": js_literal(subject_hues(data))}
 
-    ico = icon(180)
-    buf = io.BytesIO()
-    icon(64).save(buf, "PNG")
-    favicon = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+    news = next(({"date": r["date"], "title": r["title"]} for r in changelog if {"site", "ios"} & set(r["platforms"])), None)
+    index = page("index.html", ["tokens", "base", "components", "app"], ["core", "schedule", "rules", "app", "now", "week", "rooms", "more", "snake", "start"],
+                 dict(data_js, **{"/*@QRS@*/null": js_literal(qrs), "/*@NEWS@*/null": js_literal(news), "@HEAD_JS@": HEAD_JS + HEAD_PC}), common=common)
+    page("make.html", ["tokens", "base", "components", "pages", "make"], ["core", "schedule", "rules", "make"], data_js, common=common)
+    page("about.html", ["tokens", "base", "components", "pages", "about"], ["core", "schedule", "rules", "pages", "about"], data_js, common=common)
+    page("changelog.html", ["tokens", "base", "components", "pages"], ["core", "pages", "changelog"],
+         {"/*@CHANGELOG@*/[]": js_literal(changelog)}, common=common)
+    page("feedback.html", ["tokens", "base", "components", "pages"], ["core", "pages", "feedback"],
+         {"/*@CLASSES@*/[]": js_literal(classes)}, connect="'self' https://api.web3forms.com https://formsubmit.co", common=common)
+    versions = class_scripts(data, changelog)
+    page("iphone.html", ["iphone_guide", "iphone"], ["core", "schedule", "rules", "iphone", "iphone_guide"],
+         dict(data_js, **{"/*@SCRIPTABLE@*/null": js_literal(scriptable_template(data)), "/*@IOSVER@*/null": js_literal(versions)}), common=common)
+    page("poster.html", ["tokens", "poster"], ["poster"], {"/*@QRS@*/null": js_literal(qrs), "/*@CLASSES@*/[]": js_literal(classes)}, common=common)
+    page("404.html", ["tokens", "base", "components", "pages"], ["core", "pages", "notfound"], {"/*@CLASSES@*/[]": js_literal(classes)}, common=common)
 
-    page = (tpl
-            .replace("/*@DATA@*/null", js_literal(data))
-            .replace("/*@SCRIPTABLE@*/null", js_literal(scriptable_template(data)))
-            .replace("/*@CHANGES@*/null", js_literal(changes))
-            .replace("/*@QRS@*/null", js_literal(dict([("", qr_code(SITE_URL))] + [(c, qr_code(SITE_URL + "#" + slug(c).lower())) for c in data["classes"]])))
-            .replace("@QR@", qr_svg(SITE_URL))
-            .replace("@FAVICON@", favicon)
-            .replace("@SITE_URL@", SITE_URL)
-            .replace("@APK_URL@", APK_URL))
-    assert "@" + "QR@" not in page
-    write("index.html", page)
-
-    poster = (read("site", "src", "poster.html")
-              .replace("@QR@", qr_svg(SITE_URL))
-              .replace("@FAVICON@", favicon)
-              .replace("@SITE_URL@", SITE_URL.replace("https://", "").rstrip("/")))
-    write("poster.html", poster)
-
-    ico.save(os.path.join(OUT, "apple-touch-icon.png"))
-    icon(192).save(os.path.join(OUT, "icon-192.png"))
-    icon(512).save(os.path.join(OUT, "icon-512.png"))
-    icon(512, pad_ratio=0.35).save(os.path.join(OUT, "icon-maskable.png"))
-
+    icon(180).save(os.path.join(OUT, "apple-touch-icon.png"), optimize=True)
+    icon(192).save(os.path.join(OUT, "icon-192.png"), optimize=True)
+    icon(512).save(os.path.join(OUT, "icon-512.png"), optimize=True)
+    icon(512, maskable=True).save(os.path.join(OUT, "icon-maskable.png"), optimize=True)
     write("manifest.webmanifest", json.dumps({
+        "id": "./",
         "name": "Звонок. Расписание лицея №165",
         "short_name": "Звонок",
-        "description": "Расписание всех классов лицея №165: таймер до звонка, кабинет, следующий урок. Работает офлайн.",
+        "description": "Сколько до звонка, какой урок следующий и в каком кабинете. Все классы лицея №165, работает без интернета.",
         "lang": "ru",
+        "dir": "ltr",
         "start_url": "./",
         "scope": "./",
         "display": "standalone",
-        "background_color": "#000000",
-        "theme_color": "#000000",
+        "orientation": "portrait",
+        "background_color": "#0B0B0C",
+        "theme_color": "#0B0B0C",
+        "categories": ["education", "productivity", "utilities"],
         "icons": [
             {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
             {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
             {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
         ],
+        "shortcuts": [
+            {"name": "Неделя", "short_name": "Неделя", "url": "./#week", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
+            {"name": "Свободные кабинеты", "short_name": "Кабинеты", "url": "./#rooms", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
+        ],
     }, ensure_ascii=False, indent=2))
-    css = read("site", "src", "common.css")
-    classes = sorted(data["classes"], key=lambda c: (int(re.match(r"\d+", c)[0]), c))
-    for name, extra in (("changelog.html", {"/*@CHANGELOG@*/[]": js_literal(json.loads(read("data", "changelog.json")))}),
-                        ("feedback.html", {"/*@CLASSES@*/[]": js_literal(classes)}),
-                        ("iphone.html", {})):
-        t = read("site", "src", name).replace("@COMMON_CSS@", css).replace("@HEADER@", header(name)).replace("@FAVICON@", favicon)
-        for k, v in extra.items():
-            assert k in t, k
-            t = t.replace(k, v)
-        write(name, t)
-    write("sw.js", read("site", "src", "sw.js"))
-    write(".nojekyll", "")
+
     os.makedirs(os.path.join(OUT, "cal"), exist_ok=True)
     for c in data["classes"]:
         with open(os.path.join(OUT, "cal", slug(c) + ".ics"), "w", encoding="utf-8", newline="") as f:
             f.write(calendar(data, changes, c))
     write("changes.json", json.dumps(changes, ensure_ascii=False, indent=1))
-    # расписание целиком: приложение скачивает его отсюда, чтобы новое расписание пришло без обновления APK
+    # расписание целиком: приложение и сайт узнают из него, что вышло новое расписание
     write("schedule.json", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    write(".nojekyll", "")
     # в GitHub Actions другие шрифты: картинку превью не перерисовываем, берём закоммиченную
     if not os.environ.get("CI") or not os.path.exists(os.path.join(OUT, "og.png")):
         og_image().save(os.path.join(OUT, "og.png"), optimize=True)
-    print("site/index.html", len(page) // 1024, "KB")
+
+    # service worker: версия меняется вместе с любым файлом, поэтому обновление приходит само
+    shell = ["./", "index.html", "about.html", "make.html", "iphone.html", "changelog.html", "feedback.html", "poster.html",
+             "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png", "changes.json"]
+    h = hashlib.sha256()
+    for f in shell[1:] + ["schedule.json"]:
+        with open(os.path.join(OUT, f), "rb") as fh:
+            h.update(fh.read())
+    sw = read("site", "src", "sw.js").replace("@VERSION@", h.hexdigest()[:10]).replace("/*@SHELL@*/[]", json.dumps(shell))
+    write("sw.js", sw)
+    print("site/index.html", len(index.encode()) // 1024, "KB")
 
 
 if __name__ == "__main__":

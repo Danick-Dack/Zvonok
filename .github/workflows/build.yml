@@ -65,4 +65,7 @@ jobs:
             Zvonok-165.apk
             Uroki7B.apk
             Zvonok-165.html
-          make_latest: true
+          # версия с -beta: пробный выпуск. Приложение обновляется только до основных релизов (releases/latest),
+          # и ссылка на сайте ведёт туда же, так что пробную сборку ставит себе только тот, кто проверяет
+          prerelease: ${{ contains(steps.ver.outputs.name, '-beta') }}
+          make_latest: ${{ !contains(steps.ver.outputs.name, '-beta') }}

@@ -103,7 +103,7 @@ public final class Updater {
         // каникулы, праздники, отменённые дни и выходные приложение знает само (расписание + замены с сайта)
         Display d = describe(s, nowMs);
         boolean screenOn = isScreenOn(ctx);
-        Theme t = Theme.load(ctx);
+        Theme t = Theme.load(ctx).forDisplay(d);
 
         boolean notif = notifWanted(ctx, d);
         boolean widgets = widgetIds(ctx, LessonWidget.class).length > 0
@@ -246,7 +246,7 @@ public final class Updater {
                 d.holiday = s.holiday != null;
                 boolean longOff = d.holiday && s.nextDays > 1; // однодневный праздник как обычный вечер
                 d.label = after ? "УРОКИ ЗАКОНЧИЛИСЬ" : d.holiday ? s.holiday.toUpperCase() : "ВЫХОДНОЙ";
-                d.title = after ? "Свободен" : d.holiday ? (vac ? "Каникулы" : "Выходной") : "Отдыхай";
+                d.title = after ? "Отдыхай" : d.holiday ? (vac ? "Каникулы" : "Выходной") : "Отдыхай";
                 if (n != null && longOff) {
                     // каникулы: крупно сколько дней до уроков
                     String date = Schedule.dateText(s.nextDate);
@@ -360,7 +360,7 @@ public final class Updater {
         Display d = describe(Schedule.compute(now), now.toInstant().toEpochMilli());
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm != null) ensureChannel(nm);
-        return build(ctx, d, Theme.load(ctx));
+        return build(ctx, d, Theme.load(ctx).forDisplay(d));
     }
 
     /** @return true, если уведомление показано. */

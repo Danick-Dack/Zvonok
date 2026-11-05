@@ -22,6 +22,8 @@ public final class Theme {
     public boolean progress = true;
     public boolean next = true;
     public boolean dots = true;
+    public boolean subjectColor = false; // кольцо, полоса и кабинет в цвете текущего урока
+    public int textColor = 0;            // свой цвет текста; 0 — сам по фону
 
     public static final String[][] PRESETS = {
             // название, фон, акцент
@@ -49,7 +51,8 @@ public final class Theme {
 
     public String encode() {
         return "ZV1;bg=" + hex(bg) + ";ac=" + hex(accent) + ";op=" + opacity + ";r=" + radius
-                + ";s=" + b(seconds) + ";p=" + b(progress) + ";n=" + b(next) + ";d=" + b(dots);
+                + ";s=" + b(seconds) + ";p=" + b(progress) + ";n=" + b(next) + ";d=" + b(dots)
+                + ";sc=" + b(subjectColor) + (textColor != 0 ? ";tx=" + hex(textColor) : "");
     }
 
     /** Разбор кода темы. Всё, что не распознано, остаётся по умолчанию; мусор → null. */
@@ -72,6 +75,8 @@ public final class Theme {
                     case "p": t.progress = !"0".equals(v); break;
                     case "n": t.next = !"0".equals(v); break;
                     case "d": t.dots = !"0".equals(v); break;
+                    case "sc": t.subjectColor = "1".equals(v); break;
+                    case "tx": t.textColor = color(v, 0); break;
                     default: break;
                 }
             } catch (NumberFormatException ignored) {
@@ -83,9 +88,20 @@ public final class Theme {
     // ---------- цвета ----------
 
     public boolean light() { return lum(bg) > 0.5; }
-    public int text() { return light() ? 0xFF111111 : 0xFFFFFFFF; }
-    public int soft() { return light() ? 0xFF3A3A3A : 0xFFD0D0D0; }
-    public int muted() { return light() ? 0xFF6B6B6B : 0xFF7E7E7E; }
+    public int text() { return textColor != 0 ? textColor : light() ? 0xFF111111 : 0xFFFFFFFF; }
+    public int soft() { return textColor != 0 ? (textColor & 0x00FFFFFF) | 0xD9000000 : light() ? 0xFF3A3A3A : 0xFFD0D0D0; }
+    public int muted() { return textColor != 0 ? (textColor & 0x00FFFFFF) | 0x99000000 : light() ? 0xFF6B6B6B : 0xFF7E7E7E; }
+
+    /** Для показа сейчас: при «цвете урока» акцент берётся у текущего (на перемене у следующего) предмета. */
+    public Theme forDisplay(Updater.Display d) {
+        if (!subjectColor || d == null) return this;
+        String subj = d.kind == Schedule.Kind.LESSON ? d.title : d.nextSubject;
+        if (subj == null || subj.isEmpty() || Hues.index(subj) < 0) return this;
+        Theme t = decode(encode());
+        if (t == null) return this;
+        t.accent = Hues.vivid(subj, !light());
+        return t;
+    }
     public int faint() { return light() ? 0x33000000 : 0xFF2A2A2A; }
     public int chip() { return light() ? 0x14000000 : 0xFF1E1E1E; }
     public int track() { return light() ? 0x22000000 : 0xFF262626; }

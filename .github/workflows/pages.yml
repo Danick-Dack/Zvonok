@@ -36,6 +36,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Собрать сайт из расписания
+        env:
+          # закрытый ключ подписи новых версий скрипта iPhone (Settings → Secrets → Actions); без него версии без подписи
+          IOS_SIGN_KEY: ${{ secrets.IOS_SIGN_KEY }}
         run: |
           pip install qrcode pillow
           python tools/build_site.py

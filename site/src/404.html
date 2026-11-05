@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="@CSP@">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<title>Нет такой страницы · Звонок</title>
+<link rel="icon" href="@FAVICON@">
+<script>@HEAD_JS@</script>
+<style>@CSS@</style>
+</head>
+<body>
+@ICONS@
+@HEADER@
+<main id="main" class="wrap narrow lost">
+  <div class="lost-bell" aria-hidden="true">@MARK@</div>
+  <h1>Звонок уже прозвенел</h1>
+  <p>А такой страницы нет. Скорее всего, ссылка старая или в ней опечатка. Беги на главную, там всё по расписанию.</p>
+  <div class="lost-run"><a class="btn btn-primary" id="home" href="./">На главную</a></div>
+</main>
+<div class="zv-toast" id="zvToast" role="status" aria-live="polite"></div>
+<script>@JS@</script>
+</body>
+</html>

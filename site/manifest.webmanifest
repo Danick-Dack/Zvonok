@@ -1,13 +1,21 @@
 {
+  "id": "./",
   "name": "Звонок. Расписание лицея №165",
   "short_name": "Звонок",
-  "description": "Расписание всех классов лицея №165: таймер до звонка, кабинет, следующий урок. Работает офлайн.",
+  "description": "Сколько до звонка, какой урок следующий и в каком кабинете. Все классы лицея №165, работает без интернета.",
   "lang": "ru",
+  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "orientation": "portrait",
+  "background_color": "#0B0B0C",
+  "theme_color": "#0B0B0C",
+  "categories": [
+    "education",
+    "productivity",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "icon-192.png",
@@ -24,6 +32,30 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Неделя",
+      "short_name": "Неделя",
+      "url": "./#week",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Свободные кабинеты",
+      "short_name": "Кабинеты",
+      "url": "./#rooms",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

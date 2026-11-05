@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="@CSP@">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" data-c="#0B0B0C" media="(prefers-color-scheme: dark)">
+<title>Конструктор · Звонок</title>
+<meta name="description" content="Собери своё расписание и подбери цвета виджетов и уведомления для приложения «Звонок».">
+<link rel="canonical" href="@SITE_URL@make.html">
+<link rel="icon" href="@FAVICON@">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>@HEAD_JS@</script>
+<style>@CSS@</style>
+</head>
+<body>
+<a class="skip" href="#main">К конструктору</a>
+@ICONS@
+@HEADER@
+<main id="main" class="wrap page" tabindex="-1">
+  <div class="page-head"><h1>Конструктор</h1><p>Своё расписание и цвета для виджетов и уведомления. Получится код: его можно вставить в приложение или отправить другу.</p></div>
+  <div class="seg tabs" role="tablist" aria-label="Что настраиваем">
+    <button type="button" role="tab" id="tSched" aria-controls="pSched" aria-selected="true">Своё расписание</button>
+    <button type="button" role="tab" id="tTheme" aria-controls="pTheme" aria-selected="false">Цвета виджетов</button>
+  </div>
+
+  <section id="pSched" role="tabpanel" aria-labelledby="tSched">
+    <div class="make-grid">
+      <div class="card">
+        <div class="days ed-days" id="cDays" role="group" aria-label="День"></div>
+        <div class="slots-ed" id="cSlots"></div>
+        <datalist id="subjList"></datalist>
+        <div class="row" style="margin-top:14px">
+          <select class="field" id="cFrom" aria-label="Чьё расписание взять" style="flex:1;min-width:150px;width:auto"></select>
+          <button class="btn btn-quiet btn-sm" id="cTake" type="button">Взять расписание класса</button>
+          <button class="btn btn-line btn-sm btn-danger" id="cClear" type="button"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>Очистить день</button>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <label class="switch"><span>Показывать на сайте своё расписание<small>Хранится только в этом браузере</small></span><input type="checkbox" id="cUse"></label>
+          <div class="row" style="margin-top:8px">
+            <button class="btn btn-primary" id="cCopy" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Код для приложения</button>
+            <button class="btn btn-quiet" id="cShare" type="button"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg>Поделиться</button>
+            <button class="btn btn-quiet" id="cIcs" type="button"><svg class="icon" aria-hidden="true"><use href="#i-week"/></svg>В календарь</button>
+          </div>
+          <p class="note" style="margin-top:12px">В приложении: ⚙ → «Своё расписание» → «Вставить код». В коде только предметы, кабинеты и звонки.</p>
+          <label class="label" for="cCode" style="margin-top:18px">Есть код от друга?</label>
+          <textarea class="field" id="cCode" placeholder="ZVS1:…" spellcheck="false" autocapitalize="off"></textarea>
+          <div class="row" style="margin-top:10px"><button class="btn btn-quiet btn-sm" id="cLoad" type="button">Загрузить код</button></div>
+        </div>
+        <div class="card faq bells-card">
+          <details><summary>Звонки<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary>
+            <p class="note">Время в формате 8:45. Пустой урок можно не заполнять.</p>
+            <div class="bells" id="cBells"></div>
+            <button class="btn btn-line btn-sm" id="cBellsReset" type="button" style="margin-top:12px">Как в лицее</button>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pTheme" role="tabpanel" aria-labelledby="tTheme" hidden>
+    <div class="make-grid">
+      <div>
+        <div class="wall" id="pv" aria-label="Предпросмотр"></div>
+        <p class="note" style="margin-top:10px">На телефоне уведомление всегда на сплошном фоне, так его рисует Android. Прозрачными будут только виджеты.</p>
+      </div>
+      <div class="card">
+        <h2 class="label">Тема</h2>
+        <div class="swatches" id="thPresets"></div>
+        <h2 class="label" style="margin-top:20px">Акцент: таймер, полоса и кабинет</h2>
+        <div class="accents" id="thAcc"></div>
+        <label class="label" for="thOp" style="margin-top:20px">Непрозрачность виджетов: <span id="thOpV"></span></label>
+        <input type="range" min="30" max="100" step="5" id="thOp" class="range">
+        <h2 class="label" style="margin-top:18px">Углы</h2>
+        <div class="seg" id="thR" role="group" aria-label="Углы"></div>
+        <div style="margin-top:8px">
+          <label class="switch"><span>Секунды в таймере<small>Без них заряд тратится ещё меньше</small></span><input type="checkbox" id="thS"></label>
+          <label class="switch"><span>Полоса прогресса</span><input type="checkbox" id="thP"></label>
+          <label class="switch"><span>Следующий урок</span><input type="checkbox" id="thN"></label>
+          <label class="switch"><span>Точки уроков дня</span><input type="checkbox" id="thD"></label>
+          <label class="switch"><span>Цвет урока<small>Таймер, полоса и кабинет в цвете предмета: алгебра синяя, физика фиолетовая</small></span><input type="checkbox" id="thSC"></label>
+          <span class="label" id="thTXL" style="margin-top:8px">Цвет текста</span>
+          <div class="seg" id="thTX" role="group" aria-labelledby="thTXL"></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn btn-primary" id="thCopy" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Код темы</button>
+          <button class="btn btn-line" id="thReset" type="button">Сбросить</button>
+        </div>
+        <p class="note" style="margin-top:12px">В приложении: ⚙ → «Оформление» → «Вставить код темы». Эти же цвета получит виджет iPhone, если скопировать скрипт на <a href="iphone.html">странице для iPhone</a>.</p>
+      </div>
+    </div>
+  </section>
+</main>
+@FOOTER@
+<div class="zv-toast" id="zvToast" role="status" aria-live="polite"></div>
+<script>@JS@</script>
+</body>
+</html>

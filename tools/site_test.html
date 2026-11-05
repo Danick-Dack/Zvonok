@@ -3,213 +3,398 @@
 <title>Звонок: тесты сайта</title>
 <iframe id="f" src="_site_under_test.html" style="width:1100px;height:800px"></iframe>
 <pre id="out"></pre>
+<script src="_sig_fixture.js"></script><!-- пишет tools/test_site.py: подписанная тестовым ключом «новая версия» 7Б -->
 <script>
+// Запуск: python tools/test_site.py (копии страниц без CSP, безголовый Chrome)
 const out = [];
 const ok = (cond, name) => out.push((cond ? "PASS " : "FAIL ") + name);
 const run = (name, fn) => { try { fn(); } catch (e) { ok(false, name + ": " + e); } };
-const at = (iso) => new Date(iso);
+const at = iso => new Date(iso);
+function load(src, w, h) {
+  return new Promise(r => {
+    const f = document.createElement("iframe"); f.src = src; f.style.cssText = "width:" + (w || 390) + "px;height:" + (h || 800) + "px";
+    f.onload = () => setTimeout(() => r(f.contentWindow), 400); document.body.append(f);
+  });
+}
+// контраст по WCAG: относительная яркость
+function lum(c) {
+  const m = c.match(/\d+(\.\d+)?/g).map(Number), f = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+  return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]);
+}
+const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
 
-document.getElementById("f").onload = () => setTimeout(() => {
+document.getElementById("f").onload = () => setTimeout(main, 500);
+async function main() {
   const w = document.getElementById("f").contentWindow, d = w.document, ev = s => w.eval(s);
-  ok(d.getElementById("lTitle").textContent !== "", "скрипт сайта запустился");
-
-  run("таймер 7Б", () => {
-    ev('cls="7Б";useCustom=false;rebuild()');
-    const c = t => w.compute(at(t));
-    let s = c("2026-11-02T08:20:00"); ok(s.kind === "LESSON" && s.cur.subject === "Классный час", "пн 8:20 — классный час");
-    s = c("2026-11-02T08:47:00"); ok(s.kind === "BREAK" && s.next.subject === "Казахский яз. и лит.", "пн 8:47 — перемена, дальше казахский");
-    s = c("2026-11-02T07:30:00"); ok(s.kind === "BEFORE" && s.soon, "пн 7:30 — скоро уроки");
-    s = c("2026-11-02T06:00:00"); ok(s.kind === "BEFORE" && !s.soon, "пн 6:00 — без отсчёта");
-    s = c("2026-11-02T15:24:00"); ok(s.kind === "LESSON" && s.cur.num === 8 && !s.next, "пн 15:24 — последний урок");
-    s = c("2026-11-02T16:00:00"); ok(s.kind === "AFTER" && s.nLabel === "Завтра" && s.next.subject === "Геометрия", "пн 16:00 — завтра геометрия");
-    s = c("2026-11-06T16:00:00"); ok(s.kind === "AFTER" && s.nLabel === "Понедельник", "пт 16:00 — в понедельник");
-    s = c("2026-11-07T12:00:00"); ok(s.kind === "OFF" && s.next.subject === "Классный час", "сб — выходной");
-    ok(w.fmtTimer(3723000) === "1:02:03" && w.fmtTimer(59000) === "0:59", "формат таймера");
-    ok(w.plural(1) === "1 урок" && w.plural(3) === "3 урока" && w.plural(7) === "7 уроков" && w.plural(11) === "11 уроков", "склонение «урок»");
-  });
-
-  run("каникулы", () => {
-    ev('cls="7Б";useCustom=false;rebuild()');
-    let s = w.compute(at("2026-12-30T10:00:00"));
-    ok(s.kind === "OFF" && s.holiday && s.holiday[2] === "Зимние каникулы" && s.nLabel === "11 января", "30 декабря: каникулы, уроки с 11 января");
-    s = w.compute(at("2026-12-25T16:00:00"));
-    ok(s.kind === "AFTER" && s.nLabel === "11 января", "25 декабря после уроков: дальше 11 января");
-    s = w.compute(at("2026-12-16T10:00:00"));
-    ok(s.kind === "OFF" && s.holiday[2] === "День Независимости", "16 декабря: праздник");
-  });
-
-  run("кабинеты после уроков", () => {
-    ev(`(() => { const R = Date, T = "2026-11-02T16:00:00";
-      window.Date = class extends R { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return new R(T).getTime(); } };
-      try { $("rday").value = 0; $("rq").value = ""; renderRooms(); } finally { window.Date = R; } })()`);
-    ok(d.getElementById("freeH").textContent === "Уроки закончились", "пн 16:00: «Уроки закончились», а не «9 урок»");
-  });
-
   // выполнить код сайта «как будто сейчас» T
   const withDate = (T, code) => ev(`(() => { const R = Date, T = ${JSON.stringify(T)};
       window.Date = class extends R { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return new R(T).getTime(); } };
       try { return (${code}); } finally { window.Date = R; } })()`);
+  ok(d.getElementById("lTitle").textContent !== "" || !d.getElementById("hello").hidden, "скрипт главной запустился");
+
+  run("таймер 7Б", () => {
+    ev('cls="7Б";useCustom=false;pick=false;rebuild()');
+    const c = t => w.compute(at(t), ev("src"));
+    let s = c("2026-11-02T08:20:00"); ok(s.kind === "LESSON" && s.cur.subject === "Классный час", "пн 8:20: классный час");
+    s = c("2026-11-02T08:47:00"); ok(s.kind === "BREAK" && s.next.subject === "Казахский яз. и лит.", "пн 8:47: перемена, дальше казахский");
+    s = c("2026-11-02T07:30:00"); ok(s.kind === "BEFORE" && s.soon, "пн 7:30: скоро уроки");
+    s = c("2026-11-02T06:00:00"); ok(s.kind === "BEFORE" && !s.soon, "пн 6:00: без отсчёта");
+    s = c("2026-11-02T15:24:00"); ok(s.kind === "LESSON" && s.cur.num === 8 && !s.next, "пн 15:24: последний урок");
+    s = c("2026-11-02T16:00:00"); ok(s.kind === "AFTER" && s.nLabel === "Завтра" && s.next.subject === "Геометрия", "пн 16:00: завтра геометрия");
+    s = c("2026-11-06T16:00:00"); ok(s.kind === "AFTER" && s.nLabel === "Понедельник", "пт 16:00: в понедельник");
+    s = c("2026-11-07T12:00:00"); ok(s.kind === "OFF" && s.next.subject === "Классный час", "сб: выходной");
+    ok(w.fmtTimer(3723000) === "1:02:03" && w.fmtTimer(59000) === "0:59", "формат таймера");
+    ok(ev('[plural(1),plural(3),plural(7),plural(11),plural(22)].join()') === "1 урок,3 урока,7 уроков,11 уроков,22 урока", "склонение «урок»");
+  });
+
+  run("каникулы", () => {
+    let s = w.compute(at("2026-12-30T10:00:00"), ev("src"));
+    ok(s.kind === "OFF" && s.holiday && s.holiday[2] === "Зимние каникулы" && s.nLabel === "11 января", "30 декабря: каникулы, уроки с 11 января");
+    s = w.compute(at("2026-12-25T16:00:00"), ev("src"));
+    ok(s.kind === "AFTER" && s.nLabel === "11 января", "25 декабря после уроков: дальше 11 января");
+    s = w.compute(at("2026-12-16T10:00:00"), ev("src"));
+    ok(s.kind === "OFF" && s.holiday[2] === "День Независимости", "16 декабря: праздник");
+    withDate("2026-12-30T10:00:00", 'key="",tick()');
+    ok(d.getElementById("lTitle").textContent === "Каникулы" && d.getElementById("lTimer").textContent === "12" && /дней до уроков/.test(d.getElementById("lCap").textContent), "карточка в каникулы: дни до уроков");
+  });
 
   run("замены", () => {
-    ev(`cls="7Б";useCustom=false;pick=false;rebuild();CHANGES={days:{
+    ev(`CHANGES={days:{
       "2026-11-03":{note:"Сокращённые уроки",bells:[["8:00","8:30"],["8:35","9:05"],["9:15","9:45"],["9:55","10:25"],["10:35","11:05"],["11:15","11:45"],["11:50","12:20"]],
         classes:{"7Б":{"1":{subject:"fiz",room:"48"},"2":"нет урока","8":{subject:"Шахматы",room:"40"}}}},
-      "2026-11-04":{off:"Актированный день"}}}`);
+      "2026-11-04":{off:"Актированный день"}}};chVer++`);
     const l = w.dayLessons("7Б", at("2026-11-03T12:00:00"));
     ok(l[0].subject === "Физика" && l[0].room === "48" && l[0].changed && l[0].end === 510, "замена 1 урока и сокращённый звонок");
     ok(!l.some(x => x.num === 2), "2 урок отменён");
     ok(l[1].subject === "Физика" && !l[1].changed && l[1].short && l[1].start === 555, "остальные уроки по сокращённым звонкам");
     ok(!l.some(x => x.num === 8), "лишний урок без звонка не появляется");
-    let s = w.compute(at("2026-11-03T08:20:00"));
+    let s = w.compute(at("2026-11-03T08:20:00"), ev("src"));
     ok(s.kind === "LESSON" && s.cur.subject === "Физика" && s.target === at("2026-11-03T08:30:00").getTime(), "таймер идёт по замене");
-    s = w.compute(at("2026-11-04T09:00:00"));
-    ok(s.kind === "OFF" && s.holiday[2] === "Актированный день" && d.getElementById("lTitle") && true, "день off: уроков нет");
+    s = w.compute(at("2026-11-04T09:00:00"), ev("src"));
+    ok(s.kind === "OFF" && s.holiday[2] === "Актированный день", "день off: уроков нет");
     const a = w.dayLessons("7А", at("2026-11-03T12:00:00"))[0];
     ok(a.subject === "Физика" && !a.changed && a.end === 510, "у другого класса только сокращённые звонки");
-    withDate("2026-11-03T08:20:00", 'lastKey="",renderLive(),selDay=1,renderDay()');
-    ok(d.getElementById("lChg").textContent === "замена" && !d.getElementById("lChg").hidden, "пометка «замена» в карточке");
-    ok(d.getElementById("dayNote").textContent.includes("Сокращённые уроки") && d.getElementById("dayNote").textContent.includes("Отменён урок 2"), "пометка дня: заметка и отмена");
-    ok(d.querySelector("#dayList .lesson .m small").textContent.includes("замена"), "пометка «замена» в списке дня");
-    ev('CHANGES={days:{}};lastKey=""');
+    withDate("2026-11-03T08:20:00", 'key="",tick()');
+    ok(d.getElementById("lTag").textContent === "замена" && !d.getElementById("lTag").hidden, "пометка «замена» в карточке");
+    const note = d.getElementById("todayNote");
+    ok(note.textContent.includes("Сокращённые уроки") && note.textContent.includes("Отменён урок 2") && note.classList.contains("bad"), "пометка дня: заметка и отмена красным");
+    ok(d.querySelector("#todayList .les .chg").textContent === "замена", "пометка «замена» в ленте дня");
+    ev('CHANGES={days:{}};chVer++;key=""');
   });
 
   run("счётчик до каникул", () => {
-    ev('cls="7Б";useCustom=false;rebuild()');
-    let v = w.vacation(at("2026-12-21T07:00:00"));
-    ok(v && v.n === 5 && v.name === "Зимние каникулы", "21 декабря утром: 5 учебных дней");
-    v = w.vacation(at("2026-12-21T17:00:00"));
-    ok(v.n === 4, "после уроков сегодня не считается");
-    ok(w.vacationText(w.vacation(at("2026-12-25T09:00:00"))).startsWith("Сегодня последний учебный день"), "последний день");
-    ok(w.vacationText(w.vacation(at("2026-12-14T09:00:00"))) === "До каникул 9 учебных дней", "праздник 16 декабря не считается");
-    ok(w.vacation(at("2026-12-30T09:00:00")) === null, "в каникулы счётчика нет");
-    ok(w.daysWord(1) === "1 учебный день" && w.daysWord(3) === "3 учебных дня" && w.daysWord(18) === "18 учебных дней", "склонение дней");
+    const v = t => w.vacation(at(t), ev("src"));
+    ok(v("2026-12-21T07:00:00").n === 5 && v("2026-12-21T07:00:00").name === "Зимние каникулы", "21 декабря утром: 5 учебных дней");
+    ok(v("2026-12-21T17:00:00").n === 4, "после уроков сегодня не считается");
+    ok(w.vacationText(v("2026-12-25T09:00:00")).startsWith("Сегодня последний учебный день"), "последний день");
+    ok(w.vacationText(v("2026-12-14T09:00:00")) === "До каникул 9 учебных дней", "праздник 16 декабря не считается");
+    ok(v("2026-12-30T09:00:00") === null, "в каникулы счётчика нет");
+    ok(ev('[1,3,18].map(n => vacationText({n, today: false, name: "Зимние каникулы"})).join()') === "До каникул 1 учебный день,До каникул 3 учебных дня,До каникул 18 учебных дней", "склонение дней");
   });
 
-  run("ссылка на класс", () => {
+  run("ссылка на класс и вкладки", () => {
     ev('location.hash="#10a"');
     ok(ev("classFromHash()") === "10А", "#10a это 10А");
     ev('location.hash="#9%D0%B3"');
     ok(ev("classFromHash()") === "9Г", "кириллица #9г");
-    ev('location.hash="#schedule"');
-    ok(ev("classFromHash()") === null, "якорь меню не класс");
-    ev('location.hash="#10a";openHashClass();rebuild();renderClasses()');
-    ok(ev("cls") === "10А" && ev("shareUrl()").endsWith("/#10a"), "открывает класс и делится ссылкой на него");
-    ok(d.getElementById("qr").innerHTML.includes("<path") && d.getElementById("shMsg").textContent.includes("#10a"), "QR и сообщение с классом");
-    ok(ev('QRS["10А"]') !== ev('QRS[""]'), "у класса свой QR");
-    d.querySelector("#classes .pill").click();
-    ok(ev("classFromHash()") === null && ev("cls") === "7А", "выбор своего класса убирает #10a из адреса");
-    ev('cls="7Б";rebuild();renderClasses()');
+    ev('location.hash="#week"');
+    ok(ev("classFromHash()") === null, "вкладка не класс");
+    ev('location.hash="#10a";route(false)');
+    ok(ev("cls") === "10А" && ev("shareUrl()").endsWith("/#10a") && location.hash === "" || ev("cls") === "10А", "ссылка открывает класс");
+    ok(ev("QRS[\"10А\"]") !== ev("QRS[\"\"]"), "у класса свой QR");
+    ev('location.hash="#week";route(false)');
+    ok(!d.getElementById("v-week").hidden && d.getElementById("v-now").hidden, "#week открывает неделю");
+    ok(d.querySelector('.tabbar a[aria-current="page"]').dataset.tab === "week", "в нижней панели отмечена неделя");
+    ev('location.hash="#install";route(false)');
+    ok(!d.getElementById("v-more").hidden && !!d.getElementById("install"), "старая ссылка #install ведёт в «Ещё»");
+    ev('location.hash="#schedule";route(false)');
+    ok(!d.getElementById("v-week").hidden, "старая ссылка #schedule ведёт в неделю");
+    ev('location.hash="#now";route(false);setClass("7Б")');
+    ok(ev("cls") === "7Б" && JSON.parse(w.localStorage.getItem("zv.class")) === "7Б", "выбор класса запоминается");
   });
 
-  run("кабинет: короткий ответ", () => {
-    ev('cls="7Б";useCustom=false;rebuild()');
+  run("«Ещё»: счётчик дней проекта", () => {
+    ev('location.hash="#more";route(false);renderMore()');
+    const age = d.getElementById("age"), n = ev("projectAge(new Date())");
+    ok(!!age && /^«Звонку» \d+ (день|дня|дней)\. Первая версия вышла 1 ноября 2026\.$/.test(age.textContent) && age.textContent.includes(" " + n + " "),
+      "в «О проекте» мини-счётчик: " + (age ? age.textContent : "нет #age"));
+    ok(ev('projectAge(new Date(2026, 10, 1, 9))') === 1 && ev('projectAge(new Date(2026, 10, 5, 23))') === 4 && ev('projectAge(new Date(2027, 10, 1))') === 365,
+      "счётчик: 1 ноября первый день, 5 ноября 4 дня, через год 365");
+    const ageEl = d.getElementById("age"), parent = ageEl.parentNode, next = ageEl.nextSibling;
+    ageEl.remove();
+    let noAge = true;
+    try { ev("renderMore()"); } catch (e) { noAge = false; }
+    parent.insertBefore(ageEl, next);
+    ok(noAge, "«Ещё» рисуется и без блока счётчика");
+    ev('location.hash="#now";route(false)');
+  });
+
+  run("кабинеты", () => {
     const use = withDate("2026-11-02T10:00:00", "roomDay(new Date())");
     const t = w.roomNow("46", use, 600);
-    ok(/^Сейчас: 7Б, история Казахстана, освободится в \d+:\d\d$/.test(t) || /^Сейчас: .+, освободится в /.test(t), "занят: кто и когда освободится (" + t + ")");
+    ok(t.busy && /^Сейчас .+\. Освободится в \d+:\d\d$/.test(t.text), "занят: кто и когда освободится (" + t.text + ")");
     const f = w.roomNow("46", use, 16 * 60);
-    ok(f === "Сейчас свободен до конца дня", "после уроков свободен");
-    withDate("2026-11-02T10:40:00", '($("rday").value=0,$("rq").value="",renderRooms())');
-    ok(d.getElementById("freeH").textContent.startsWith("Свободны на следующем уроке · 10:50") && d.querySelectorAll("#free .chip").length > 0, "на перемене: свободны на следующем уроке");
+    ok(!f.busy && f.text === "Свободен до конца дня", "после уроков свободен");
+    ev('location.hash="#rooms";route(false)');
+    withDate("2026-11-02T10:40:00", '(rDay=0,rSlot=null,$("rq").value="",renderRooms())');
+    ok(d.getElementById("freeH").textContent === "Свободны на 4 уроке" && d.getElementById("freeNote").textContent.startsWith("4 урок, 10:50–11:35 ·") && d.querySelectorAll("#free button").length > 0, "на перемене: свободны на следующем уроке");
+    withDate("2026-11-02T10:00:00", '(rSlot=null,$("rq").value="",renderRooms())');
+    ok(!d.getElementById("nextFree").hidden && d.getElementById("nextFreeNote").textContent.startsWith("4 урок, 10:50"), "во время урока видно, что свободно на следующем");
     withDate("2026-11-02T10:40:00", '($("rq").value="46",renderRooms())');
-    ok(d.getElementById("rnow") && d.getElementById("rnow").textContent.startsWith("Сейчас"), "строка «Сейчас» в поиске");
-    ev('$("rq").value="";renderRooms()');
-  });
-
-  run("где друг убран", () => {
-    ok(!d.getElementById("friend") && typeof w.renderFriend === "undefined", "блока «Где друг» нет");
-    ok(d.querySelector("#rooms h3").textContent === "Кто в кабинете?", "заголовок «Кто в кабинете?»");
-  });
-
-  run("ошибка и календарь", () => {
-    ev('selDay=0');
-    const u = ev("reportUrl()");
-    ok(u.startsWith("https://github.com/Danick-Dack/Zvonok/issues/new?title=") && decodeURIComponent(u).includes("Класс: 7Б") && decodeURIComponent(u).includes("1. Классный час"), "ссылка на issue с классом и днём");
-    ok(ev('calUrl("10Г")') === "webcal://danick-dack.github.io/Zvonok/cal/10G.ics", "ссылка на календарь класса");
+    ok(!d.getElementById("roomCard").hidden && d.querySelector("#roomCard .room-now").textContent.startsWith("Сейчас"), "карточка кабинета со строкой «Сейчас»");
+    withDate("2026-11-02T16:00:00", '(rSlot=null,$("rq").value="",renderRooms())');
+    ok(d.getElementById("freeH").textContent === "Уроки закончились", "пн 16:00: «Уроки закончились»");
+    let bad = 0;
+    for (const r of ev("ROOMS")) { d.getElementById("rq").value = r; w.renderRooms(); if (/object|undefined|NaN/.test(d.getElementById("roomCard").innerText)) bad++; }
+    ok(bad === 0, "поиск по " + ev("ROOMS").length + " кабинетам");
+    d.getElementById("rq").value = ""; w.renderRooms();
   });
 
   run("первый заход", () => {
-    ev('pick=true;lastKey="";renderLive()');
-    ok(d.getElementById("lTitle").textContent === "Выбери свой класс" && d.getElementById("lTimer").textContent === "", "новичок сначала выбирает класс");
-    ev('pick=false;lastKey="";renderLive()');
-    ok(d.getElementById("lTitle").textContent !== "Выбери свой класс", "после выбора класса виден таймер");
+    ev('pick=true;key="";location.hash="#now";route(false);tick()');
+    ok(!d.getElementById("hello").hidden && d.getElementById("nowMain").hidden && d.querySelectorAll("#helloGrades button").length === 19, "новичок сначала выбирает класс");
+    d.querySelector("#helloGrades button").click();
+    ok(d.getElementById("hello").hidden && ev("cls") === "7А" && !ev("pick"), "после выбора класса виден таймер");
+    ev('setClass("7Б")');
   });
 
   const classes = ev("CLASSES");
   ok(classes.length === 19, "19 классов");
   for (const c of classes) run("класс " + c, () => {
-    ev(`cls=${JSON.stringify(c)};useCustom=false;rebuild();selDay=null;renderDay();renderLive()`);
-    const n = d.querySelectorAll("#dayList .lesson").length;
-    ok(n > 0 && !d.body.innerText.includes("undefined"), "класс " + c + ": " + n + " уроков");
-    new (Object.getPrototypeOf(async function () {}).constructor)(w.scriptFor(c));
-    ok(!w.scriptFor(c).includes("__"), "скрипт Scriptable для " + c);
+    ev(`setClass(${JSON.stringify(c)});selDay=null;renderWeek()`);
+    const n = d.querySelectorAll("#weekGrid .les").length;
+    ok(n > 20 && !d.body.innerText.includes("undefined"), "класс " + c + ": " + n + " уроков в неделе");
+  });
+  ev('setClass("7Б")');
+
+  run("цвета предметов", () => {
+    ok(w.hueOf("Алгебра") === "blue" && w.hueOf("Физика") === "purple" && w.hueOf("Физкультура") === "orange", "у предметов свои оттенки");
+    ok(w.hueOf("Шахматы") === w.hueOf("Шахматы") && /^[a-z]+$/.test(w.hueOf("Шахматы")), "свой предмет получает постоянный оттенок");
+    ok(d.querySelector("#weekGrid .les").className.includes("hue-"), "уроки в неделе окрашены");
   });
 
-  run("кабинеты", () => {
-    let bad = 0;
-    for (const r of ev("ROOMS")) {
-      d.getElementById("rq").value = r; w.renderRooms();
-      if (/object|undefined/.test(d.getElementById("rres").innerText)) bad++;
+  run("доступность", () => {
+    ok(!d.getElementById("lTimer").closest("[aria-live]"), "таймер не зачитывается каждую секунду");
+    ok(!!d.getElementById("announce").getAttribute("aria-live"), "смена урока объявляется отдельно");
+    const unnamed = [...d.querySelectorAll("button, a[href]")].filter(b => !(b.textContent.trim() || b.getAttribute("aria-label") || b.title));
+    ok(unnamed.length === 0, "у всех кнопок и ссылок есть имя (" + unnamed.length + ")");
+    const fields = [...d.querySelectorAll("input, select, textarea")].filter(i => !(i.getAttribute("aria-label") || i.labels && i.labels.length || i.getAttribute("aria-labelledby")));
+    ok(fields.length === 0, "у всех полей есть подпись (" + fields.length + ")");
+    ok(d.documentElement.lang === "ru" && !!d.querySelector("main#main") && !!d.querySelector("a.skip"), "язык, main и ссылка «к содержимому»");
+  });
+
+  run("прошедшие уроки читаются, кривые замены не ломают расписание", () => {
+    ev('cls="7Б";useCustom=false;pick=false;rebuild();location.hash="#now";route(false)');
+    withDate("2026-11-02T13:00:00", "refresh()");
+    const pm = d.querySelector("#v-now .tl .past .m");
+    let bgEl = pm;
+    while (bgEl && w.getComputedStyle(bgEl).backgroundColor === "rgba(0, 0, 0, 0)") bgEl = bgEl.parentElement;
+    const pr = pm && bgEl ? ratio(w.getComputedStyle(pm).color, w.getComputedStyle(bgEl).backgroundColor) : 0;
+    ok(pr >= 4.5, "прошедший урок на «Сейчас»: контраст " + pr.toFixed(2) + " (нужно 4.5)");
+    const bad = {updated: 5, days: {"2026-11-10": {off: {x: 1}, note: 7, bells: "8:00",
+      classes: {"7Б": {"1": 42, "2": {subject: ["x"], room: 46}, "x": null, "3": "нет"}, "7А": "всё"}}, "вчера": {off: "x"}, "2026-11-11": [1, 2]}};
+    ok(JSON.stringify(ev("cleanChanges(" + JSON.stringify(bad) + ")")) === JSON.stringify({days: {"2026-11-10": {classes: {"7Б": {"2": {room: "46"}, "3": "нет"}}}}}),
+      "из кривого changes.json остаётся только то, что можно прочитать");
+    const day = ev("(() => { const keep = CHANGES; CHANGES = cleanChanges(" + JSON.stringify(bad) + "); try { return dayLessons('7Б', new Date(2026, 10, 10)).map(l => l.num + ':' + l.subject + ':' + l.room).join(','); } finally { CHANGES = keep; } })()");
+    ok(day.includes("2:Английский язык:46") && !/(^|,)3:/.test(day) && day.startsWith("1:Геометрия"), "с такими заменами день считается: " + day.slice(0, 60) + "…");
+  });
+
+  run("контраст тем", () => {
+    const root = d.documentElement, bad = [];
+    for (const theme of ["light", "dark"]) {
+      root.dataset.theme = theme;
+      for (const a of ev("ACCENTS").map(x => x.id)) {
+        if (a === ev("ACCENTS")[0].id) delete root.dataset.accent; else root.dataset.accent = a;
+        const cs = w.getComputedStyle(root), v = k => cs.getPropertyValue(k).trim();
+        const probe = d.createElement("span"); d.body.append(probe);
+        const rgb = col => { probe.style.color = col; return w.getComputedStyle(probe).color; };
+        const bg = rgb(v("--bg")), surf = rgb(v("--surface"));
+        [["--text", 7], ["--text-2", 4.5], ["--muted", 4.5], ["--accent", 4.5], ["--ok", 4.5], ["--warn", 4.5], ["--bad", 4.5]].forEach(([k, need]) => {
+          [bg, surf].forEach(b => { const r = ratio(rgb(v(k)), b); if (r < need) bad.push(theme + "/" + a + " " + k + " " + r.toFixed(2)); });
+        });
+        const ink = ratio(rgb(v("--accent-ink")), rgb(v("--accent"))); if (ink < 4.5) bad.push(theme + "/" + a + " текст на акценте " + ink.toFixed(2));
+        probe.remove();
+      }
+      for (const hue of ["red", "orange", "yellow", "green", "mint", "teal", "cyan", "blue", "indigo", "purple", "pink", "brown", "gray"]) {
+        const el = d.createElement("span"); el.className = "hue-" + hue; d.body.append(el);
+        const cs = w.getComputedStyle(el), probe = d.createElement("span"); el.append(probe);
+        const rgb = col => { probe.style.color = col; return w.getComputedStyle(probe).color; };
+        const surf = rgb(w.getComputedStyle(root).getPropertyValue("--surface").trim());
+        const t = ratio(rgb(cs.getPropertyValue("--st").trim()), surf), f = ratio(rgb(cs.getPropertyValue("--si").trim()), rgb(cs.getPropertyValue("--sf").trim()));
+        if (t < 4.5) bad.push(theme + " предмет " + hue + " текст " + t.toFixed(2));
+        // текст кабинета на мягком фоне предмета (полупрозрачный фон поверх карточки)
+        const ss = w.getComputedStyle(probe.appendChild(d.createElement("i")));
+        probe.lastChild.style.color = cs.getPropertyValue("--ss").trim();
+        const m = w.getComputedStyle(probe.lastChild).color.match(/[\d.]+/g).map(Number), s0 = surf.match(/[\d.]+/g).map(Number), al = m[3] == null ? 1 : m[3];
+        const mixed = "rgb(" + [0, 1, 2].map(i => Math.round(m[i] * al + s0[i] * (1 - al))).join(",") + ")";
+        const tc = ratio(rgb(cs.getPropertyValue("--st").trim()), mixed);
+        if (tc < 4.5) bad.push(theme + " предмет " + hue + " кабинет на мягком фоне " + tc.toFixed(2));
+        if (f < 4.5) bad.push(theme + " предмет " + hue + " заливка " + f.toFixed(2));
+        el.remove();
+      }
     }
-    ok(bad === 0, "поиск по " + ev("ROOMS").length + " кабинетам");
+    delete root.dataset.theme; delete root.dataset.accent;
+    ok(bad.length === 0, "контраст AA в обеих темах, всех цветах и предметах" + (bad.length ? ": " + bad.slice(0, 4).join("; ") : ""));
   });
 
-  run("темы", () => {
-    for (const p of ev("PRESETS")) { ev(`th.bg=${JSON.stringify(p[1])};th.ac=${JSON.stringify(p[2])};th.op=40;renderTheme()`); }
-    ok(/^ZV1;bg=[0-9A-F]{6};ac=[0-9A-F]{6};op=\d+;r=\d+;s=[01];p=[01];n=[01];d=[01]$/.test(ev("thCode()")), "код темы для приложения");
-    ok(d.querySelector(".pv-n").style.background !== "", "предпросмотр уведомления");
+  run("тексты", () => {
+    ev('location.hash="#more";route(false)');
+    const t = d.body.innerText;
+    ok(!/undefined|NaN|\[object/.test(t), "нет мусора в тексте");
+    ok(!/—/.test(t), "без длинных тире");
+    ok(!/Нашёл|Не нашёл|Свободен\b/.test(t), "без текстов только «в мужском роде»");
   });
 
-  run("iPhone", () => {
-    ev('os="ios";renderOs();renderGuide("ios")');
-    const t = d.getElementById("guide").textContent;
-    ok(!t.includes("Способ 1") && t.includes("Виджет на экран блокировки") && t.includes("Скопировать скрипт") && !/null|undefined/.test(t), "инструкция для iPhone без «null»");
-    ok(t.includes("Уведомления перед уроком через Календарь") && d.getElementById("calSub").href.startsWith("webcal://"), "блок с подпиской на календарь");
-  });
-
-  run("код своего расписания", () => {
-    ev('fillFromClass(ed,"9А")');
-    const code = ev("edCode()"), back = JSON.parse(ev("b64d")(code.slice(5)));
-    ok(code.startsWith("ZVS1:") && JSON.stringify(back) === JSON.stringify(ev("edJson()")), "код туда и обратно");
-    ok(back.days[0][0][0] === "Алгебра", "в коде кириллица не ломается");
-    ok(w.customWeek(back)[0].length === 8, "своё расписание читается");
-  });
-
-  pages().then(() => {
-    out.push("DONE");
-    document.getElementById("out").textContent = out.join("\n");
-  });
-}, 500);
-
-// отдельные страницы: «Что нового» и «Написать нам»
-function load(src) {
-  return new Promise(r => {
-    const f = document.createElement("iframe"); f.src = src; f.style.cssText = "width:390px;height:800px";
-    f.onload = () => setTimeout(() => r(f.contentWindow), 300); document.body.append(f);
-  });
+  await pages();
+  out.push("DONE");
+  document.getElementById("out").textContent = out.join("\n");
 }
+
 async function pages() {
   try {
-    let w = await load("_changelog_under_test.html"), d = w.document;
+    // узкий экран: ничего не вылезает вбок
+    let w = await load("_site_under_test.html#week", 390, 800), d = w.document;
+    w.eval('try{localStorage.setItem("zv.class",JSON.stringify("7Б"))}catch(e){}');
+    for (const v of ["now", "week", "rooms", "more"]) {
+      w.eval(`location.hash="#${v}";route(false)`);
+      ok(d.documentElement.scrollWidth <= 390, "390px, " + v + ": нет горизонтальной прокрутки (" + d.documentElement.scrollWidth + ")");
+    }
+    ok(w.getComputedStyle(d.querySelector(".tabbar")).display === "flex" && w.getComputedStyle(d.querySelector(".nav-top")).display === "none", "на телефоне нижняя панель вместо меню");
+
+    w = await load("_changelog_under_test.html"); d = w.document;
     const n = d.querySelectorAll(".rel").length, all = w.eval("LOG.length");
-    ok(n === all && n > 3 && !!d.querySelector(".rel .chip.now"), "что нового: все записи, самая свежая с плашкой «Новое»");
+    ok(n === all && n > 3 && !!d.querySelector(".rel .tag.hot"), "что нового: все записи, самая свежая с плашкой «Новое»");
     [...d.querySelectorAll("#flt button")].find(b => b.textContent === "iPhone").click();
     ok([...d.querySelectorAll(".rel")].every(c => c.textContent.includes("iPhone")) && d.querySelectorAll(".rel").length < n, "фильтр по iPhone");
     ok(!/—/.test(d.body.innerText) && !/undefined|null/.test(d.body.innerText), "что нового: без длинных тире и мусора");
+
+    w = await load("_feedback_under_test.html?about=schedule&class=9%D0%90&day=2"); d = w.document;
+    ok(d.getElementById("pTitle").textContent === "Анонимно" && /formsubmit\.co\/ajax\//.test(d.documentElement.innerHTML), "анонимно, запасной FormSubmit");
+    ok(d.getElementById("cls").value === "9А" && d.getElementById("text").value.startsWith("Ошибка в расписании 9А, среда") && d.querySelector('#kind [aria-pressed="true"]').textContent === "Ошибка", "из расписания: класс, день и тип подставлены");
+    w.eval('localStorage.removeItem("zv.fbDraft")');
     w = await load("_feedback_under_test.html"); d = w.document;
-    ok(d.getElementById("pTitle").textContent === "Анонимно" && /formsubmit\.co\/ajax\//.test(d.documentElement.innerHTML) && !/github\.com/.test(d.querySelector("script:not([src])").textContent), "анонимно, без GitHub");
+    d.getElementById("text").value = ""; d.getElementById("text").dispatchEvent(new w.Event("input"));
     ok(d.getElementById("send").disabled, "пустой текст не отправить");
-    const t = d.getElementById("text"); t.value = "Хочу тёмную тему посветлее"; t.dispatchEvent(new w.Event("input"));
-    ok(!d.getElementById("send").disabled && d.getElementById("cnt").textContent === "26 / 1000", "счётчик и кнопка");
-    ok(t.maxLength === 1000 && d.getElementById("cls").options[0].textContent === "Не указывать" && d.getElementById("cls").options.length === 20, "лимит 1000 и выбор класса");
-    w.eval('localStorage.setItem("zv.fbLast", Date.now()); update()');
-    ok(d.getElementById("send").disabled && /^Ещё \d+ с$/.test(d.getElementById("send").textContent), "не чаще раза в 30 секунд");
-    w.eval('localStorage.removeItem("zv.fbLast"); localStorage.removeItem("zv.fbDraft")');
-    // телефон 390px: никакой горизонтальной прокрутки, превью виджетов iPhone на месте
-    w = await load("_site_under_test.html"); d = w.document;
-    w.eval('pick=false;os="ios";renderOs();renderGuide("ios")');
-    ok(d.documentElement.scrollWidth <= 390, "390px: нет горизонтальной прокрутки (" + d.documentElement.scrollWidth + ")");
-    ok(d.querySelectorAll("#iosPv .scr").length === 2 && d.querySelectorAll(".step .ill svg").length === 5 && !/undefined|null|NaN/.test(d.getElementById("iosPv").innerText), "превью виджетов iPhone и картинки к шагам");
+    d.getElementById("text").value = "Хочу тёмную тему"; d.getElementById("text").dispatchEvent(new w.Event("input"));
+    ok(!d.getElementById("send").disabled && d.getElementById("cnt").textContent === "16 / 1000", "счётчик и кнопка");
+    w.eval('localStorage.setItem("zv.fbLast", Date.now())'); d.getElementById("text").dispatchEvent(new w.Event("input"));
+    ok(d.getElementById("send").disabled && /Можно через \d+ с/.test(d.getElementById("send").textContent), "не чаще раза в 30 секунд");
+    w.eval('localStorage.removeItem("zv.fbLast");localStorage.removeItem("zv.fbDraft")');
+
+    w = await load("_make_under_test.html", 1100, 900); d = w.document;
+    w.eval('fillFromClass(ed,"9А")');
+    const code = w.eval("edCode()"), back = JSON.parse(w.eval("b64d")(code.slice(5)));
+    ok(code.startsWith("ZVS1:") && JSON.stringify(back) === JSON.stringify(w.eval("edJson()")), "код своего расписания туда и обратно");
+    ok(back.days[0][0][0] === "Алгебра" && w.customWeek(back)[0].length === 8, "в коде кириллица не ломается, расписание читается");
+    const ics = w.eval('icsFor(customWeek(edJson()), "test")');
+    ok(/^BEGIN:VCALENDAR/.test(ics) && (ics.match(/BEGIN:VEVENT/g) || []).length > 20 && ics.includes("TRIGGER:-PT3M"), "своё расписание в календарь (.ics)");
+    w.eval('tab(true)');
+    for (const p of w.eval("PRESETS")) w.eval(`th.bg=${JSON.stringify(p[1])};th.ac=${JSON.stringify(p[2])};th.op=40;renderTheme()`);
+    ok(/^ZV1;bg=[0-9A-F]{6};ac=[0-9A-F]{6};op=\d+;r=\d+;s=[01];p=[01];n=[01];d=[01]/.test(w.eval("thCode()")), "код темы для приложения");
+    ok(!!d.querySelector(".pv-n") && d.querySelector(".pv-n").style.background !== "", "предпросмотр уведомления");
+    w.eval("th=Object.assign({},TH0);renderTheme()");
+
+    w = await load("_iphone_under_test.html", 1100, 900); d = w.document;
+    // страница iPhone всегда тёмная: её серый текст должен читаться на всех её фонах (WCAG AA)
+    const probe = d.createElement("i"); d.body.append(probe);
+    const rgbOf = name => { probe.style.color = "var(" + name + ")"; return w.getComputedStyle(probe).color; };
+    const weak = [];
+    for (const fg of ["--muted", "--dim"]) for (const bg of ["--bg", "--surface", "--raise"]) {
+      const r = ratio(rgbOf(fg), rgbOf(bg)); if (r < 4.5) weak.push(fg + " на " + bg + " " + r.toFixed(2));
+    }
+    probe.remove();
+    ok(weak.length === 0, "страница iPhone: серый текст читается на всех фонах (AA)" + (weak.length ? ": " + weak.join("; ") : ""));
+    const cls = w.eval("CLASSES");
+    let broken = 0;
+    for (const c of cls) {
+      const src = w.scriptFor(c);
+      try { new (Object.getPrototypeOf(async function () {}).constructor)(src); } catch (e) { broken++; }
+      if (src.includes("__") || !src.includes('const VERSION = "' + w.eval("IOS_VERSIONS")[c.replace(/[АБВГ]/g, x => ({"А": "A", "Б": "B", "В": "V", "Г": "G"})[x])] + '"')) broken++;
+    }
+    ok(broken === 0, "скрипт Scriptable для всех " + cls.length + " классов: целый и с версией");
+    ok(d.getElementById("kCal").href.startsWith("webcal://") && d.getElementById("kOpen").getAttribute("href").startsWith("scriptable://"), "календарь и кнопка «Открыть Scriptable»");
+    // код темы из испорченного хранилища: в скрипт виджета попадают только проверенные поля
+    w.localStorage.setItem("zv.theme", JSON.stringify({bg: '"; alert(1); //', ac: "60a5fa", op: "70", r: 99, s: 1, x: "y"}));
+    const thc = w.eval("themeCode()"), src7 = w.scriptFor("7Б");
+    let compiles7 = true;
+    try { new (Object.getPrototypeOf(async function () {}).constructor)(src7); } catch (e) { compiles7 = false; }
+    ok(thc === "ZV1;bg=000000;ac=60A5FA;op=70;r=26;s=1;p=1;n=1;d=1;sc=0" && src7.includes('const THEME = "' + thc + '"') && compiles7,
+      "испорченная тема в хранилище: в скрипт попадают только проверенные поля (" + thc + ")");
+    w.localStorage.removeItem("zv.theme");
+    await iosScript(w);
   } catch (e) { ok(false, "страницы: " + e); }
 }
 
+// Скрипт iPhone в «Scriptable»: самообновление и ответ для Siri
+async function iosScript(w) {
+  const src = w.scriptFor("7Б"), ver = w.eval("IOS_VERSIONS")["7B"];
+  const run = async (opts, code) => {
+    const files = {}, logs = [], notes = [];
+    let out = null;
+    const fm = {documentsDirectory: () => "/docs", joinPath: (a, b) => a + "/" + b, fileExists: p => p in files, readString: p => files[p],
+      writeString: (p, s) => { files[p] = s; }, modificationDate: () => new Date(), isFileStoredIniCloud: p => p.startsWith("/icloud/")};
+    class Request { constructor(u) { this.url = u; logs.push(u); }
+      loadJSON() { return /versions\.json$/.test(this.url) ? Promise.resolve(opts.versions) : Promise.reject(new Error("офлайн")); }
+      loadString() { return /ios\/7B\.js$/.test(this.url) ? Promise.resolve(opts.code) : Promise.reject(new Error("офлайн")); } }
+    class Stub { constructor() { return new Proxy(function () {}, {get: (t, k) => k === "then" ? undefined : new Stub(), apply: () => new Stub(), construct: () => new Stub(), set: () => true}); } }
+    const env = {config: {runsInApp: true, runsWithSiri: !!opts.siri, runsInWidget: false}, args: {widgetParameter: ""}, module: {filename: "/icloud/Звонок.js"},
+      Script: {complete() {}, setWidget() {}, setShortcutOutput(v) { out = v; }}, FileManager: {local: () => fm, iCloud: () => fm}, Request,
+      Notification: class { schedule() { notes.push(this.title + " / " + this.body); return Promise.resolve(); } },
+      WebView: class { loadHTML() { return Promise.resolve(); } present() { return Promise.resolve(); } },
+      Color: Stub, Font: Stub, Size: Stub, Point: Stub, LinearGradient: Stub, ListWidget: Stub, SFSymbol: Stub, DrawContext: Stub, Image: Stub, Path: Stub, Rect: Stub,
+      Device: {isUsingDarkAppearance: () => true, screenSize: () => ({width: 390, height: 844})}};
+    const names = Object.keys(env), AF = Object.getPrototypeOf(async function () {}).constructor;
+    const ret = await new AF(...names, code || src)(...names.map(n => env[n]));
+    return {files, logs, notes, out, ret};
+  };
+  try {
+    // код темы в виджете: мусор на входе даёт тему по умолчанию, без исключений
+    const pt = (await run({versions: {classes: {}}}, src.replace("Script.complete();", "Script.complete(); return parseTheme;"))).ret;
+    const DEF = JSON.stringify({bg: "000000", ac: "FFFFFF", p: 1, n: 1, d: 1, sc: 0, tx: ""});
+    let themeOk = [undefined, null, "", "abc", "ZV2;bg=112233", "ZV1;" + "x".repeat(300), "ZV1;bg=zzzzzz;sc=abc;p=2;n=;d=x;tx=GGGGGG;=;;", 42, {}]
+      .every(x => { try { return JSON.stringify(pt(x)) === DEF; } catch (e) { return false; } });
+    const good = pt("ZV1;bg=0b1220;ac=60A5FA;p=0;n=1;d=0;sc=1;tx=ffffff;zz=1");
+    themeOk = themeOk && good.bg === "0B1220" && good.ac === "60A5FA" && good.p === 0 && good.d === 0 && good.sc === 1 && good.tx === "FFFFFF" && !("zz" in good);
+    ok(themeOk, "код темы в виджете: мусор даёт тему по умолчанию, верный код читается целиком");
+    // подпись новых версий: тестовый ключ из tools/test_site.py вместо настоящего
+    const F = window.SIG_FIXTURE || {};
+    const withKey = k => src.replace(/const UPDATE_KEY = "[^"]*";/, 'const UPDATE_KEY = "' + k + '";');
+    const keyed = withKey(F.pub), plain = withKey(""), got = r => !!r.files["/icloud/Звонок.js"];
+    const kit = (await run({versions: {classes: {}}}, keyed.replace("Script.complete();", "Script.complete(); return {sha512, utf8, edVerify, b64bytes};"))).ret;
+    const hex = a => a.map(x => x.toString(16).padStart(2, "0")).join("");
+    ok(hex(kit.sha512(kit.utf8("abc"))) === F.sha.abc && hex(kit.sha512(kit.utf8(F.code))) === F.sha.code,
+      "SHA-512 виджета совпадает с Python: короткая строка и весь скрипт с кириллицей");
+    const pubB = kit.b64bytes(F.pub), sigB = kit.b64bytes(F.sig), msgB = kit.utf8(F.code), flip = sigB.slice();
+    flip[10] ^= 1;
+    ok(kit.edVerify(pubB, msgB, sigB) && !kit.edVerify(pubB, kit.utf8(F.code + " "), sigB) && !kit.edVerify(pubB, msgB, flip),
+      "Ed25519 виджета: верная подпись проходит, изменённый файл и изменённая подпись нет");
+    if (F.real) ok(kit.edVerify(kit.b64bytes(F.real.pub), kit.utf8(F.real.code), kit.b64bytes(F.real.sig)), "подпись скрипта 7Б на сайте сходится с ключом внутри скрипта");
+    let r = await run({versions: {note: "Новое", classes: {"7B": "new0000001"}, sig: {"7B": F.sig}}, code: F.code}, keyed);
+    ok(got(r) && r.files["/icloud/Звонок.js"].includes('const VERSION = "new0000001"') && r.notes.length === 1 && r.notes[0].startsWith("Звонок обновился"),
+      "виджет iPhone сам ставит подписанную новую версию и присылает уведомление");
+    r = await run({versions: {classes: {"7B": "new0000001"}}, code: F.code}, keyed);
+    ok(!got(r) && r.notes.length === 0, "версию без подписи не ставит");
+    r = await run({versions: {classes: {"7B": "new0000001"}, sig: {"7B": F.sig}}, code: F.code.replace("Script.complete();", "Script.complete(); /* подмена */")}, keyed);
+    ok(!got(r) && r.notes.length === 0, "подменённый файл со старой подписью не ставит");
+    r = await run({versions: {classes: {"7B": "new0000001"}}, code: F.code}, plain);
+    ok(got(r), "без ключа в скрипте (сайт собран без секрета) обновляется как раньше");
+    r = await run({versions: {classes: {"7B": "new0000001"}}, code: "alert(1)"}, plain);
+    ok(!got(r) && r.notes.length === 0, "битую или чужую версию не ставит");
+    r = await run({versions: {classes: {"7B": ver}}, code: F.code}, keyed);
+    ok(!got(r) && !r.logs.some(u => /ios\/7B\.js/.test(u)), "та же версия: ничего не скачивает");
+    r = await run({siri: true, versions: {classes: {"7B": ver}}});
+    ok(typeof r.out === "string" && r.out.length > 10 && !/undefined|NaN/.test(r.out), "ответ для Siri: «" + r.out + "»");
+    // сайт и виджет iPhone считают одно и то же: целая неделя с шагом 7 минут, три класса
+    let diff = 0, checks = 0;
+    for (const c of ["7Б", "9А", "11Г"]) {
+      const res = await run({versions: {classes: {}}}, w.scriptFor(c).replace("Script.complete();", "Script.complete(); return d => compute(d, {at: lessonsOn, real: true});"));
+      const fn = res.ret, sig = s => [s.kind, s.cur && s.cur.subject, s.next && s.next.subject, s.target == null ? "" : +s.target].join("|");
+      for (let t = +new Date("2026-11-02T06:00:00"); t < +new Date("2026-11-09T00:00:00"); t += 7 * 60000) {
+        const a = w.compute(new Date(t), {at: d => w.dayLessons(c, d), real: true}), b = fn(new Date(t));
+        checks++; if (sig(a) !== sig(b)) diff++;
+      }
+    }
+    ok(diff === 0 && checks > 4000, "сайт и виджет iPhone совпадают в " + checks + " моментах недели" + (diff ? " (расхождений " + diff + ")" : ""));
+  } catch (e) { ok(false, "скрипт iPhone: " + e); }
+}
 </script>

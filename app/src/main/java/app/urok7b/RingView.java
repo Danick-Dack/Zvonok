@@ -9,7 +9,7 @@ import android.graphics.RectF;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
-/** Кольцо-таймер: тёмная дорожка с рисками, белая дуга прогресса и светящаяся точка на её конце. */
+/** Кольцо-таймер: дорожка с рисками, дуга прогресса в цвете предмета и точка на её конце. */
 final class RingView extends View {
 
     private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -26,15 +26,22 @@ final class RingView extends View {
         stroke = Ui.dp(c, 12);
         track.setStyle(Paint.Style.STROKE);
         track.setStrokeWidth(stroke);
-        track.setColor(Color.parseColor("#18181B"));
+        track.setColor(Ui.TRACK);
         tick.setStrokeWidth(Ui.dp(c, 1));
-        tick.setColor(Color.parseColor("#2A2A2E"));
+        tick.setColor(Ui.DARK ? Color.parseColor("#2A2A2E") : Color.parseColor("#D6D6D0"));
         arc.setStyle(Paint.Style.STROKE);
         arc.setStrokeWidth(stroke);
         arc.setStrokeCap(Paint.Cap.ROUND);
-        arc.setColor(Color.WHITE);
-        knob.setColor(Color.WHITE);
-        knob.setShadowLayer(Ui.dp(c, 8), 0, 0, 0x99FFFFFF); // свечение (на старых Android может не рисоваться)
+        setColor(Ui.ACCENT);
+    }
+
+    /** Цвет дуги: цвет текущего предмета или главный цвет. */
+    void setColor(int color) {
+        if (arc.getColor() == color) return;
+        arc.setColor(color);
+        knob.setColor(color);
+        knob.setShadowLayer(Ui.dp(getContext(), 8), 0, 0, (color & 0x00FFFFFF) | 0x88000000);
+        invalidate();
     }
 
     /** Плавно перейти к новому значению (0..1) или убрать дугу (-1). */

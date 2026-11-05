@@ -90,6 +90,8 @@ public class StyleActivity extends Activity {
                 (b, v) -> { t.next = v; changed(); }));
         show.addView(Ui.switchRow(this, "Точки уроков дня", null, t.dots,
                 (b, v) -> { t.dots = v; changed(); }));
+        show.addView(Ui.switchRow(this, "Цвет урока", "Таймер и кабинет в цвете предмета: алгебра синяя, физика фиолетовая", t.subjectColor,
+                (b, v) -> { t.subjectColor = v; changed(); }));
         root.addView(show);
 
         root.addView(Ui.caps(this, "КОД ТЕМЫ"));
@@ -267,7 +269,7 @@ public class StyleActivity extends Activity {
 
     private void importCode() {
         EditText in = Ui.field(this, "", "ZV1;bg=000000;ac=FFFFFF...");
-        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+        new AlertDialog.Builder(this, Ui.dialogTheme())
                 .setTitle("Код темы")
                 .setView(in)
                 .setPositiveButton("Применить", (d, w) -> {

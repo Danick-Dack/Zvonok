@@ -27,6 +27,11 @@ public class SettingsActivity extends Activity {
         build();
     }
 
+    private String themeName() {
+        String s = Ui.scheme(this);
+        return "light".equals(s) ? "светлая" : "dark".equals(s) ? "тёмная" : "как в системе";
+    }
+
     private void build() {
         root = Ui.screen(this, "Настройки", Schedule.school() + " · " + Schedule.term());
 
@@ -35,11 +40,13 @@ public class SettingsActivity extends Activity {
                 Updater.prefs(this).getString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS), v -> Ui.pickClass(this, this::build)));
         sched.addView(Ui.linkRow(this, "Своё расписание", "Любые предметы, кабинеты и звонки",
                 Schedule.isCustom() ? "вкл" : null, v -> startActivity(new Intent(this, EditorActivity.class))));
-        sched.addView(Ui.linkRow(this, "Оформление", "Цвета виджетов и уведомления", null,
+        sched.addView(Ui.linkRow(this, "Тема и цвет приложения", "Светлая, тёмная или как в системе", themeName(),
+                v -> Ui.pickLook(this, this::build)));
+        sched.addView(Ui.linkRow(this, "Виджеты и уведомление", "Цвета, прозрачность, цвет урока", null,
                 v -> startActivity(new Intent(this, StyleActivity.class))));
 
         LinearLayout notif = section("УВЕДОМЛЕНИЕ");
-        notif.addView(flag("Уведомление на экране блокировки", "Чёрное, не смахивается", Updater.KEY_NOTIF, true));
+        notif.addView(flag("Уведомление на экране блокировки", "С таймером, не смахивается", Updater.KEY_NOTIF, true));
         notif.addView(flag("Только в учебное время", "После уроков и в выходные уведомления нет", Updater.KEY_SCHOOL_ONLY, false));
         notif.addView(Ui.switchRow(this, "Экономный таймер", "Без секунд: «24 мин» вместо 24:16",
                 !Theme.load(this).seconds, (b, on) -> {

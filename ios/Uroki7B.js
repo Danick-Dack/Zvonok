@@ -2,79 +2,149 @@
 // Экран блокировки: прямоугольный, круглый, строка над часами. Рабочий стол и StandBy: маленький, средний, большой.
 // Если запустить скрипт в Scriptable, откроется экран как в приложении: таймер, кольцо и весь день.
 //
+// Можно спросить Siri или нажать кнопку действия: в «Командах» добавь Scriptable → Run Script → «Звонок» и «Показать результат».
+//
 // Заряд почти не тратится: таймер на виджете тикает силами iOS, а сам скрипт iOS запускает изредка.
-// В интернет скрипт ходит только за файлом замен со своего сайта (не чаще раза в 3 часа), без сети работает как обычно.
+// В интернет скрипт ходит только на свой сайт: за файлом замен (не чаще раза в 3 часа) и за новой версией себя
+// (не чаще раза в 6 часов). Новая версия ставится сама, только если подписана ключом «Звонка» (Ed25519),
+// и приходит уведомление «Звонок обновился».
+// Выключить самообновление: AUTO_UPDATE = false ниже. Без сети всё работает как обычно.
+
+const AUTO_UPDATE = true;
 
 // ---------- данные (сайт подставляет сюда выбранный класс) ----------
 const CLASS = "7Б";
 const THEME = ""; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее
+const VERSION = "";
+const UPDATE_KEY = ""; // открытый ключ подписи новых версий (пусто: сборка была без ключа)
 const BELLS = [[480,525],[530,575],[585,630],[650,695],[715,760],[770,815],[825,870],[880,925],[935,985]];
 const WEEK = {"1":[["Классный час","40"],["Казахский яз. и лит.","42/21"],["История Казахстана","46"],["Алгебра","24/35"],["Математика","24/35"],["Физкультура","спортзал"],["Физкультура","спортзал"],["Практ. физика","48/73"]],"2":[["Геометрия","24/35"],["Английский язык","44/47"],["Физика","48/49"],["Физика","48/49"],["Программирование","56/57"],["Биология","25"],["Худ. труд","11/1"]],"3":[["Алгебра","24/35"],["Алгебра","24/35"],["Английский язык","45/47"],["География","54"],["Физкультура","спортзал"],["Русский язык","46"]],"4":[["Казахский яз. и лит.","42/21"],["Алгебра","24/35"],["Русский язык","46"],["Русская литература","46"],["Физика","48/49"],["Физика","48/49"],["Всемирная история","54"]],"5":[["Геометрия","24/35"],["Геометрия","24/35"],["Казахский яз. и лит.","42/21"],["Английский язык","25/47"],["Химия","40"],["Информатика","56/57"],["Русская литература","46"]]};
 const HOLIDAYS = [["2026-12-16","2026-12-16","День Независимости"],["2026-12-28","2027-01-10","Зимние каникулы"],["2027-03-08","2027-03-08","Международный женский день"],["2027-03-22","2027-03-28","Весенние каникулы"],["2027-05-01","2027-05-01","Праздник единства народа Казахстана"],["2027-05-03","2027-05-03","Выходной за 1 мая"],["2027-05-07","2027-05-07","День защитника Отечества"],["2027-05-09","2027-05-10","День Победы"],["2027-05-26","2027-08-31","Летние каникулы"]];
 const TERM_END = "2026-12-27";
 const SUBJECTS = {"alg":"Алгебра","geom":"Геометрия","mat":"Математика","fiz":"Физика","prf":"Практ. физика","kaz":"Казахский яз. и лит.","rus":"Русский язык","rlit":"Русская литература","eng":"Английский язык","istk":"История Казахстана","vist":"Всемирная история","geo":"География","bio":"Биология","him":"Химия","inf":"Информатика","prog":"Программирование","fk":"Физкультура","hud":"Худ. труд","kl":"Классный час","prav":"Основы права","nvp":"НВП","avto":"Автодело"};
+const COLORS = {"Алгебра":["007AFF","0A84FF"],"Геометрия":["007AFF","0A84FF"],"Математика":["007AFF","0A84FF"],"Физика":["AF52DE","BF5AF2"],"Практ. физика":["AF52DE","BF5AF2"],"Казахский яз. и лит.":["FFCC00","FFD60A"],"Русский язык":["FF3B30","FF453A"],"Русская литература":["FF3B30","FF453A"],"Английский язык":["32ADE6","64D2FF"],"История Казахстана":["A2845E","AC8E68"],"Всемирная история":["A2845E","AC8E68"],"География":["00C7BE","63E6E2"],"Биология":["34C759","30D158"],"Химия":["30B0C7","40CBE0"],"Информатика":["5856D6","5E5CE6"],"Программирование":["5856D6","5E5CE6"],"Физкультура":["FF9500","FF9F0A"],"Худ. труд":["FF2D55","FF375F"],"Классный час":["8E8E93","8E8E93"],"Основы права":["A2845E","AC8E68"],"НВП":["34C759","30D158"],"Автодело":["FF9500","FF9F0A"]}; // цвета предметов: для светлого и тёмного фона
 const SITE = "https://danick-dack.github.io/Zvonok/";
 // ---------- конец данных ----------
 
-// ---------- расписание (та же логика, что на сайте и в Android) ----------
+// ---------- расписание ----------
+// Правила дня (каникулы, замены, сокращённые звонки, что сейчас) общие с сайтом: сборка вставляет их ниже
+// из site/src/js/rules.js. Здесь только то, что этим правилам нужно от виджета, и неделя класса в их формате.
 
-const DAYN = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
-const WHEN = ["в воскресенье", "в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу"];
-const DSHORT = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
+const DAYN = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]; // с понедельника, как на сайте
+const WHEN = ["в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу", "в воскресенье"];
+const DSHORT = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"]; // по getDay(): с воскресенья
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 const SHORT = {"Казахский яз. и лит.": "Казахский", "Английский язык": "Английский", "Русский язык": "Русский", "Русская литература": "Литература",
   "История Казахстана": "Ист. Казахстана", "Всемирная история": "Всем. история", "Программирование": "Программир.", "Практ. физика": "Пр. физика"};
-let CH = {days: {}}; // замены с сайта
+const DATA = {holidays: HOLIDAYS, subjects: SUBJECTS, term_end: TERM_END};
+let CHANGES = {days: {}}; // замены с сайта
 
 function hm(min) { const m = min % 60; return Math.floor(min / 60) + ":" + (m < 10 ? "0" : "") + m; }
 function two(n) { return (n < 10 ? "0" : "") + n; }
 function iso(d) { return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()); }
 function dm(d) { return d.getDate() + " " + MONTHS[d.getMonth()]; }
+function dow(d) { return (d.getDay() + 6) % 7; } // 0 = понедельник
 function at(day, min) { return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, min, 0, 0); }
+function toMin(t) { const m = /^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(String(t || "")); if (!m) return -1; const H = +m[1], M = +m[2]; return H < 24 && M < 60 ? H * 60 + M : -1; }
 function short(s) { return SHORT[s] || s; }
 function word(n, one, few, many) { const a = n % 10, b = n % 100; return n + " " + (a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many); }
 function plural(n) { return word(n, "урок", "урока", "уроков"); }
-function clean(s) { return String(s == null ? "" : s).replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 40); }
+function clean(s) { return String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40); }
 function roomName(r) { return r === "с/з" ? "спортзал" : r || ""; }
-function holiday(d) { const t = iso(d); return HOLIDAYS.find(h => t >= h[0] && t <= h[1]) || null; }
-function chDay(d) { return (CH.days || {})[iso(d)] || null; }
-function noLesson(v) { return v === null || (typeof v === "string" && /^нет/i.test(v.trim())); }
-// день без уроков у всех: каникулы, праздник или «off» в заменах
-function dayOff(d) { const h = holiday(d), c = chDay(d); return h || (c && c.off ? [iso(d), iso(d), clean(c.off)] : null); }
-function dayBells(d) {
-  const c = chDay(d);
-  if (!c || !Array.isArray(c.bells)) return BELLS;
-  const t = x => { const m = /^(\d{1,2})[:.](\d\d)$/.exec(String(x || "").trim()); return m ? +m[1] * 60 + +m[2] : -1; };
-  return c.bells.map((b, i) => { const s = b ? t(b[0]) : -1, e = b ? t(b[1]) : -1; return s >= 0 && e > s ? [s, e] : BELLS[i] || null; });
+/** Обычная неделя класса в формате правил: 7 дней с понедельника, уроки {num, start, end, subject, room}. */
+function classWeek() {
+  return classWeek.w || (classWeek.w = [1, 2, 3, 4, 5, 6, 0].map(wd => (WEEK[wd] || []).map((p, i) =>
+    p && p[0] && BELLS[i] ? {num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: p[0], room: p[1] || ""} : null).filter(Boolean)));
 }
-// уроки на дату: с каникулами, заменами и сокращёнными звонками
-function lessonsOn(d) {
-  if (dayOff(d)) return [];
-  const raw = WEEK[d.getDay()] || [], ch = chDay(d), bells = dayBells(d), fix = ch && ch.classes && ch.classes[CLASS] || {};
-  const n = Math.max(raw.length, ...Object.keys(fix).map(Number).filter(x => x > 0), 0), out = [];
-  for (let i = 1; i <= n; i++) {
-    const p = raw[i - 1], f = fix[i];
-    let subject = p && p[0] || "", room = p && p[1] || "", changed = false;
-    if (f !== undefined && noLesson(f)) continue;
-    if (f && typeof f === "object") {
-      changed = true;
-      if (f.subject) subject = SUBJECTS[f.subject] || clean(f.subject);
-      if (f.room != null) room = roomName(clean(f.room));
+/** Уроки своего класса на дату: с каникулами, заменами и сокращёнными звонками. */
+function lessonsOn(d) { return dayLessons(CLASS, d); }
+/** Коротко, когда следующие уроки: «завтра», «пн», «12.01». */
+function nShort(s) { return !s.nDate ? "" : s.nDays === 1 ? "завтра" : s.nDays > 6 ? s.nDate.getDate() + "." + two(s.nDate.getMonth() + 1) : DSHORT[s.nDate.getDay()]; }
+
+// ---------- правила дня (сборка вставляет сюда site/src/js/rules.js, править там) ----------
+/* Звонок · правила дня: каникулы, замены, сокращённые звонки и что происходит в момент now.
+   Один файл на сайт и на виджет iPhone. Сборка (tools/build_site.py) вставляет его в скрипт Scriptable
+   между метками, поэтому правила у сайта и виджета не расходятся. Править только здесь.
+   Только объявления функций: виджет передаёт их в свой экран через toString().
+   Снаружи нужны: DATA {holidays, subjects, term_end}, CHANGES, BELLS, classWeek(c), iso, dow, toMin, clean,
+   roomName, hm, dm, at, word, DAYN и WHEN (с понедельника). */
+
+/** Замены с сайта: оставляем только то, что правила умеют читать. Кривое поле в changes.json выпадает,
+ *  а не роняет расписание у всех (на сайте и в виджете одинаково). */
+function cleanChanges(j) {
+  const out = {days: {}}, str = v => typeof v === "string", obj = v => !!v && typeof v === "object" && !Array.isArray(v);
+  if (!obj(j)) return out;
+  if (str(j.updated)) out.updated = j.updated;
+  const days = obj(j.days) ? j.days : {};
+  for (const date of Object.keys(days)) {
+    const c = days[date];
+    if (!/^\d{4}-\d\d-\d\d$/.test(date) || !obj(c)) continue;
+    const day = {};
+    if (str(c.note)) day.note = c.note;
+    if (str(c.off)) day.off = c.off;
+    if (Array.isArray(c.bells)) day.bells = c.bells.map(b => Array.isArray(b) && str(b[0]) && str(b[1]) ? [b[0], b[1]] : null);
+    if (obj(c.classes)) {
+      day.classes = {};
+      for (const cls of Object.keys(c.classes)) {
+        const fix = c.classes[cls], f = {};
+        if (!obj(fix)) continue;
+        for (const n of Object.keys(fix)) {
+          const v = fix[n];
+          if (!/^\d{1,2}$/.test(n)) continue;
+          if (v === null || str(v)) f[n] = v;
+          else if (obj(v)) f[n] = {subject: str(v.subject) ? v.subject : undefined, room: str(v.room) || typeof v.room === "number" ? String(v.room) : undefined};
+        }
+        day.classes[cls] = f;
+      }
     }
-    if (!subject || !bells[i - 1]) continue;
-    out.push({num: i, start: bells[i - 1][0], end: bells[i - 1][1], subject, room, changed, short: bells !== BELLS});
+    out.days[date] = day;
   }
   return out;
 }
+/** Каникулы и праздники: [с, по, название]. */
+function holiday(d) { const t = iso(d); return (DATA.holidays || []).find(x => t >= x[0] && t <= x[1]) || null; }
+/** Замены на дату: data/changes.json (копия на момент сборки, свежая подтягивается с сайта). */
+function chDay(d) { return (CHANGES.days || {})[iso(d)] || null; }
+/** null, «нет» или «нет урока» в заменах: урока нет. */
+function noLesson(v) { return v === null || (typeof v === "string" && /^нет/i.test(v.trim())); }
+/** День без уроков у всех: каникулы, праздник или «off» в заменах. [с, по, название] */
+function dayOff(d) { const x = holiday(d), c = chDay(d); return x || (c && c.off ? [iso(d), iso(d), clean(c.off)] : null); }
+/** Звонки на дату: свои на день целиком из замен или обычные. Урока без звонка в этот день нет. */
+function dayBells(d) {
+  const c = chDay(d);
+  if (!c || !Array.isArray(c.bells)) return BELLS;
+  return c.bells.map((x, i) => { const s = x ? toMin(x[0]) : -1, e = x ? toMin(x[1]) : -1; return s >= 0 && e > s ? [s, e] : BELLS[i] || null; });
+}
+/** Уроки класса на конкретную дату: с каникулами, заменами и сокращёнными звонками. */
+function dayLessons(c, d) {
+  if (dayOff(d)) return [];
+  const base = classWeek(c)[dow(d)], ch = chDay(d);
+  if (!ch) return base;
+  const bells = dayBells(d), fix = (ch.classes || {})[c] || {}, short = bells !== BELLS;
+  const nums = [...new Set(base.map(l => l.num).concat(Object.keys(fix).map(Number).filter(n => n > 0)))].sort((a, b) => a - b);
+  return nums.map(n => {
+    let l = base.find(x => x.num === n);
+    const f = fix[n];
+    if (f !== undefined && noLesson(f)) return null;
+    if (f && typeof f === "object") l = {num: n, changed: true,
+      subject: f.subject ? DATA.subjects[f.subject] || clean(f.subject) : l ? l.subject : "",
+      room: f.room != null ? roomName(clean(f.room)) : l ? l.room : ""};
+    if (!l || !l.subject || !bells[n - 1]) return null;
+    return Object.assign({}, l, {start: bells[n - 1][0], end: bells[n - 1][1], short});
+  }).filter(Boolean);
+}
 
-function compute(now) {
-  const s = {}, list = lessonsOn(now), sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+/**
+ * Что происходит в момент now. src = {at(date) → уроки на дату, real: учитывать каникулы}.
+ * kind: LESSON (идёт урок), BREAK (перемена), BEFORE (до первого урока), AFTER (уроки кончились), OFF (уроков нет).
+ */
+function compute(now, src) {
+  const s = {}, list = src.at(now), sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
   if (list.length) {
     const first = list[0], last = list[list.length - 1];
-    s.count = list.length; s.end = last.end; s.list = list;
+    s.count = list.length; s.end = hm(last.end); s.list = list;
     if (sec < first.start * 60) {
-      Object.assign(s, {kind: "BEFORE", next: first, start: at(now, first.start - 60), target: at(now, first.start), soon: sec >= (first.start - 60) * 60});
-      return s;
+      return Object.assign(s, {kind: "BEFORE", next: first, start: at(now, first.start - 60), target: at(now, first.start), soon: sec >= (first.start - 60) * 60});
     }
     for (let i = 0; i < list.length; i++) {
       const l = list[i];
@@ -85,35 +155,31 @@ function compute(now) {
       }
     }
     s.kind = "AFTER";
-  } else { s.kind = "OFF"; s.holiday = dayOff(now); }
+  } else { s.kind = "OFF"; s.holiday = src.real ? dayOff(now) : null; }
   for (let d = 1; d <= 120; d++) {
-    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d), l = lessonsOn(date);
+    const date = new Date(now); date.setDate(date.getDate() + d);
+    const l = src.at(date);
     if (!l.length) continue;
-    const far = d > 6, wd = date.getDay();
-    Object.assign(s, {next: l[0], nCount: l.length, nEnd: l[l.length - 1].end, nDate: date, nDays: d,
-      nLabel: d === 1 ? "Завтра" : far ? dm(date) : DAYN[wd], nWhen: d === 1 ? "завтра" : far ? dm(date) : WHEN[wd],
-      nShort: d === 1 ? "завтра" : far ? date.getDate() + "." + two(date.getMonth() + 1) : DSHORT[wd], target: at(date, l[0].start)});
+    const far = d > 6;
+    Object.assign(s, {next: l[0], nList: l, nDate: date, nDays: d, nCount: l.length, nEnd: hm(l[l.length - 1].end),
+      nLabel: d === 1 ? "Завтра" : far ? dm(date) : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : far ? dm(date) : WHEN[dow(date)], target: at(date, l[0].start)});
     break;
   }
   return s;
 }
-
-// учебные дни до ближайших каникул (сегодня считается, пока уроки не кончились)
-function vacation(now) {
-  const t = iso(now);
-  if (holiday(now) || (TERM_END && t > TERM_END)) return null;
-  const v = HOLIDAYS.filter(x => /каникул/i.test(x[2]) && x[0] > t).sort((a, b) => a[0] < b[0] ? -1 : 1)[0];
+/** Сколько учебных дней до ближайших каникул (сегодня считается, если уроки ещё не кончились). */
+function vacation(now, src) {
+  if (!src.real || holiday(now) || (DATA.term_end && iso(now) > DATA.term_end)) return null;
+  const t = iso(now), v = (DATA.holidays || []).filter(x => /каникул/i.test(x[2]) && x[0] > t).sort((a, b) => a[0] < b[0] ? -1 : 1)[0];
   if (!v) return null;
-  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const d = new Date(now), nowMin = now.getHours() * 60 + now.getMinutes();
   let n = 0, today = false;
-  for (let i = 0; i < 400; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-    if (iso(d) >= v[0]) break;
-    const l = lessonsOn(d);
+  for (let i = 0; i < 400 && iso(d) < v[0]; i++, d.setDate(d.getDate() + 1)) {
+    const l = src.at(d);
     if (!l.length || (i === 0 && nowMin >= l[l.length - 1].end)) continue;
     n++; if (i === 0) today = true;
   }
-  return n > 60 ? null : {n, today, name: v[2]};
+  return n > 60 ? null : {n, today, name: v[2], from: v[0]}; // больше 60 дней: рано считать
 }
 function vacationText(v) {
   if (!v) return "";
@@ -121,10 +187,11 @@ function vacationText(v) {
   if (v.n === 1 && v.today) return "Сегодня последний учебный день, потом " + v.name.toLowerCase();
   return "До каникул " + word(v.n, "учебный день", "учебных дня", "учебных дней");
 }
+// ---------- конец правил дня ----------
 
 // всё, что показывают виджеты и экран, в одном месте
 function model(now) {
-  const s = compute(now), n = s.next, c = s.cur;
+  const s = compute(now, {at: lessonsOn, real: true}), n = s.next, c = s.cur;
   const m = {s, kind: s.kind, timer: false, target: s.target, progress: -1, big: "", bigSub: "", capW: "", capV: "", label: "", tag: "",
     title: "", room: "", changed: false, nextHead: "", nextSubj: "", nextRoom: "", nextChanged: false, home: false, go: "", hol: false, days: 0};
   const pct = () => Math.max(0, Math.min(1, (now - s.start) / (s.target - s.start)));
@@ -144,20 +211,20 @@ function model(now) {
     Object.assign(m, {nextHead: "ПЕРВЫЙ · " + hm(n.start), nextSubj: n.subject, nextRoom: n.room, nextChanged: n.changed, go: n.room, room: n.room});
     if (s.soon) Object.assign(m, {timer: true, progress: pct(), label: "СКОРО УРОКИ", tag: "СКОРО УРОКИ", title: "До уроков", capW: "уроки в", capV: hm(n.start), when: "до " + hm(n.start)});
     else Object.assign(m, {label: "СЕГОДНЯ " + plural(s.count).toUpperCase(), tag: "СЕГОДНЯ", title: "Уроки с " + hm(n.start),
-      big: hm(n.start), bigSub: "сегодня", capW: "до", capV: hm(s.end)});
+      big: hm(n.start), bigSub: "сегодня", capW: "до", capV: s.end});
   } else {
     const h = s.holiday, vac = !!h && /каникул/i.test(h[2]);
     m.hol = !!h && (!n || s.nDays > 1); // однодневный праздник выглядит как обычный вечер перед уроками
     m.label = s.kind === "AFTER" ? "УРОКИ ЗАКОНЧИЛИСЬ" : h ? h[2].toUpperCase() : "ВЫХОДНОЙ";
     m.tag = s.kind === "AFTER" ? (n ? s.nLabel.toUpperCase() : "ВСЁ") : vac ? "КАНИКУЛЫ" : "ВЫХОДНОЙ";
-    m.title = s.kind === "AFTER" ? "Свободен" : h ? (vac ? "Каникулы" : "Выходной") : "Отдыхай";
+    m.title = s.kind === "AFTER" ? "Отдыхай" : h ? (vac ? "Каникулы" : "Выходной") : "Отдыхай";
     if (n) {
       Object.assign(m, {nextSubj: n.subject, nextRoom: n.room, nextChanged: n.changed, go: n.room});
       if (m.hol) {
         m.days = s.nDays;
         Object.assign(m, {big: String(s.nDays), bigSub: word(s.nDays, "день", "дня", "дней").replace(/^\d+ /, ""),
           capW: word(s.nDays, "день", "дня", "дней").replace(/^\d+ /, "") + " до уроков", capV: dm(s.nDate), nextHead: dm(s.nDate).toUpperCase() + " · " + hm(n.start)});
-      } else Object.assign(m, {big: hm(n.start), bigSub: s.nShort, capW: "до", capV: hm(s.nEnd), nextHead: s.nLabel.toUpperCase() + " · " + plural(s.nCount).toUpperCase()});
+      } else Object.assign(m, {big: hm(n.start), bigSub: nShort(s), capW: "до", capV: s.nEnd, nextHead: s.nLabel.toUpperCase() + " · " + plural(s.nCount).toUpperCase()});
     } else m.big = "нет";
   }
   // подпись под таймером на экране в приложении
@@ -173,32 +240,60 @@ function nextRefresh(m, now) {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
 }
 
-// замены: файл с сайта, не чаще раза в 3 часа; без сети берём сохранённый
-async function loadChanges() {
-  let fm, path, data = null;
+// ---------- сеть ----------
+// Радио телефона дорого будить, поэтому в сеть ходим редко и одним заходом. Замены с сайта берём не чаще
+// раза в 3 часа, и в тот же заход (если с прошлой проверки прошло 6 часов) спрашиваем, нет ли новой версии:
+// оба запроса идут одновременно. Если связь плохая и запрос долго висел, следующая попытка через 30 минут,
+// а не на каждой перерисовке виджета. Когда сети нет совсем, запрос падает сразу и почти ничего не стоит:
+// тогда пробуем при каждой перерисовке, как раньше, чтобы замены пришли, как только появится интернет.
+const NET = {changes: false, update: false, st: {}, fm: null, stamp: ""};
+function saveNet() { try { NET.fm.writeString(NET.stamp, JSON.stringify(NET.st)); } catch (e) {} }
+function netPlan() {
+  const now = Date.now();
+  try {
+    const fm = NET.fm = FileManager.local(), dir = fm.documentsDirectory(), saved = fm.joinPath(dir, "zvonok-changes.json");
+    NET.stamp = fm.joinPath(dir, "zvonok-update.json");
+    try { if (fm.fileExists(NET.stamp)) NET.st = JSON.parse(fm.readString(NET.stamp)) || {}; } catch (e) {}
+    // Math.abs: если часы на телефоне перевели назад, не ждём, пока время «догонит» отметку
+    const age = fm.fileExists(saved) ? Math.abs(now - fm.modificationDate(saved).getTime()) : Infinity;
+    NET.changes = age > 3 * 3600000 && Math.abs(now - (NET.st.slow || 0)) > 30 * 60000;
+    NET.update = NET.changes && AUTO_UPDATE && !!VERSION && typeof module !== "undefined" && Math.abs(now - (NET.st.t || 0)) > 6 * 3600000;
+    if (NET.update) { NET.st.t = now; saveNet(); }
+  } catch (e) { /* без доступа к файлам в сеть не ходим: иначе ходили бы при каждой перерисовке */ }
+}
+
+// замены: сохранённые с прошлого раза; свежие с сайта, только если netPlan сказал, что пора
+async function loadChanges(fetch) {
+  let fm = null, path = "", data = null;
   try {
     fm = FileManager.local(); path = fm.joinPath(fm.documentsDirectory(), "zvonok-changes.json");
     if (fm.fileExists(path)) data = JSON.parse(fm.readString(path));
-    const age = fm.fileExists(path) ? Date.now() - fm.modificationDate(path).getTime() : Infinity;
-    if (age > 3 * 3600000) {
+  } catch (e) { data = null; }
+  if (fetch) {
+    const t0 = Date.now();
+    try {
       const r = new Request(SITE + "changes.json");
       r.timeoutInterval = 4;
       const j = await r.loadJSON();
-      if (j && typeof j.days === "object") { data = j; fm.writeString(path, JSON.stringify(j)); }
+      if (j && typeof j.days === "object") { data = j; if (fm) fm.writeString(path, JSON.stringify(j)); }
+    } catch (e) {
+      // работаем с тем, что есть; запрос висел долго (плохая связь): радио не мучаем 30 минут
+      if (Math.abs(Date.now() - t0) > 1500) { NET.st.slow = Date.now(); saveNet(); }
     }
-  } catch (e) { /* нет сети: работаем с тем, что есть */ }
+  }
   return data && typeof data.days === "object" ? data : {days: {}};
 }
 
 // ---------- оформление ----------
 
 function parseTheme(code) {
-  const t = {bg: "000000", ac: "FFFFFF", p: 1, n: 1, d: 1};
+  const t = {bg: "000000", ac: "FFFFFF", p: 1, n: 1, d: 1, sc: 0, tx: ""};
   code = String(code || "").trim();
   if (!code.startsWith("ZV1") || code.length > 200) return t;
   for (const part of code.split(";")) {
     const k = part.split("=")[0].trim(), v = (part.split("=")[1] || "").trim();
-    if ((k === "bg" || k === "ac") && /^[0-9a-fA-F]{6}$/.test(v)) t[k] = v.toUpperCase();
+    if ((k === "bg" || k === "ac" || k === "tx") && /^[0-9a-fA-F]{6}$/.test(v)) t[k] = v.toUpperCase();
+    else if (k === "sc") t.sc = v === "1" ? 1 : 0;
     else if (k === "p" || k === "n" || k === "d") t[k] = v === "0" ? 0 : 1;
   }
   return t;
@@ -211,8 +306,8 @@ function mix(a, b, t) {
 const param = typeof args !== "undefined" && args.widgetParameter ? String(args.widgetParameter) : "";
 const TH = parseTheme(param.trim().startsWith("ZV1") ? param : THEME);
 const LIGHT = lum(TH.bg) > 0.5;
-const FG = LIGHT ? "111111" : "FFFFFF";
-const ACC = Math.abs(lum(TH.ac) - lum(TH.bg)) < 0.25 ? FG : TH.ac;
+const FG = TH.tx || (LIGHT ? "111111" : "FFFFFF");
+let ACC = Math.abs(lum(TH.ac) - lum(TH.bg)) < 0.25 ? FG : TH.ac; // при «цвете урока» меняется на цвет предмета
 const c = a => new Color("#" + FG, a);
 const acc = a => new Color("#" + ACC, a);
 const WHITE = a => new Color("#FFFFFF", a);
@@ -372,7 +467,7 @@ function lockRect(m) {
     if (TH.p) bar(w, 156, 5, m.progress, WHITE(0.28), WHITE(1));
     else if (m.kind === "LESSON" && n) T(w, "Дальше: " + short(n.subject) + (n.room ? " · " + n.room : ""), Font.mediumSystemFont(12), 0.7);
   } else if (m.kind === "BEFORE" && s.soon) {
-    T(w, "Сегодня " + plural(s.count) + " · до " + hm(s.end), Font.mediumSystemFont(12), 0.7);
+    T(w, "Сегодня " + plural(s.count) + " · до " + s.end, Font.mediumSystemFont(12), 0.7);
   } else if (n) {
     T(w, "→ " + short(n.subject) + (n.room ? " · " + n.room : ""), Font.mediumSystemFont(12), 0.7);
   }
@@ -500,7 +595,7 @@ function sideInfo(col, m, opt) {
 function bottomLine(m) {
   const s = m.s;
   if (m.kind === "BREAK") { const a = s.list[s.list.indexOf(s.next) + 1]; return a ? ["ПОТОМ · " + hm(a.start), a.subject, a.room] : ["ПОТОМ", "Домой в " + hm(s.next.end), ""]; }
-  if (m.kind === "BEFORE" && s.soon) return ["СЕГОДНЯ", plural(s.count) + " · до " + hm(s.end), ""];
+  if (m.kind === "BEFORE" && s.soon) return ["СЕГОДНЯ", plural(s.count) + " · до " + s.end, ""];
   return [m.nextHead, m.nextSubj, m.nextRoom];
 }
 
@@ -554,7 +649,7 @@ function large(m, now) {
     w.addSpacer(2);
   }
   w.addSpacer();
-  const d = now, h = s.holiday, v = vacation(now);
+  const d = now, h = s.holiday, v = vacation(now, {at: lessonsOn, real: true});
   let foot = DSHORT[d.getDay()].toUpperCase() + ", " + dm(d).toUpperCase();
   if (h && /каникул/i.test(h[2])) foot = h[2].toUpperCase() + " · ДО " + dm(new Date(h[1] + "T12:00:00")).toUpperCase();
   else if (v) foot += " · " + vacationText(v).toUpperCase();
@@ -565,9 +660,10 @@ function large(m, now) {
 // ---------- экран внутри Scriptable ----------
 
 function appHtml(m, now) {
-  const core = [hm, two, iso, dm, at, short, word, plural, clean, roomName, holiday, chDay, noLesson, dayOff, dayBells, lessonsOn, compute, vacation, vacationText, model]
+  const core = [hm, two, iso, dm, dow, at, toMin, short, word, plural, clean, roomName, classWeek, lessonsOn, nShort,
+    holiday, chDay, noLesson, dayOff, dayBells, dayLessons, compute, vacation, vacationText, model]
     .map(f => f.toString()).join("\n");
-  const data = {CLASS, BELLS, WEEK, HOLIDAYS, TERM_END, SUBJECTS, CH, DAYN, WHEN, DSHORT, MONTHS, SHORT, FG, ACC, BG: TH.bg};
+  const data = {CLASS, BELLS, WEEK, DATA, CHANGES, DAYN, WHEN, DSHORT, MONTHS, SHORT, FG, ACC, BG: TH.bg};
   const glow = "#" + mix(TH.bg, "FFFFFF", 0.10), fg = "#" + FG, ac = "#" + ACC, a = (hex, x) => hex + Math.round(x * 255).toString(16).padStart(2, "0");
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -624,7 +720,7 @@ body{background:radial-gradient(120% 60% at 50% 0%,${glow},#${TH.bg} 60%) #${TH.
 Рабочий стол: зажми пустое место, нажми «+» или «Изменить», найди Scriptable и выбери размер. Потом нажми на виджет и выбери этот скрипт.</div>
 <script>
 const D=${JSON.stringify(data).replace(/</g, "\\u003c")};
-const {CLASS,BELLS,WEEK,HOLIDAYS,TERM_END,SUBJECTS,CH,DAYN,WHEN,DSHORT,MONTHS,SHORT}=D;
+const {CLASS,BELLS,WEEK,DATA,CHANGES,DAYN,WHEN,DSHORT,MONTHS,SHORT}=D;
 ${core}
 const $=id=>document.getElementById(id);
 let sel=null;
@@ -665,17 +761,183 @@ function render(){
   if(l.room){const p=document.createElement("span");p.className="pl"+(cur?"":" s");p.textContent=l.room;r.appendChild(p)}
   list.appendChild(r)});
  if(!ls.length)list.innerHTML='<div class="brk" style="padding:20px 0;text-align:center">Уроков нет. Отдыхай.</div>';
- $("vac").textContent=vacationText(vacation(now));
+ $("vac").textContent=vacationText(vacation(now,{at:lessonsOn,real:true}));
 }
 render();setInterval(render,1000);
 </script></body></html>`;
 }
 
+// ---------- самообновление: новая версия скрипта для своего класса с сайта ----------
+// Когда пора (netPlan: не чаще раза в 6 часов), спрашиваем ios/versions.json; если версия новее, скачиваем
+// ios/<класс>.js, проверяем, что это целый скрипт «Звонка» для того же класса и что он собирается,
+// и записываем поверх себя. Тема с сайта сохраняется.
+// ---------- подпись новых версий: Ed25519 (RFC 8032) ----------
+// Сборка подписывает скрипт каждого класса закрытым ключом «Звонка» (он есть только в секретах GitHub,
+// в репозитории и на сайте его нет), а открытый ключ вписан в скрипт (UPDATE_KEY в данных выше).
+// Если ключ вписан, виджет ставит только версию с верной подписью: подменённый на хостинге файл не примет.
+// В Scriptable нет WebCrypto, поэтому SHA-512 и Ed25519 здесь свои, на BigInt; проверка занимает доли секунды
+// и бывает только при выходе новой версии. Автотесты сверяют их с Python и libsodium.
+function b64bytes(s) {
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", out = [];
+  let buf = 0, n = 0;
+  for (const ch of String(s || "").replace(/[^A-Za-z0-9+/]/g, "")) {
+    buf = ((buf << 6) | A.indexOf(ch)) & 0xffff; n += 6;
+    if (n >= 8) { n -= 8; out.push((buf >> n) & 255); }
+  }
+  return out;
+}
+function utf8(str) {
+  const out = [];
+  for (const ch of String(str)) {
+    const c = ch.codePointAt(0);
+    if (c < 0x80) out.push(c);
+    else if (c < 0x800) out.push(0xc0 | c >> 6, 0x80 | c & 63);
+    else if (c < 0x10000) out.push(0xe0 | c >> 12, 0x80 | c >> 6 & 63, 0x80 | c & 63);
+    else out.push(0xf0 | c >> 18, 0x80 | c >> 12 & 63, 0x80 | c >> 6 & 63, 0x80 | c & 63);
+  }
+  return out;
+}
+function sha512(bytes) {
+  const M = (1n << 64n) - 1n;
+  if (!sha512.K) {
+    // константы SHA-512 считаем, а не переписываем: 64 бита дробной части кубических корней первых 80 простых
+    // (и квадратных корней первых 8 для начального значения), как в стандарте FIPS 180-4
+    const primes = [];
+    for (let x = 2; primes.length < 80; x++) if (primes.every(y => x % y)) primes.push(x);
+    const root = (x, k) => {
+      const K = BigInt(k);
+      let r = 1n << BigInt(Math.ceil(x.toString(2).length / k));
+      for (;;) { const s = ((K - 1n) * r + x / r ** (K - 1n)) / K; if (s >= r) return r; r = s; }
+    };
+    sha512.K = primes.map(x => root(BigInt(x) << 192n, 3) & M);
+    sha512.H = primes.slice(0, 8).map(x => root(BigInt(x) << 128n, 2) & M);
+  }
+  const K = sha512.K, rotr = (x, n) => ((x >> n) | (x << (64n - n))) & M;
+  const m = bytes.slice(), bits = BigInt(bytes.length) * 8n;
+  m.push(0x80);
+  while (m.length % 128 !== 112) m.push(0);
+  for (let i = 15; i >= 0; i--) m.push(Number((bits >> BigInt(i * 8)) & 255n));
+  let h = sha512.H.slice();
+  const w = new Array(80);
+  for (let o = 0; o < m.length; o += 128) {
+    for (let t = 0; t < 16; t++) { let x = 0n; for (let j = 0; j < 8; j++) x = (x << 8n) | BigInt(m[o + t * 8 + j]); w[t] = x; }
+    for (let t = 16; t < 80; t++) {
+      const a = w[t - 15], b = w[t - 2];
+      w[t] = (w[t - 16] + (rotr(a, 1n) ^ rotr(a, 8n) ^ (a >> 7n)) + w[t - 7] + (rotr(b, 19n) ^ rotr(b, 61n) ^ (b >> 6n))) & M;
+    }
+    let [a, b, c, dd, e, f, g, hh] = h;
+    for (let t = 0; t < 80; t++) {
+      const t1 = (hh + (rotr(e, 14n) ^ rotr(e, 18n) ^ rotr(e, 41n)) + ((e & f) ^ (~e & M & g)) + K[t] + w[t]) & M;
+      const t2 = ((rotr(a, 28n) ^ rotr(a, 34n) ^ rotr(a, 39n)) + ((a & b) ^ (a & c) ^ (b & c))) & M;
+      hh = g; g = f; f = e; e = (dd + t1) & M; dd = c; c = b; b = a; a = (t1 + t2) & M;
+    }
+    h = [a, b, c, dd, e, f, g, hh].map((x, i) => (h[i] + x) & M);
+  }
+  const out = [];
+  for (const x of h) for (let j = 7; j >= 0; j--) out.push(Number((x >> BigInt(j * 8)) & 255n));
+  return out;
+}
+function edVerify(pub, msg, sig) {
+  const P = 2n ** 255n - 19n, L = 2n ** 252n + 27742317777372353535851937790883648493n;
+  const mod = x => ((x % P) + P) % P;
+  const pow = (b, e) => { let r = 1n; b = mod(b); for (; e > 0n; e >>= 1n, b = b * b % P) if (e & 1n) r = r * b % P; return r; };
+  const inv = x => pow(x, P - 2n);
+  const D = mod(-121665n * inv(121666n)), I = pow(2n, (P - 1n) / 4n);
+  const num = b => { let x = 0n; for (let i = b.length - 1; i >= 0; i--) x = (x << 8n) | BigInt(b[i]); return x; };
+  const xOf = (y, sign) => {
+    if (y >= P) return null;
+    const x2 = mod((y * y - 1n) * inv(D * y * y + 1n));
+    if (x2 === 0n) return sign ? null : 0n;
+    let x = pow(x2, (P + 3n) / 8n);
+    if (mod(x * x - x2) !== 0n) x = x * I % P;
+    if (mod(x * x - x2) !== 0n) return null;
+    if (Number(x & 1n) !== sign) x = P - x;
+    return x;
+  };
+  const point = b => { const y = num(b) & ((1n << 255n) - 1n), x = xOf(y, b[31] >> 7); return x === null ? null : [x, y, 1n, x * y % P]; };
+  const add = (p, q) => {
+    const A = mod((p[1] - p[0]) * (q[1] - q[0])), B = (p[1] + p[0]) * (q[1] + q[0]) % P;
+    const C = 2n * p[3] * q[3] % P * D % P, Z = 2n * p[2] * q[2] % P;
+    const E = mod(B - A), F = mod(Z - C), G = (Z + C) % P, H = (B + A) % P;
+    return [E * F % P, G * H % P, F * G % P, E * H % P];
+  };
+  const mul = (s, p) => { let q = [0n, 1n, 1n, 0n]; for (; s > 0n; s >>= 1n, p = add(p, p)) if (s & 1n) q = add(q, p); return q; };
+  const same = (p, q) => mod(p[0] * q[2] - q[0] * p[2]) === 0n && mod(p[1] * q[2] - q[1] * p[2]) === 0n;
+  if (pub.length !== 32 || sig.length !== 64) return false;
+  const A = point(pub), R = point(sig.slice(0, 32)), S = num(sig.slice(32));
+  if (!A || !R || S >= L) return false;
+  const gy = 4n * inv(5n) % P, gx = xOf(gy, 0), B = [gx, gy, 1n, gx * gy % P];
+  const h = num(sha512(sig.slice(0, 32).concat(pub, msg))) % L;
+  return same(mul(S, B), add(R, mul(h, A)));
+}
+/** Новая версия подписана ключом «Звонка». */
+function signedByZvonok(code, sig) {
+  try { return !!sig && edVerify(b64bytes(UPDATE_KEY), utf8(code), b64bytes(sig)); } catch (e) { return false; }
+}
+function compiles(code) {
+  try { new (Object.getPrototypeOf(async function () {}).constructor)(code); return true; }
+  catch (e) { return !(e instanceof SyntaxError); }
+}
+async function selfUpdate() {
+  if (!AUTO_UPDATE || !VERSION || typeof module === "undefined") return;
+  try {
+    const slug = CLASS.replace(/[АБВГ]/g, x => ({"А": "A", "Б": "B", "В": "V", "Г": "G"})[x]);
+    const r = new Request(SITE + "ios/versions.json");
+    r.timeoutInterval = 4;
+    const v = await r.loadJSON();
+    const latest = v && v.classes && v.classes[slug];
+    if (!latest || latest === VERSION) return;
+    const rr = new Request(SITE + "ios/" + slug + ".js");
+    rr.timeoutInterval = 8;
+    let code = await rr.loadString();
+    const ok = code && code.length > 20000 && code.length < 400000 && code.includes('const VERSION = "' + latest + '"')
+      && code.includes('const CLASS = "' + CLASS + '"') && code.includes("Script.complete()");
+    // с ключом в скрипте ставим только подписанную версию; без ключа (первая сборка без секрета) как раньше
+    if (!ok || (UPDATE_KEY && !signedByZvonok(code, v.sig && v.sig[slug])) || !compiles(code)) return;
+    if (THEME) code = code.replace('const THEME = "";', "const THEME = " + JSON.stringify(THEME) + ";");
+    const icloud = FileManager.iCloud();
+    const target = icloud.isFileStoredIniCloud(module.filename) ? icloud : FileManager.local();
+    target.writeString(module.filename, code);
+    const n = new Notification();
+    n.title = "Звонок обновился";
+    n.body = v.note ? "Что нового: " + v.note : "Новое расписание и улучшения уже в виджете.";
+    n.openURL = SITE + "changelog.html";
+    await n.schedule();
+  } catch (e) { /* нет сети или нет доступа к файлу: попробуем в следующий раз */ }
+}
+
+// ---------- Siri и «Команды»: ответ одной фразой ----------
+function spoken(m, now) {
+  const s = m.s, n = s.next;
+  const say = t => t.replace(/яз\. и лит\./g, "язык и литература").replace(/^Практ\. /, "практическая ").replace(/^Худ\. /, "художественный ")
+    .replace(/^Ист\. /, "история ").replace(/^Всем\. /, "всемирная ").replace(/^НВП$/, "Н В П");
+  const low = t => { t = say(t); return /^[А-ЯЁ][а-яё]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t; };
+  const where = r => !r ? "" : r === "спортзал" ? ", спортзал" : ", кабинет " + r.split("/").filter(Boolean).join(" или ");
+  const left = t => {
+    const min = Math.max(1, Math.ceil((t.getTime() - now.getTime()) / 60000));
+    return min < 60 ? word(min, "минута", "минуты", "минут") : word(Math.floor(min / 60), "час", "часа", "часов") + (min % 60 ? " " + word(min % 60, "минута", "минуты", "минут") : "");
+  };
+  if (s.kind === "LESSON") return "Сейчас " + low(s.cur.subject) + where(s.cur.room) + ". До звонка " + left(s.target) + "."
+    + (n ? " Дальше " + low(n.subject) + where(n.room) + "." : " Это последний урок.");
+  if (s.kind === "BREAK") return (n.start - s.cur.end > 25 ? "Окно" : "Перемена") + ". Через " + left(s.target) + " " + low(n.subject) + where(n.room) + ".";
+  if (s.kind === "BEFORE") return (s.soon ? "Первый урок через " + left(s.target) : "Сегодня " + plural(s.count) + ", первый в " + hm(n.start)) + ": " + low(n.subject) + where(n.room) + ".";
+  const head = s.kind === "AFTER" ? "Уроки закончились." : s.holiday ? s.holiday[2] + "." : "Сегодня выходной.";
+  if (!n) return head;
+  return head + (s.nLabel === "Завтра" ? " Завтра первый урок в " : " Следующие уроки " + s.nWhen + ". Первый в ") + hm(n.start) + ": " + low(n.subject) + where(n.room) + ".";
+}
+
 // ---------- запуск ----------
 
-CH = await loadChanges();
+netPlan();
+CHANGES = cleanChanges((await Promise.all([loadChanges(NET.changes), NET.update ? selfUpdate() : null]))[0]);
 const now = new Date();
 const m = model(now);
+// «цвет урока»: кольцо и кабинет в цвете текущего предмета, на перемене следующего
+if (TH.sc) {
+  const subj = m.s.kind === "LESSON" ? m.s.cur && m.s.cur.subject : m.s.next && m.s.next.subject;
+  const col = subj && COLORS[subj];
+  if (col) ACC = col[LIGHT ? 0 : 1];
+}
 
 if (config.runsInWidget || config.runsInAccessoryWidget) {
   const f = config.widgetFamily;
@@ -683,7 +945,10 @@ if (config.runsInWidget || config.runsInAccessoryWidget) {
     : f === "medium" ? medium(m) : f === "large" || f === "extraLarge" ? large(m, now) : small(m);
   w.refreshAfterDate = nextRefresh(m, now);
   Script.setWidget(w);
+} else if (config.runsWithSiri || config.runsInShortcuts) {
+  Script.setShortcutOutput(spoken(m, now));
 } else {
+  Script.setShortcutOutput(spoken(m, now));
   const wv = new WebView();
   await wv.loadHTML(appHtml(m, now));
   await wv.present(true);
