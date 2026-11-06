@@ -24,6 +24,8 @@ for path in sys.argv[1:]:
         for ref in r["categories"][k]["auditRefs"]:
             a = r["audits"].get(ref["id"], {})
             if ref.get("weight") and a.get("score") is not None and a["score"] < 1:
-                why.append(a.get("title", ref["id"]))
+                nodes = [i.get("node", {}).get("snippet", "")[:90] for i in (a.get("details") or {}).get("items", [])[:3] if isinstance(i, dict)]
+                why.append(a.get("title", ref["id"]) + (" (" + a.get("displayValue", "") + ")" if a.get("displayValue") else "")
+                           + (": " + " | ".join(n for n in nodes if n) if any(nodes) else ""))
     print("::warning::" + line + " · " + "; ".join(why[:6]))
 sys.exit(0)
