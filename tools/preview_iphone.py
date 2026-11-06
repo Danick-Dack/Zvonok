@@ -6,9 +6,11 @@
   py tools/preview_iphone.py 7Б home --param "ZV1;bg=0B1220;ac=60A5FA"
   py tools/preview_iphone.py 7Б lock --changes my_changes.json   # что скачает скрипт вместо changes.json
 
-Сначала собери сайт: py tools/build_site.py (скрипт берётся из site/iphone.html через scriptFor()).
+Сначала собери сайт: py tools/build_site.py (скрипт класса берётся из site/ios/<класс>.js, лист app показывает
+site/index.html так, как его открывает Scriptable). Листы: lock, home, large, mono, app, rooms (виджет «кабинеты»).
 Картинки: .tmp/team/iphone_<лист>.png
 """
+import json
 import os
 import re
 import shutil
@@ -22,8 +24,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHROME = os.environ.get("CHROME") or next(
     (p for p in [shutil.which("google-chrome"), shutil.which("chromium"),
                  r"C:\Program Files\Google\Chrome\Application\chrome.exe"] if p and os.path.exists(p)), None)
-SHEETS = ["lock", "home", "large", "mono", "app"]
-SIZE = {"lock": (1300, 1300), "home": (1250, 1800), "large": (1650, 1500), "mono": (1250, 1800), "app": (1700, 950)}
+SHEETS = ["lock", "home", "large", "mono", "app", "rooms"]
+SIZE = {"lock": (1300, 1300), "home": (1250, 1800), "large": (1650, 1500), "mono": (1250, 1800), "app": (1700, 950), "rooms": (1250, 1400)}
+LAT = {"А": "A", "Б": "B", "В": "V", "Г": "G"}
+# копия сайта для листа app: время приложения подменяется по ?t= до запуска его скриптов
+FAKE_TIME = ('<script>(()=>{const q=new URLSearchParams(location.search),t=+q.get("t"),c=q.get("cls");'
+             'if(c)try{localStorage.setItem("zv.class",JSON.stringify(c))}catch(e){}if(!t)return;const R=Date;'
+             'window.Date=class extends R{constructor(...a){super(...(a.length?a:[t]))}static now(){return t}};})()</script>')
 
 
 def main():
@@ -44,9 +51,12 @@ def main():
     if not CHROME:
         sys.exit("Chrome не найден (переменная CHROME)")
 
-    # копия страницы iPhone без CSP рядом с инструментом: нужен доступ к scriptFor() из iframe
-    page = open(os.path.join(ROOT, "site", "iphone.html"), encoding="utf-8").read()
-    page = re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]*>', "", page)
+    # скрипт класса, как его отдаёт сайт, и копия сайта без CSP рядом с инструментом
+    code = open(os.path.join(ROOT, "site", "ios", re.sub("[АБВГ]", lambda m: LAT[m.group(0)], cls) + ".js"), encoding="utf-8").read()
+    src = os.path.join(ROOT, "tools", "_script_for_preview.js")
+    open(src, "w", encoding="utf-8").write("window.PREVIEW_SRC = " + json.dumps(code, ensure_ascii=False) + ";\n")
+    page = open(os.path.join(ROOT, "site", "index.html"), encoding="utf-8").read()
+    page = re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]*>', "", page).replace("<head>", "<head>" + FAKE_TIME, 1)
     site = os.path.join(ROOT, "tools", "_site_for_preview.html")
     open(site, "w", encoding="utf-8").write(page)
     out_dir = os.path.join(ROOT, ".tmp", "team")
@@ -54,7 +64,7 @@ def main():
     tool = "file:///" + os.path.join(ROOT, "tools", "scriptable_preview.html").replace("\\", "/").lstrip("/")
     try:
         for sh in sheets:
-            q = {"site": "_site_for_preview.html", "cls": cls, "sheet": sh}
+            q = {"src": "_script_for_preview.js", "app": "_site_for_preview.html", "cls": cls, "sheet": sh}
             if param:
                 q["param"] = param
             if changes:
@@ -71,6 +81,7 @@ def main():
             print(png)
     finally:
         os.remove(site)
+        os.remove(src)
         if changes and os.path.exists(os.path.join(ROOT, "tools", "_changes_for_preview.json")):
             os.remove(os.path.join(ROOT, "tools", "_changes_for_preview.json"))
 

@@ -748,7 +748,8 @@ function roomsWidget(f, r) {
   w.setPadding(14, 16, 14, 16);
   text(w, r.head.toUpperCase(), Font.semiboldSystemFont(11), 0.42, 1);
   w.addSpacer(4);
-  text(w, r.list, Font.semiboldRoundedSystemFont(f === "small" ? 15 : 17), 1, f === "small" ? 5 : f === "medium" ? 3 : 7);
+  const big = r.list.length <= (f === "small" ? 14 : 30); // пара кабинетов крупно, длинный список мельче
+  text(w, r.list, Font.semiboldRoundedSystemFont(big ? 22 : f === "small" ? 15 : 17), 1, f === "small" ? 5 : f === "medium" ? 3 : 7);
   if (r.head2 && f !== "small") {
     w.addSpacer(8);
     text(w, r.head2.toUpperCase(), Font.semiboldSystemFont(11), 0.42, 1);
@@ -811,7 +812,7 @@ async function app(m, now) {
   try {
     const st = JSON.parse(await wv.evaluateJavaScript("zvState()"));
     if (st && st.cls) saveSettings(st);
-    else if (SET.cls || SET.custom) { await wv.evaluateJavaScript("zvSync(" + JSON.stringify(SET) + ")"); await wv.waitForLoad(); }
+    else { await wv.evaluateJavaScript("zvSync(" + JSON.stringify(Object.assign({cls: CLS}, SET)) + ")"); await wv.waitForLoad(); } // сразу свой класс
   } catch (e) { /* страница без моста (старая копия): просто показываем */ }
   if (age > 6 * 3600000) fetchApp(); // в фоне; в следующий раз откроется свежая версия
   while (open) {

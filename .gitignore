@@ -11,3 +11,4 @@ tools/_site_for_preview.html
 .tmp/
 __pycache__/
 tools/_sig_fixture.js
+tools/_script_for_preview.js

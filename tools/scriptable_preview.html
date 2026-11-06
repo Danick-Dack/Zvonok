@@ -5,7 +5,7 @@
 <title>Предпросмотр виджетов iPhone</title>
 <!--
   Эмулятор API Scriptable: рисует виджеты скрипта iPhone во всех размерах, в pt 1:1, для разных моментов дня.
-  Параметры адреса: ?site=<копия site/index.html без CSP>&cls=7Б&sheet=lock|home|large|mono|app&param=<код темы>
+  Параметры адреса: ?src=<файл с window.PREVIEW_SRC>&app=<копия сайта для листа app>&sheet=lock|home|large|mono|app|rooms&param=<код темы>
   Обычно запускается через: py tools/preview_iphone.py
   Только приблизительно: на Windows нет шрифта SF, ширина текста немного другая.
 -->
@@ -61,7 +61,7 @@ h1{font-size:15px;font-weight:600;margin:0 0 12px;color:#fff}
 <script>
 "use strict";
 const Q = new URLSearchParams(location.search);
-const CLS = Q.get("cls") || "7Б", SHEET = Q.get("sheet") || "lock", PARAM = Q.get("param") || null;
+const CLS = Q.get("cls") || "7Б", SHEET = Q.get("sheet") || "lock", PARAM = SHEET === "rooms" ? "кабинеты" : Q.get("param") || null;
 
 // Моменты: понедельник 2 ноября 2026 у 7Б и др. (локальное время)
 const MOMENTS = [
@@ -430,13 +430,24 @@ const rf = r => r && r.refresh ? (r.refresh.getDate() !== NOW.getDate() ? r.refr
 async function sheet(src) {
   const out = document.getElementById("out");
   const grid = document.createElement("div"); grid.className = "grid"; out.appendChild(grid);
-  const cols = {lock: 3, home: 2, large: 4, mono: 2, app: 4}[SHEET] || 3;
+  const cols = {lock: 3, home: 2, large: 4, mono: 2, app: 4, rooms: 3}[SHEET] || 3;
   grid.style.gridTemplateColumns = `repeat(${cols}, max-content)`;
-  const moments = SHEET === "app" ? MOMENTS.filter((m, i) => [0, 2, 5, 9].includes(i)) : MOMENTS;
+  const moments = SHEET === "app" ? MOMENTS.filter((m, i) => [0, 2, 5, 9].includes(i)) : SHEET === "rooms" ? MOMENTS.filter((m, i) => [0, 2, 3, 5, 7].includes(i)) : MOMENTS;
   for (const [name, iso] of moments) {
     const cell = document.createElement("div"); cell.className = "cell"; grid.appendChild(cell);
     const d = new Date(iso);
-    if (SHEET === "lock") {
+    if (SHEET === "rooms") {
+      // виджет «кабинеты» (параметр виджета): экран блокировки и рабочий стол
+      const L = document.createElement("div"); L.className = "lock";
+      const [rr, rc, ri] = [await widgetEl(src, iso, "accessoryRectangular"), await widgetEl(src, iso, "accessoryCircular"), await widgetEl(src, iso, "accessoryInline")];
+      const row = document.createElement("div"); row.className = "row"; row.append(rr.el, rc.el);
+      ri.el.style.height = "22px";
+      L.append(ri.el, row);
+      const H = document.createElement("div"); H.className = "home";
+      const a = await widgetEl(src, iso, "small"), b = await widgetEl(src, iso, "medium");
+      H.append(a.el, b.el);
+      cell.append(cap(name, iso, rf(b.r)), L, H);
+    } else if (SHEET === "lock") {
       const L = document.createElement("div"); L.className = "lock";
       const [ri, rr, rc] = [await widgetEl(src, iso, "accessoryInline"), await widgetEl(src, iso, "accessoryRectangular"), await widgetEl(src, iso, "accessoryCircular")];
       const date = document.createElement("div"); date.className = "date";
@@ -458,10 +469,9 @@ async function sheet(src) {
     } else if (SHEET === "app") {
       const r = await runScript(src, iso, null);
       if (r.error || !r.html) { cell.append(cap(name, iso), errBox(r.error ? r : {error: "WebView.loadHTML не вызван"})); continue; }
-      const T = new Date(iso).getTime();
-      const fake = `<script>(()=>{const R=Date,T=${T};window.Date=class extends R{constructor(...a){super(...(a.length?a:[T]))}static now(){return T}};})()<\/script>`;
+      // приложение в Scriptable: сайт из памяти телефона (?app=scriptable), время подменяет копия сайта по ?t=
       const f = document.createElement("iframe"); f.className = "app";
-      f.srcdoc = r.html.replace(/<head>/i, "<head>" + fake);
+      f.src = Q.get("app") + "?app=scriptable&cls=" + encodeURIComponent(CLS) + "&t=" + new Date(iso).getTime();
       cell.append(cap(name, iso), f);
     }
   }
@@ -471,17 +481,14 @@ async function sheet(src) {
 async function main() {
   document.getElementById("h").textContent = "Скрипт iPhone · " + CLS + " · " + SHEET + (PARAM ? " · " + PARAM : "");
   let src = null;
-  const site = Q.get("site");
   if (Q.get("changes")) CHANGES = await (await fetch(Q.get("changes"))).text();
-  if (site) {
-    const f = document.createElement("iframe"); f.src = site; f.style.cssText = "position:absolute;left:-9999px;width:1000px;height:600px";
-    document.body.appendChild(f);
-    await new Promise(r => f.onload = r);
-    await new Promise(r => setTimeout(r, 300));
-    src = f.contentWindow.scriptFor(CLS);
-    f.remove();
+  if (Q.get("src")) {
+    const s = document.createElement("script"); s.src = Q.get("src");
+    await new Promise(r => { s.onload = s.onerror = r; document.head.append(s); });
+    src = window.PREVIEW_SRC;
+    if (src && Q.get("app")) files["/docs/zvonok-app.html"] = {s: "<!doctype html><title>Звонок</title>zvNext", t: new Date(0)}; // копия сайта уже на телефоне
   }
-  if (!src) { document.getElementById("out").append(errBox({error: "Нет скрипта: укажи ?site=..."})); return; }
+  if (!src) { document.getElementById("out").append(errBox({error: "Нет скрипта: укажи ?src=..."})); return; }
   await sheet(src);
   document.body.dataset.done = "1";
 }
