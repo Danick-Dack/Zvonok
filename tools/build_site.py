@@ -331,9 +331,15 @@ def sign_key():
     seed = base64.b64decode(raw)
     if len(seed) != 32:
         raise SystemExit("IOS_SIGN_KEY: нужен закрытый ключ Ed25519, 32 байта в base64")
+    # чужой или опечатанный ключ запер бы виджеты навсегда: такой сборке лучше упасть
+    if base64.b64encode(ed25519.public_key(seed)).decode() != PUBLIC_KEY:
+        raise SystemExit("IOS_SIGN_KEY: это не ключ «Звонка» (открытая часть не совпадает с PUBLIC_KEY)")
     return seed
 
 
+# Открытая часть ключа подписи (не секрет: она и так вписана в каждый скрипт). По ней сборка и проверки
+# убеждаются, что в секрете IOS_SIGN_KEY лежит именно ключ «Звонка».
+PUBLIC_KEY = "3P0BRx5wF1s6d2rpOK65p4Spf+v8vxgrRX7zQXravwg="
 SIGN_SEED = None   # заполняет main()
 UPDATE_KEY = ""    # открытый ключ, вписывается в скрипт
 

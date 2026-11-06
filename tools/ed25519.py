@@ -116,3 +116,18 @@ def verify(pub, msg, sig):
     if s >= q:
         return False
     return _equal(_mul(s, G), _add(R, _mul(_hq(sig[:32], pub, msg), A)))
+
+
+if __name__ == "__main__":
+    # Проверка в CI: секрет IOS_SIGN_KEY на месте и это ключ «Звонка» (сверяем только открытую часть, ключ не печатаем)
+    import ast, base64, os, sys
+    raw = os.environ.get("IOS_SIGN_KEY", "").strip()
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "build_site.py"), encoding="utf-8").read()
+    want = next(ast.literal_eval(n.value) for n in ast.parse(src).body
+                if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "PUBLIC_KEY")
+    if not raw:
+        print("::warning::Секрета IOS_SIGN_KEY нет: виджеты iPhone получат новую версию без подписи")
+        sys.exit(0)
+    ok = len(base64.b64decode(raw)) == 32 and base64.b64encode(public_key(base64.b64decode(raw))).decode() == want
+    print("::notice::Секрет IOS_SIGN_KEY на месте и совпадает с ключом «Звонка»" if ok else "::error::IOS_SIGN_KEY не совпадает с ключом «Звонка»")
+    sys.exit(0 if ok else 1)

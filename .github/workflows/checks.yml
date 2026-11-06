@@ -13,3 +13,8 @@ jobs:
         run: python3 tools/test_site.py
       - name: Эталон Android совпадает с правилами сайта
         run: python3 tools/golden.py --check
+      - name: Ключ подписи iPhone
+        if: github.event_name != 'pull_request'
+        env:
+          IOS_SIGN_KEY: ${{ secrets.IOS_SIGN_KEY }}
+        run: python3 tools/ed25519.py
