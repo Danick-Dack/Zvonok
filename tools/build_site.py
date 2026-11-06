@@ -355,54 +355,37 @@ def with_rules(js):
     return js[:a] + "\n" + read("site", "src", "js", "rules.js").strip() + "\n" + js[b:]
 
 
-def scriptable_template(data):
-    """Скрипт для Scriptable: общие данные (каникулы, предметы, сайт) вписываем сразу,
-    а класс, звонки, неделю и тему страница подставит сама (метки __CLASS__, __BELLS__, __WEEK__, __THEME__)."""
-    js = with_rules(read("ios", "Zvonok.js"))
-    a = js.index("// ---------- данные")
-    b = js.index("// ---------- конец данных ----------")
+def data_block(data, cls, version):
+    """Данные скрипта iPhone: класс по умолчанию и всё расписание (класс можно сменить в приложении)."""
     j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
-    block = "\n".join([
-        "// ---------- данные (сайт подставляет сюда выбранный класс) ----------",
-        'const CLASS = "__CLASS__";',
-        'const THEME = "__THEME__"; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее',
-        'const VERSION = "__VERSION__";',
+    return "\n".join([
+        "// ---------- данные (сайт подставляет сюда класс по умолчанию) ----------",
+        'const CLASS = "%s"; // класс скрипта: его новую версию виджет и скачивает' % cls,
+        'const THEME = ""; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее',
+        'const VERSION = "%s";' % version,
         'const UPDATE_KEY = "%s"; // открытый ключ подписи новых версий (пусто: сборка была без ключа)' % UPDATE_KEY,
-        "const BELLS = __BELLS__;",
-        "const WEEK = __WEEK__;",
-        "const HOLIDAYS = " + j(data["holidays"]) + ";",
-        "const TERM_END = " + j(data["term_end"]) + ";",
-        "const SUBJECTS = " + j(data["subjects"]) + ";",
+        "const START = null; // своё расписание со страницы iPhone: при первом запуске переходит в настройки",
+        "const DATA = " + j(data) + "; // всё расписание: классы, звонки, каникулы, предметы",
         "const COLORS = " + j(subject_colors(data)) + "; // цвета предметов: для светлого и тёмного фона",
         "const SITE = " + j(SITE_URL) + ";",
         ""])
-    js = js[:a] + block + js[b:]
-    return js.replace("// Звонок:", "// Звонок __CLASS__:", 1)
 
 
-def class_week(data, cls):
-    """Неделя класса для скрипта iPhone: {"1": [[предмет, кабинет], ...]} (1 = понедельник)."""
-    week = {}
-    for d, day in enumerate(data["classes"][cls]):
-        arr = []
-        for raw in day:
-            code, _, room = (raw or "").partition(" ")
-            arr.append([data["subjects"].get(code, code), "спортзал" if room == "с/з" else room] if raw else ["", ""])
-        if arr:
-            week[str(d + 1)] = arr
-    return week
+def with_data(js, block):
+    a = js.index("// ---------- данные")
+    b = js.index("// ---------- конец данных ----------")
+    return js[:a] + block + js[b:]
 
 
-def class_scripts(data, changelog):
-    """site/ios/<класс>.js и site/ios/versions.json: виджет iPhone сам скачивает свежую версию для своего класса."""
-    tpl = scriptable_template(data)
-    j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
-    bells = [[int(x.split(":")[0]) * 60 + int(x.split(":")[1]) for x in pair] for pair in data["bells"]]
+def class_scripts(data, changelog, app_html):
+    """site/ios/<класс>.js и site/ios/versions.json: виджет iPhone сам скачивает свежую версию для своего класса.
+    Скрипты классов отличаются только классом по умолчанию. versions.json подписывает и сам сайт (index.html):
+    его копию приложение iPhone хранит у себя и открывает без интернета."""
+    tpl = with_rules(read("ios", "Zvonok.js"))
     os.makedirs(os.path.join(OUT, "ios"), exist_ok=True)
     versions, sigs = {}, {}
     for c in data["classes"]:
-        js = (tpl.replace("__BELLS__", j(bells)).replace("__WEEK__", j(class_week(data, c)))
-              .replace("__THEME__", "").replace("__CLASS__", c))
+        js = with_data(tpl, data_block(data, c, "__VERSION__")).replace("// Звонок:", "// Звонок %s:" % c, 1)
         ver = hashlib.sha256(js.encode("utf-8")).hexdigest()[:10]
         versions[slug(c)] = ver
         final = js.replace("__VERSION__", ver)
@@ -410,41 +393,15 @@ def class_scripts(data, changelog):
         if SIGN_SEED:  # подпись ровно тех байт, что лежат на сайте: виджет проверит её перед тем, как поставить версию
             sigs[slug(c)] = base64.b64encode(ed25519.sign(SIGN_SEED, final.encode("utf-8"))).decode()
     note = next((r["title"] for r in changelog if "ios" in r["platforms"]), "")
-    write("ios/versions.json", json.dumps(dict({"note": note, "classes": versions}, **({"sig": sigs} if sigs else {})),
-                                          ensure_ascii=False, indent=1))
+    extra = {"sig": sigs, "app": base64.b64encode(ed25519.sign(SIGN_SEED, app_html.encode("utf-8"))).decode()} if SIGN_SEED else {}
+    write("ios/versions.json", json.dumps(dict({"note": note, "classes": versions}, **extra), ensure_ascii=False, indent=1))
     return versions
 
 
 def ios_sample(data):
     """ios/Zvonok.js держим рабочим для 7Б со свежими данными (его можно вставить в Scriptable как есть)."""
     js = read("ios", "Zvonok.js")
-    a = js.index("// ---------- данные")
-    b = js.index("// ---------- конец данных ----------")
-    j = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ":"))
-    bells = [[int(x.split(":")[0]) * 60 + int(x.split(":")[1]) for x in pair] for pair in data["bells"]]
-    week = {}
-    for d, day in enumerate(data["classes"]["7Б"]):
-        arr = []
-        for raw in day:
-            code, _, room = (raw or "").partition(" ")
-            arr.append([data["subjects"].get(code, code), "спортзал" if room == "с/з" else room] if raw else ["", ""])
-        if arr:
-            week[str(d + 1)] = arr
-    block = "\n".join([
-        "// ---------- данные (сайт подставляет сюда выбранный класс) ----------",
-        'const CLASS = "7Б";',
-        'const THEME = ""; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее',
-        'const VERSION = "";',
-        'const UPDATE_KEY = "%s"; // открытый ключ подписи новых версий (пусто: сборка была без ключа)' % UPDATE_KEY,
-        "const BELLS = " + j(bells) + ";",
-        "const WEEK = " + j(week) + ";",
-        "const HOLIDAYS = " + j(data["holidays"]) + ";",
-        "const TERM_END = " + j(data["term_end"]) + ";",
-        "const SUBJECTS = " + j(data["subjects"]) + ";",
-        "const COLORS = " + j(subject_colors(data)) + "; // цвета предметов: для светлого и тёмного фона",
-        "const SITE = " + j(SITE_URL) + ";",
-        ""])
-    out = with_rules(js[:a] + block + js[b:])
+    out = with_rules(with_data(js, data_block(data, "7Б", "")))
     if out != js:
         with open(os.path.join(ROOT, "ios", "Zvonok.js"), "w", encoding="utf-8", newline="\n") as f:
             f.write(out)
@@ -646,7 +603,7 @@ def main():
     data_js = {"/*@DATA@*/null": js_literal(data), "/*@CHANGES@*/null": js_literal(changes), "/*@HUES@*/null": js_literal(subject_hues(data))}
 
     news = next(({"date": r["date"], "title": r["title"]} for r in changelog if {"site", "ios"} & set(r["platforms"])), None)
-    index = page("index.html", ["tokens", "base", "components", "app"], ["core", "schedule", "rules", "app", "now", "week", "rooms", "more", "snake", "start"],
+    index = page("index.html", ["tokens", "base", "components", "app"], ["core", "embed", "schedule", "rules", "app", "now", "week", "rooms", "more", "snake", "start"],
                  dict(data_js, **{"/*@QRS@*/null": js_literal(qrs), "/*@NEWS@*/null": js_literal(news), "@HEAD_JS@": HEAD_JS + HEAD_PC}), common=common)
     page("make.html", ["tokens", "base", "components", "pages", "make"], ["core", "schedule", "rules", "make"], data_js, common=common)
     page("about.html", ["tokens", "base", "components", "pages", "about"], ["core", "schedule", "rules", "pages", "about"], data_js, common=common)
@@ -654,9 +611,9 @@ def main():
          {"/*@CHANGELOG@*/[]": js_literal(changelog)}, common=common)
     page("feedback.html", ["tokens", "base", "components", "pages"], ["core", "pages", "feedback"],
          {"/*@CLASSES@*/[]": js_literal(classes)}, connect="'self' https://api.web3forms.com https://formsubmit.co", common=common)
-    versions = class_scripts(data, changelog)
+    versions = class_scripts(data, changelog, index)
     page("iphone.html", ["iphone_guide", "iphone"], ["core", "schedule", "rules", "iphone", "iphone_guide"],
-         dict(data_js, **{"/*@SCRIPTABLE@*/null": js_literal(scriptable_template(data)), "/*@IOSVER@*/null": js_literal(versions)}), common=common)
+         dict(data_js, **{"/*@IOSVER@*/null": js_literal(versions)}), common=common)
     page("poster.html", ["tokens", "poster"], ["poster"], {"/*@QRS@*/null": js_literal(qrs), "/*@CLASSES@*/[]": js_literal(classes)}, common=common)
     page("404.html", ["tokens", "base", "components", "pages"], ["core", "pages", "notfound"], {"/*@CLASSES@*/[]": js_literal(classes)}, common=common)
 

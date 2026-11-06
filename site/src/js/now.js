@@ -61,7 +61,7 @@ function renderNow(now) {
   $("lTag").textContent = m.tag; $("lTag").hidden = !m.tag; $("lTag").className = "tag warn";
   $("lDial").classList.toggle("idle", !m.timer);
   // звонки идут по времени Алматы (UTC+5); если на телефоне другой пояс, честно предупреждаем
-  $("tzNote").hidden = now.getTimezoneOffset() === -300;
+  $("tzNote").hidden = [-300, -360].includes(now.getTimezoneOffset()); // +6: Алматы на телефонах со старой базой поясов
   swing();
   $("lCap").textContent = m.cap;
   $("lTitle").textContent = m.title;
@@ -163,7 +163,7 @@ function announce() {
 /* приглашение поставить на телефон */
 function renderPromo() {
   const box = $("promo");
-  const kind = STANDALONE || store.get("promoOff", false) ? null : IOS ? "ios" : ANDROID ? "android" : null;
+  const kind = STANDALONE || EMBED || store.get("promoOff", false) ? null : IOS ? "ios" : ANDROID ? "android" : null;
   box.hidden = !kind || pick;
   if (box.hidden) return;
   const close = h("button", {class: "icon-btn", type: "button", "aria-label": "Скрыть", onclick: () => { store.set("promoOff", true); box.hidden = true; }}, icon("close", "sm"));

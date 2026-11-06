@@ -106,7 +106,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [34, 36]
+        api: [34, '36.1']   # 36.1: Android 16 QPR, где таймер урока виден чипом в строке состояния
     steps:
       - uses: actions/checkout@v4
 

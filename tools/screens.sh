@@ -12,6 +12,7 @@ adb shell settings put global auto_time_zone 0
 adb shell svc power stayon true
 adb shell input keyevent 82
 adb install -r "$APK" >/dev/null
+sleep 20   # система после загрузки ещё занята: так меньше окон «приложение не отвечает»
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
 adb shell dumpsys deviceidle whitelist +$PKG >/dev/null
 
@@ -22,8 +23,17 @@ prefs() {
     | adb shell "run-as $PKG sh -c 'mkdir -p shared_prefs && cat > shared_prefs/settings.xml'"
 }
 at() { adb shell am force-stop $PKG; adb shell "date $1" >/dev/null; sleep 1; }   # MMDDhhmmYYYY.ss, время Алматы
-tab() { adb shell am start -n $PKG/.MainActivity --es tab "$1" >/dev/null; sleep 3; }
-shot() { adb exec-out screencap -p > "$OUT/api${API}_$1.png"; echo "снимок $1"; }
+tab() { adb shell am start -W -n $PKG/.MainActivity --es tab "$1" >/dev/null; sleep 2; }
+# окно «… не отвечает» от занятого эмулятора закрываем кнопкой «Wait», чтобы не закрывало снимок
+calm() {
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+  local b; b=$(adb shell cat /sdcard/ui.xml 2>/dev/null | grep -o 'text="Wait"[^>]*' | grep -o 'bounds="[^"]*"' | head -1 | tr -dc '0-9,[]')
+  if [ -n "$b" ]; then
+    set -- $(echo "$b" | tr '[],' '   ')
+    adb shell input tap $(( ($1 + $3) / 2 )) $(( ($2 + $4) / 2 )); sleep 1
+  fi
+}
+shot() { calm; adb exec-out screencap -p > "$OUT/api${API}_$1.png"; echo "снимок $1"; }
 
 for scheme in dark light; do
   prefs $scheme
@@ -53,6 +63,6 @@ adb shell settings put system font_scale 1.0
 
 # остальные экраны
 for a in Changelog Feedback StyleActivity EditorActivity; do
-  adb shell am start -n $PKG/.$a >/dev/null; sleep 3; shot "dark_screen_$a"
+  adb shell am start -W -n $PKG/.$a >/dev/null; sleep 2; shot "dark_screen_$a"
 done
 ls -la "$OUT"

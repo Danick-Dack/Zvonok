@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-GMjMqQFLIFh/g6l4yWbUQToGEIERTK67zjgINS6OOMs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-OC4MQf8PXyXrRnMJwfwvzpafcnriP/2WUX4VN9JXaG8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -164,6 +164,8 @@ function toast(t) {
 }
 // Копирование. Где нет Clipboard API (файл из Telegram, старый Android), выделяем текст по старинке.
 async function copyText(text, msg) {
+  // внутри приложения Scriptable копирует само приложение (embed.js)
+  if (typeof bridge === "function" && bridge({copy: text})) { toast(msg || "Скопировано"); return true; }
   let ok = false;
   try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
     const t = h("textarea", {readonly: true, style: "position:fixed;top:0;left:0;opacity:0;font-size:16px"});

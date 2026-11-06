@@ -22,6 +22,7 @@ final class WeekTab {
     private int weekOff = -1, sel = -1;
     private MainActivity.Tick last;
 
+    @android.annotation.SuppressLint("ClickableViewAccessibility") // смахивание дублирует кнопки дней, они доступны диктору
     WeekTab(MainActivity a) {
         this.a = a;
         view = new ScrollView(a);

@@ -63,6 +63,8 @@ function toast(t) {
 }
 // Копирование. Где нет Clipboard API (файл из Telegram, старый Android), выделяем текст по старинке.
 async function copyText(text, msg) {
+  // внутри приложения Scriptable копирует само приложение (embed.js)
+  if (typeof bridge === "function" && bridge({copy: text})) { toast(msg || "Скопировано"); return true; }
   let ok = false;
   try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
     const t = h("textarea", {readonly: true, style: "position:fixed;top:0;left:0;opacity:0;font-size:16px"});

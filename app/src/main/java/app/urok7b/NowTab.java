@@ -271,7 +271,8 @@ final class NowTab {
         String v = Schedule.vacationText(Schedule.vacation(t.now));
         vac.setText(v);
         vac.setVisibility(v.isEmpty() ? View.GONE : View.VISIBLE);
-        tz.setVisibility(t.now.getOffset().getTotalSeconds() == 5 * 3600 ? View.GONE : View.VISIBLE);
+        int off = t.now.getOffset().getTotalSeconds();
+        tz.setVisibility(off == 5 * 3600 || off == 6 * 3600 ? View.GONE : View.VISIBLE); // +6: Алматы на старой базе поясов
 
         boolean live = s.kind != Schedule.Kind.AFTER && !s.list.isEmpty();
         LocalDate day = live ? today : s.nextDate;

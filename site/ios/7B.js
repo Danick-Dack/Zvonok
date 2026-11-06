@@ -1,6 +1,8 @@
-// Звонок 7Б: виджеты для iPhone (приложение Scriptable).
+// Звонок 7Б: виджеты и приложение для iPhone (через бесплатное приложение Scriptable).
 // Экран блокировки: прямоугольный, круглый, строка над часами. Рабочий стол и StandBy: маленький, средний, большой.
-// Если запустить скрипт в Scriptable, откроется экран как в приложении: таймер, кольцо и весь день.
+// Если запустить скрипт в Scriptable, откроется само приложение «Звонок»: «Сейчас», «Неделя», «Кабинеты» и «Ещё», как на сайте.
+// Класс и своё расписание выбираются там же, виджеты показывают то же самое.
+// Параметр виджета (зажми виджет → «Изменить»): «10А» покажет 10А, «кабинеты» свободные кабинеты, код темы с сайта поменяет цвета.
 //
 // Можно спросить Siri или нажать кнопку действия: в «Командах» добавь Scriptable → Run Script → «Звонок» и «Показать результат».
 //
@@ -12,23 +14,20 @@
 
 const AUTO_UPDATE = true;
 
-// ---------- данные (сайт подставляет сюда выбранный класс) ----------
-const CLASS = "7Б";
+// ---------- данные (сайт подставляет сюда класс по умолчанию) ----------
+const CLASS = "7Б"; // класс скрипта: его новую версию виджет и скачивает
 const THEME = ""; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее
-const VERSION = "9af9d62606";
+const VERSION = "2a60f6e57c";
 const UPDATE_KEY = ""; // открытый ключ подписи новых версий (пусто: сборка была без ключа)
-const BELLS = [[480,525],[530,575],[585,630],[650,695],[715,760],[770,815],[825,870],[880,925],[935,985]];
-const WEEK = {"1":[["Классный час","40"],["Казахский яз. и лит.","42/21"],["История Казахстана","46"],["Алгебра","24/35"],["Математика","24/35"],["Физкультура","спортзал"],["Физкультура","спортзал"],["Практ. физика","48/73"]],"2":[["Геометрия","24/35"],["Английский язык","44/47"],["Физика","48/49"],["Физика","48/49"],["Программирование","56/57"],["Биология","25"],["Худ. труд","11/1"]],"3":[["Алгебра","24/35"],["Алгебра","24/35"],["Английский язык","45/47"],["География","54"],["Физкультура","спортзал"],["Русский язык","46"]],"4":[["Казахский яз. и лит.","42/21"],["Алгебра","24/35"],["Русский язык","46"],["Русская литература","46"],["Физика","48/49"],["Физика","48/49"],["Всемирная история","54"]],"5":[["Геометрия","24/35"],["Геометрия","24/35"],["Казахский яз. и лит.","42/21"],["Английский язык","25/47"],["Химия","40"],["Информатика","56/57"],["Русская литература","46"]]};
-const HOLIDAYS = [["2026-12-16","2026-12-16","День Независимости"],["2026-12-28","2027-01-10","Зимние каникулы"],["2027-03-08","2027-03-08","Международный женский день"],["2027-03-22","2027-03-28","Весенние каникулы"],["2027-05-01","2027-05-01","Праздник единства народа Казахстана"],["2027-05-03","2027-05-03","Выходной за 1 мая"],["2027-05-07","2027-05-07","День защитника Отечества"],["2027-05-09","2027-05-10","День Победы"],["2027-05-26","2027-08-31","Летние каникулы"]];
-const TERM_END = "2026-12-27";
-const SUBJECTS = {"alg":"Алгебра","geom":"Геометрия","mat":"Математика","fiz":"Физика","prf":"Практ. физика","kaz":"Казахский яз. и лит.","rus":"Русский язык","rlit":"Русская литература","eng":"Английский язык","istk":"История Казахстана","vist":"Всемирная история","geo":"География","bio":"Биология","him":"Химия","inf":"Информатика","prog":"Программирование","fk":"Физкультура","hud":"Худ. труд","kl":"Классный час","prav":"Основы права","nvp":"НВП","avto":"Автодело"};
+const START = null; // своё расписание со страницы iPhone: при первом запуске переходит в настройки
+const DATA = {"school":"Лицей №165","term":"2 четверть 2026–2027","updated":"2026-10-30","term_end":"2026-12-27","holidays":[["2026-12-16","2026-12-16","День Независимости"],["2026-12-28","2027-01-10","Зимние каникулы"],["2027-03-08","2027-03-08","Международный женский день"],["2027-03-22","2027-03-28","Весенние каникулы"],["2027-05-01","2027-05-01","Праздник единства народа Казахстана"],["2027-05-03","2027-05-03","Выходной за 1 мая"],["2027-05-07","2027-05-07","День защитника Отечества"],["2027-05-09","2027-05-10","День Победы"],["2027-05-26","2027-08-31","Летние каникулы"]],"bells":[["8:00","8:45"],["8:50","9:35"],["9:45","10:30"],["10:50","11:35"],["11:55","12:40"],["12:50","13:35"],["13:45","14:30"],["14:40","15:25"],["15:35","16:25"]],"subjects":{"alg":"Алгебра","geom":"Геометрия","mat":"Математика","fiz":"Физика","prf":"Практ. физика","kaz":"Казахский яз. и лит.","rus":"Русский язык","rlit":"Русская литература","eng":"Английский язык","istk":"История Казахстана","vist":"Всемирная история","geo":"География","bio":"Биология","him":"Химия","inf":"Информатика","prog":"Программирование","fk":"Физкультура","hud":"Худ. труд","kl":"Классный час","prav":"Основы права","nvp":"НВП","avto":"Автодело"},"classes":{"7А":[["kaz 42/21","kl 40","alg 24/35","fk с/з","istk 46","prf 48/50","geo 54"],["fiz 48/49","fiz 48/49","geom 24/35","geom 24/35","eng 44/35","prog 56/57","bio 25"],["rus 46","fk с/з","alg 24/35","alg 24/35","rlit 46","eng 45/47"],["fiz 48/49","fiz 48/49","alg 24/35","mat 24/35","rus 46","vist 54","kaz 42/21","fk с/з"],["kaz 42/21","inf 56/57","geom 24/35","rlit 46","hud 11/1","him 40","eng 25/20"]],"7Б":[["kl 40","kaz 42/21","istk 46","alg 24/35","mat 24/35","fk с/з","fk с/з","prf 48/73"],["geom 24/35","eng 44/47","fiz 48/49","fiz 48/49","prog 56/57","bio 25","hud 11/1"],["alg 24/35","alg 24/35","eng 45/47","geo 54","fk с/з","rus 46"],["kaz 42/21","alg 24/35","rus 46","rlit 46","fiz 48/49","fiz 48/49","vist 54"],["geom 24/35","geom 24/35","kaz 42/21","eng 25/47","him 40","inf 56/57","rlit 46"]],"7В":[["alg 24/35","alg 24/35","kaz 42/21","istk 46","fk с/з","geo 54","prf 48/73","kl 40"],["hud 11/1","geom 24/35","eng 44/47","bio 25","fiz 48/50","fiz 48/50","prog 56/57"],["fk с/з","rus 46","rlit 46","eng 45/47","alg 24/35"],["rus 46","kaz 42/21","fiz 48/49","fiz 48/49","alg 24/35","mat 24/35","fk с/з","vist 54"],["inf 56/57","kaz 42/21","eng 25/47","geom 24/35","geom 24/35","rlit 46","him 40"]],"8А":[["fiz 48/50","kl 25","rus 55","kaz 42/21","istk 41","alg 22/24","alg 22/24","fk с/з"],["eng 47/44","bio 25","kaz 42/43","him 40","geom 22/24","geom 22/24"],["eng 47/45","rlit 55","vist 41","fk с/з","prog 56/57","alg 22/24","fiz 48/50","prf 48/50"],["alg 22/24","inf 56/57","rus 55","rlit 55","eng 47/40","fk с/з"],["fiz 48/50","fiz 48/50","hud 11/1","kaz 42/21","geo 54","geom 22/24","mat 22/24"]],"8Б":[["kl 25","fiz 48/50","fk с/з","rus 55","alg 58/22","kaz 42/21","rlit 55"],["bio 25","kaz 42/43","geom 58/22","eng 47/44","vist 41","hud 11/1","him 40"],["rlit 55","eng 47/45","alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","fk с/з","prog 56/57"],["fk с/з","alg 58/22","mat 58/22","inf 56/57","rus 55","eng 47/40"],["geom 58/22","geom 58/22","istk 41","geo 54","fiz 48/50","prf 48/50","kaz 42/21"]],"8В":[["alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","kaz 42/21","rus 45","kl 41"],["kaz 42/43","hud 11/1","bio 25","geom 58/22","rlit 45","him 40","eng 35/44"],["alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","eng 47/45","fk с/з","prog 56/57"],["inf 56/57","vist 41","rus 45","fk с/з","fk с/з","mat 58/22"],["geo 54","eng 20/25","geom 58/22","geom 58/22","kaz 42/21","rlit 45","prf 48/50","istk 41"]],"8Г":[["rus 45","fk с/з","alg 58/22","mat 58/22","fiz 48/50","istk 41","kaz 42/21","kl 25"],["geom 58/22","geom 58/22","hud 11/1","kaz 42/43","bio 25","eng 35/44","rlit 45","him 40"],["fiz 48/50","fiz 48/50","fk с/з","vist 41","alg 58/22","prog 56/57","eng 47/45"],["rus 45","fk с/з","inf 56/57","alg 58/22","alg 58/22","rlit 45"],["eng 20/25","geo 54","fiz 48/50","prf 48/50","geom 58/22","kaz 42/21"]],"9А":[["alg 36/59","alg 36/59","istk 41","fiz 73/72","kl 40","kaz 44/43","rus 45","prog 56/57"],["fk с/з","inf 56/57","geom 36/59","fiz 73/72","fiz 73/72","rus 45","prav 41","eng 47/28"],["geo 54","him 40","kaz 44/43","alg 36/59","alg 36/59","fk с/з","bio 25"],["vist 41","rlit 45","kaz 44/43","eng 47/1","fiz 73/72","prf 73/72","mat 36/59"],["rlit 45","eng 47/40","fk с/з","hud 11/1","geom 36/59","geom 36/59"]],"9Б":[["kl 46","istk 41","fiz 73/72","rus 45","kaz 44/43","alg 36/59","prog 56/57"],["inf 56/57","fiz 73/72","fiz 73/72","fk с/з","eng 47/46","geom 36/59","geom 36/59","hud 11/1"],["kaz 44/43","alg 36/59","mat 36/59","him 40","geo 54","bio 25","fk с/з"],["alg 36/59","alg 36/59","eng 47/1","fiz 73/72","vist 41","prav 53","rlit 45"],["eng 47/40","rlit 45","kaz 44/43","geom 36/59","rus 45","fk с/з","prf 73/72"]],"9В":[["istk 41","kaz 44/43","alg 36/59","mat 36/59","fiz 73/72","fiz 73/72","prog 56/57","kl 46"],["fiz 73/72","fk с/з","inf 56/57","hud 11/1","geom 36/59","eng 47/46","rlit 46"],["alg 36/59","geo 54","him 40","kaz 44/43","bio 25","prav 28","rus 46","fk с/з"],["eng 47/35","fiz 73/72","prf 73/72","kaz 44/43","alg 36/59","alg 36/59","rlit 46"],["geom 36/59","geom 36/59","rus 46","vist 41","fk с/з","eng 47/28"]],"9Г":[["fiz 73/72","fiz 73/72","kaz 44/43","istk 41","alg 36/59","prog 56/57","kl 40"],["geom 36/59","geom 36/59","fk с/з","inf 56/57","hud 11/1","fiz 73/72","eng 47/28","rlit 46"],["him 40","kaz 44/43","geo 54","rus 46","fk с/з","alg 36/59","mat 36/59","bio 25"],["fiz 73/72","eng 47/1","alg 36/59","alg 36/59","kaz 44/43","vist 41","prav 41"],["rus 46","rlit 46","geom 36/59","fk с/з","eng 47/73","prf 73/72"]],"10А":[["inf 56/57","geo 54","alg 28/34","eng 47/20","bio 25","rlit 55","kl 28","prog 57"],["fk с/з","geom 28/34","geom 28/34","istk 41","kaz 42/43","rus 55","prf 50/72"],["fiz 73/72","fiz 73/72","nvp 1","alg 28/34","alg 28/34","prav 41","avto 71","avto 71"],["rlit 55","him 40","kaz 42/21","kaz 42/21","alg 28/34","mat 28/34","eng 20/50","fk с/з","prog 56"],["fk с/з","istk 41","fiz 73/72","fiz 73/72","geom 28/34","vist 41","inf 56/57"]],"10Б":[["rlit 55","eng 47/20","kl 25","bio 25","geo 54","alg 58/34","alg 58/34"],["istk 41","prav 54","fk с/з","rus 55","geom 58/34","geom 58/34","kaz 42/43","prf 50/72"],["kaz 42/21","kaz 42/21","fiz 73/72","fiz 73/72","him 40","alg 58/34","mat 58/34","nvp 1"],["alg 58/34","rlit 55","istk 41","vist 41","fk с/з","inf 56/57","prog 56/57"],["fiz 73/72","fiz 73/72","inf 56/57","eng 20/40","fk с/з","geom 58/34","avto 71","avto 71"]],"10В":[["alg 28/34","alg 28/34","eng 47/20","geo 54","rlit 55","kl 40","bio 25","prf 53/50"],["geom 28/34","istk 41","fiz 53/50","fiz 53/50","rus 55","kaz 42/43","fk с/з","inf 56/57"],["alg 28/34","vist 41","rlit 55","nvp 1","prav 41","him 40"],["fiz 53/50","fiz 53/50","alg 28/34","mat 28/34","kaz 42/21","kaz 42/21","fk с/з","prog 56/57"],["geom 28/34","geom 28/34","eng 20/40","inf 56/57","istk 41","fk с/з","avto 71","avto 71"]],"10Г":[["eng 47/20","rlit 55","geo 54","alg 28/34","mat 28/34","bio 25","prf 53/50","kl 54"],["fiz 53/50","fiz 53/50","istk 41","geom 28/34","fk с/з","fk с/з","rus 55","kaz 42/43"],["vist 41","alg 28/34","alg 28/34","kaz 42/21","kaz 42/21","nvp 1","avto 71","avto 71"],["him 40","alg 28/34","fiz 53/50","fiz 53/50","inf 56/57","eng 20/50","rlit 55","prog 56/57"],["istk 41","fk с/з","geom 28/34","geom 28/34","inf 56/57","prav 55"]],"11А":[["kl 43","inf 57/56","fiz 53/49","fiz 53/49","alg 30/27","mat 30/27","prav 46","kaz 44/43"],["istk 54","rus 45","geom 30/27","geom 30/27","fk с/з","fk с/з","prf 53/49","avto 71","avto 71"],["alg 30/27","alg 30/27","fiz 53/49","inf 57/56","nvp 1","geo 54","him 40"],["kaz 44/43","vist 54","eng 20/40","bio 25","rlit 45","alg 30/27"],["istk 55","fiz 53/49","geom 30/27","rlit 45","eng 20/25","kaz 44/43","fk с/з","prog 57/56"]],"11Б":[["kl 54","rlit 45","alg 30/27","alg 30/27","inf 57/56","fiz 53/49","kaz 44/43"],["him 40","fk с/з","rus 45","istk 54","geom 30/27","geom 30/27","prav 54","prf 53/49"],["nvp 1","inf 57/56","alg 30/27","mat 30/27","fiz 53/49","fiz 53/49","geo 54"],["alg 30/27","kaz 44/43","vist 54","eng 20/40","bio 25","fk с/з","avto 71","avto 71"],["fiz 53/49","kaz 44/43","fk с/з","geom 30/27","istk 55","eng 20/25","rlit 45","prog 57/56"]],"11В":[["fiz 53/49","fiz 53/49","inf 57/56","kaz 44/43","rlit 45","prav 46","alg 30/27","kl 28"],["rus 45","geom 30/27","him 40","fk с/з","istk 54","prf 53/49","avto 71","avto 71"],["inf 57/56","nvp 1","eng 25/20","fiz 53/49","kaz 44/43","alg 30/27","mat 30/27"],["eng 25/20","alg 30/27","alg 30/27","rlit 45","vist 54","bio 25"],["geom 30/27","geom 30/27","fiz 53/49","istk 55","kaz 44/43","geo 54","fk с/з","fk с/з","prog 57/56"]],"11Г":[["alg 30/27","alg 30/27","rlit 45","inf 57/56","fiz 53/49","kl 28","avto 71","avto 71"],["geom 30/27","him 40","istk 54","rus 45","prf 53/49","prav 54","fk с/з","fk с/з"],["fiz 53/49","fiz 53/49","inf 57/56","eng 25/20","alg 30/27","kaz 44/43","nvp 1"],["vist 54","eng 25/20","bio 25","alg 30/27","mat 30/27","kaz 44/43"],["kaz 44/43","istk 55","rlit 45","fiz 53/49","geom 30/27","geom 30/27","geo 54","fk с/з","prog 57/56"]]}}; // всё расписание: классы, звонки, каникулы, предметы
 const COLORS = {"Алгебра":["007AFF","0A84FF"],"Геометрия":["007AFF","0A84FF"],"Математика":["007AFF","0A84FF"],"Физика":["AF52DE","BF5AF2"],"Практ. физика":["AF52DE","BF5AF2"],"Казахский яз. и лит.":["FFCC00","FFD60A"],"Русский язык":["FF3B30","FF453A"],"Русская литература":["FF3B30","FF453A"],"Английский язык":["32ADE6","64D2FF"],"История Казахстана":["A2845E","AC8E68"],"Всемирная история":["A2845E","AC8E68"],"География":["00C7BE","63E6E2"],"Биология":["34C759","30D158"],"Химия":["30B0C7","40CBE0"],"Информатика":["5856D6","5E5CE6"],"Программирование":["5856D6","5E5CE6"],"Физкультура":["FF9500","FF9F0A"],"Худ. труд":["FF2D55","FF375F"],"Классный час":["8E8E93","8E8E93"],"Основы права":["A2845E","AC8E68"],"НВП":["34C759","30D158"],"Автодело":["FF9500","FF9F0A"]}; // цвета предметов: для светлого и тёмного фона
 const SITE = "https://danick-dack.github.io/Zvonok/";
 // ---------- конец данных ----------
 
 // ---------- расписание ----------
 // Правила дня (каникулы, замены, сокращённые звонки, что сейчас) общие с сайтом: сборка вставляет их ниже
-// из site/src/js/rules.js. Здесь только то, что этим правилам нужно от виджета, и неделя класса в их формате.
+// из site/src/js/rules.js. Здесь только то, что этим правилам нужно от виджета: неделя класса и своё расписание.
 
 const DAYN = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]; // с понедельника, как на сайте
 const WHEN = ["в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу", "в воскресенье"];
@@ -36,7 +35,6 @@ const DSHORT = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"]; // по
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 const SHORT = {"Казахский яз. и лит.": "Казахский", "Английский язык": "Английский", "Русский язык": "Русский", "Русская литература": "Литература",
   "История Казахстана": "Ист. Казахстана", "Всемирная история": "Всем. история", "Программирование": "Программир.", "Практ. физика": "Пр. физика"};
-const DATA = {holidays: HOLIDAYS, subjects: SUBJECTS, term_end: TERM_END};
 let CHANGES = {days: {}}; // замены с сайта
 
 function hm(min) { const m = min % 60; return Math.floor(min / 60) + ":" + (m < 10 ? "0" : "") + m; }
@@ -51,13 +49,55 @@ function word(n, one, few, many) { const a = n % 10, b = n % 100; return n + " "
 function plural(n) { return word(n, "урок", "урока", "уроков"); }
 function clean(s) { return String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40); }
 function roomName(r) { return r === "с/з" ? "спортзал" : r || ""; }
-/** Обычная неделя класса в формате правил: 7 дней с понедельника, уроки {num, start, end, subject, room}. */
-function classWeek() {
-  return classWeek.w || (classWeek.w = [1, 2, 3, 4, 5, 6, 0].map(wd => (WEEK[wd] || []).map((p, i) =>
-    p && p[0] && BELLS[i] ? {num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: p[0], room: p[1] || ""} : null).filter(Boolean)));
+const BELLS = DATA.bells.map(b => [toMin(b[0]), toMin(b[1])]);
+
+// Настройки: класс и своё расписание выбираются на экране приложения (это сайт «Звонка» внутри Scriptable),
+// виджеты берут их отсюда. Параметр виджета важнее: «10А» покажет 10А, «кабинеты» свободные кабинеты.
+function settingsPath() { const fm = FileManager.local(); return fm.joinPath(fm.documentsDirectory(), "zvonok-settings.json"); }
+function loadSettings() {
+  try {
+    const fm = FileManager.local(), p = settingsPath();
+    if (fm.fileExists(p)) { const s = JSON.parse(fm.readString(p)); if (s && typeof s === "object") return s; }
+  } catch (e) { /* испорченный файл: как при первом запуске */ }
+  return START ? {useCustom: true, custom: START} : {};
 }
-/** Уроки своего класса на дату: с каникулами, заменами и сокращёнными звонками. */
-function lessonsOn(d) { return dayLessons(CLASS, d); }
+function saveSettings(s) {
+  const out = {cls: typeof s.cls === "string" && DATA.classes[s.cls] ? s.cls : null, useCustom: !!s.useCustom,
+    custom: s.custom && typeof s.custom === "object" && Array.isArray(s.custom.days) ? s.custom : null};
+  try { FileManager.local().writeString(settingsPath(), JSON.stringify(out)); } catch (e) { /* без доступа к файлам виджет берёт класс скрипта */ }
+}
+const SET = loadSettings();
+const PARAM = typeof args !== "undefined" && args.widgetParameter ? String(args.widgetParameter).trim() : "";
+const ROOMS_MODE = /^(каб|своб|rooms)/i.test(PARAM);
+const PARAM_CLASS = (() => {
+  const m = /^(7|8|9|10|11)\s*([abvgабвг])$/i.exec(PARAM), c = m && m[1] + {a: "А", b: "Б", v: "В", g: "Г", "а": "А", "б": "Б", "в": "В", "г": "Г"}[m[2].toLowerCase()];
+  return c && DATA.classes[c] ? c : null;
+})();
+const CLS = PARAM_CLASS || (DATA.classes[SET.cls] ? SET.cls : DATA.classes[CLASS] ? CLASS : Object.keys(DATA.classes)[0]);
+
+const CW = {};
+/** Обычная неделя класса в формате правил: 7 дней с понедельника, уроки {num, start, end, subject, room}. */
+function classWeek(c) {
+  if (CW[c]) return CW[c];
+  const days = DATA.classes[c] || [];
+  return CW[c] = Array.from({length: 7}, (_, d) => (days[d] || []).map((raw, i) => {
+    if (!raw || !BELLS[i] || BELLS[i][0] < 0) return null;
+    const sp = raw.indexOf(" "), code = sp < 0 ? raw : raw.slice(0, sp), room = sp < 0 ? "" : raw.slice(sp + 1);
+    return {num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: DATA.subjects[code] || code, room: roomName(room)};
+  }).filter(Boolean));
+}
+/** Своё расписание из конструктора сайта: {bells: [[с, по]], days: [[[предмет, кабинет]]]} (каникулы и замены его не трогают). */
+function customWeek(c) {
+  const bells = (Array.isArray(c.bells) ? c.bells : DATA.bells).map(b => [toMin(b && b[0]), toMin(b && b[1])]);
+  return Array.from({length: 7}, (_, d) => ((c.days || [])[d] || []).map((l, i) => {
+    if (!l || !clean(l[0]) || !bells[i] || bells[i][0] < 0 || bells[i][1] <= bells[i][0]) return null;
+    return {num: i + 1, start: bells[i][0], end: bells[i][1], subject: clean(l[0]), room: roomName(clean(l[1]))};
+  }).filter(Boolean));
+}
+const OWN = !PARAM_CLASS && SET.useCustom && SET.custom && Array.isArray(SET.custom.days) ? customWeek(SET.custom) : null;
+/** Уроки на дату: свой класс с каникулами, заменами и сокращёнными звонками или своё расписание. */
+function lessonsOn(d) { return OWN ? OWN[dow(d)] : dayLessons(CLS, d); }
+const SRC = {at: lessonsOn, real: !OWN};
 /** Коротко, когда следующие уроки: «завтра», «пн», «12.01». */
 function nShort(s) { return !s.nDate ? "" : s.nDays === 1 ? "завтра" : s.nDays > 6 ? s.nDate.getDate() + "." + two(s.nDate.getMonth() + 1) : DSHORT[s.nDate.getDay()]; }
 
@@ -193,7 +233,7 @@ function vacationText(v) {
 
 // всё, что показывают виджеты и экран, в одном месте
 function model(now) {
-  const s = compute(now, {at: lessonsOn, real: true}), n = s.next, c = s.cur;
+  const s = compute(now, SRC), n = s.next, c = s.cur;
   const m = {s, kind: s.kind, timer: false, target: s.target, progress: -1, big: "", bigSub: "", capW: "", capV: "", label: "", tag: "",
     title: "", room: "", changed: false, nextHead: "", nextSubj: "", nextRoom: "", nextChanged: false, home: false, go: "", hol: false, days: 0};
   const pct = () => Math.max(0, Math.min(1, (now - s.start) / (s.target - s.start)));
@@ -306,8 +346,7 @@ function mix(a, b, t) {
   const x = parseInt(a, 16), y = parseInt(b, 16), ch = s => Math.round((x >> s & 255) * (1 - t) + (y >> s & 255) * t);
   return [16, 8, 0].map(s => ch(s).toString(16).padStart(2, "0")).join("").toUpperCase();
 }
-const param = typeof args !== "undefined" && args.widgetParameter ? String(args.widgetParameter) : "";
-const TH = parseTheme(param.trim().startsWith("ZV1") ? param : THEME);
+const TH = parseTheme(PARAM.startsWith("ZV1") ? PARAM : THEME);
 const LIGHT = lum(TH.bg) > 0.5;
 const FG = TH.tx || (LIGHT ? "111111" : "FFFFFF");
 let ACC = Math.abs(lum(TH.ac) - lum(TH.bg)) < 0.25 ? FG : TH.ac; // при «цвете урока» меняется на цвет предмета
@@ -656,7 +695,7 @@ function large(m, now) {
     w.addSpacer(2);
   }
   w.addSpacer();
-  const d = now, h = s.holiday, v = vacation(now, {at: lessonsOn, real: true});
+  const d = now, h = s.holiday, v = vacation(now, SRC);
   let foot = DSHORT[d.getDay()].toUpperCase() + ", " + dm(d).toUpperCase();
   if (h && /каникул/i.test(h[2])) foot = h[2].toUpperCase() + " · ДО " + dm(new Date(h[1] + "T12:00:00")).toUpperCase();
   else if (v) foot += " · " + vacationText(v).toUpperCase();
@@ -664,114 +703,132 @@ function large(m, now) {
   return w;
 }
 
-// ---------- экран внутри Scriptable ----------
-
-function appHtml(m, now) {
-  const core = [hm, two, iso, dm, dow, at, toMin, short, word, plural, clean, roomName, classWeek, lessonsOn, nShort,
-    holiday, chDay, noLesson, dayOff, dayBells, dayLessons, compute, vacation, vacationText, model]
-    .map(f => f.toString()).join("\n");
-  const data = {CLASS, BELLS, WEEK, DATA, CHANGES, DAYN, WHEN, DSHORT, MONTHS, SHORT, FG, ACC, BG: TH.bg, COL: TH.sc ? COLORS : null, LT: LIGHT};
-  const glow = "#" + mix(mix(TH.bg, "FFFFFF", 0.10), TINT || TH.bg, TINT ? 0.3 : 0), fg = "#" + FG, ac = "#" + ACC, a = (hex, x) => hex + Math.round(x * 255).toString(16).padStart(2, "0");
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<style>
-:root{color-scheme:${LIGHT ? "light" : "dark"}}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:radial-gradient(120% 60% at 50% 0%,${glow},#${TH.bg} 60%) #${TH.bg};color:${fg};font:16px/1.4 -apple-system,system-ui,sans-serif;
-  padding:max(18px,env(safe-area-inset-top)) 20px 40px;min-height:100vh}
-.caps{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;opacity:.5}
-.num{font-family:ui-rounded,-apple-system,system-ui;font-variant-numeric:tabular-nums}
-.head{display:flex;align-items:center;justify-content:space-between}.head b{font-size:17px;font-weight:650}
-.ring{position:relative;width:248px;height:248px;margin:22px auto 0}
-.ring svg{position:absolute;inset:0}
-.ring .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-#tm{font-size:64px;font-weight:300;line-height:1.05;letter-spacing:-.02em}
-#tm.d{font-size:76px}
-#sub{font-size:15px;opacity:.6;margin-top:2px}
-.title{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;flex-wrap:wrap;text-align:center}
-#title{font-size:26px;font-weight:600;letter-spacing:-.01em}
-.pl{background:${a(ac, .22)};color:${ac};font-weight:700;font-size:15px;border-radius:10px;padding:3px 10px;white-space:nowrap}
-.pl.s{background:${a(fg, .10)};color:${fg};font-size:14px}
-.sub{font-size:10px;letter-spacing:.1em;text-transform:uppercase;border:1px solid ${a(fg, .3)};border-radius:6px;padding:1px 6px;font-weight:600;opacity:.8}
-.dots{display:flex;gap:4px;justify-content:center;margin-top:12px}.dots i{width:14px;height:5px;border-radius:3px;background:${a(fg, .16)}}
-.dots i.d{background:${a(fg, .45)}}.dots i.c{background:${ac};width:22px}
-.card{background:${a(fg, .06)};border:1px solid ${a(fg, .08)};border-radius:22px;padding:16px;margin-top:22px}
-.nx{display:flex;align-items:center;gap:10px;margin-top:6px}.nx span:first-child{flex:1;font-size:18px}
-.seg{display:flex;background:${a(fg, .05)};border:1px solid ${a(fg, .08)};border-radius:16px;padding:4px;gap:2px;margin-top:26px}
-.seg button{flex:1;border:0;background:none;color:${fg};opacity:.55;font:600 15px -apple-system,system-ui;padding:9px 0;border-radius:12px}
-.seg button.t{opacity:1}.seg button.on{background:${fg};color:#${TH.bg};opacity:1}
-.list{margin-top:12px}
-.les{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px}
-.les.cur{background:${a(fg, .10)}}.les.nx2{background:${a(fg, .05)}}.les.past{opacity:.38}
-.les .t{width:44px;font-size:15px;font-weight:600}.les .t small{display:block;font-size:12px;opacity:.55;font-weight:500}
-.les .b{width:3px;align-self:stretch;border-radius:2px;background:${a(fg, .3)}}.les.cur .b{background:${ac}}.les.nx2 .b{background:${a(fg, .62)}}
-.les .m{flex:1;min-width:0}.les .m small{display:block;font-size:13px;opacity:.55}
-.brk{font-size:12px;opacity:.45;padding:2px 0 2px 70px}.brk.on{opacity:.9;font-weight:600}
-#note,#vac{font-size:14px;opacity:.6;margin-top:14px;text-align:center}
-.how{font-size:14px;line-height:1.5;opacity:.85}.how b{display:block;font-size:15px;margin-bottom:6px}
-</style></head><body>
-<div class="head"><b>Звонок ${CLASS}</b><span class="caps" id="date"></span></div>
-<div class="ring"><svg viewBox="0 0 248 248"><circle cx="124" cy="124" r="110" fill="none" stroke="${a(fg, .10)}" stroke-width="14"/>
-<circle id="arc" cx="124" cy="124" r="110" fill="none" stroke="${ac}" stroke-width="14" stroke-linecap="round" transform="rotate(-90 124 124)" stroke-dasharray="0 999"/>
-<circle id="knob" r="9" fill="${ac}" style="filter:drop-shadow(0 0 6px ${a(ac, .6)})"/></svg>
-<div class="in"><div class="caps" id="label"></div><div class="num" id="tm"></div><div id="sub"></div></div></div>
-<div class="title"><span id="title"></span><span id="chg" class="sub">замена</span><span id="room" class="pl"></span></div>
-<div class="dots" id="dots"></div>
-<div class="card" id="next"><div class="caps" id="nh"></div><div class="nx"><span id="ns"></span><span class="pl s" id="nr"></span></div></div>
-<div class="seg" id="days"></div>
-<div id="note"></div>
-<div class="list" id="list"></div>
-<div id="vac"></div>
-<div class="card how"><b>Как добавить виджет</b>
-Экран блокировки: зажми его, нажми «Настроить», выбери экран блокировки и нажми на поле под часами. Найди Scriptable, добавь прямоугольный или круглый виджет, нажми на него и в поле Script выбери этот скрипт.<br><br>
-Рабочий стол: зажми пустое место, нажми «+» или «Изменить», найди Scriptable и выбери размер. Потом нажми на виджет и выбери этот скрипт.</div>
-<script>
-const D=${JSON.stringify(data).replace(/</g, "\\u003c")};
-const {CLASS,BELLS,WEEK,DATA,CHANGES,DAYN,WHEN,DSHORT,MONTHS,SHORT}=D;
-${core}
-const $=id=>document.getElementById(id);
-let sel=null;
-function fmt(ms){const t=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;return (h?h+":"+two(m):m)+":"+two(s)}
-function dateOf(wd,base){const d=new Date(base.getFullYear(),base.getMonth(),base.getDate());d.setDate(d.getDate()+(wd-d.getDay()+7)%7);return d}
-function render(){
- const now=new Date(),m=model(now),s=m.s,n=s.next;
- $("date").textContent=DSHORT[now.getDay()]+", "+dm(now);
- $("label").textContent=m.label;
- const tm=$("tm");tm.className="num"+(m.timer?"":" d");tm.textContent=m.timer?fmt(m.target-now):m.big;
- $("sub").textContent=m.ringSub;
- const v=m.timer?Math.max(0.03,(now-s.start)/(s.target-s.start)):-1,C=2*Math.PI*110,arc=$("arc"),k=$("knob");
- arc.setAttribute("stroke-dasharray",v<0?"0 999":(v*C)+" "+C);arc.style.display=k.style.display=v<0?"none":""; // пустая дуга с круглым концом рисовала точку
- if(v>=0){const a=-Math.PI/2+2*Math.PI*Math.min(1,v);k.setAttribute("cx",124+110*Math.cos(a));k.setAttribute("cy",124+110*Math.sin(a))}
- $("title").textContent=m.title;$("room").textContent=m.room;$("room").style.display=m.room&&(s.kind==="LESSON"||s.kind==="BREAK"||s.kind==="BEFORE")?"":"none";
- $("chg").style.display=m.changed&&(s.kind==="LESSON"||s.kind==="BREAK"||s.kind==="BEFORE")?"":"none";
- const dots=$("dots");dots.innerHTML="";
- if(s.list&&(s.kind==="LESSON"||s.kind==="BREAK"||s.kind==="BEFORE"))s.list.forEach((l,i)=>{const e=document.createElement("i");e.className=s.kind==="LESSON"&&i===s.idx?"c":s.idx!=null&&(i<s.idx||(s.kind==="BREAK"&&i===s.idx))?"d":"";dots.appendChild(e)});
- $("next").style.display=m.nextSubj?"":"none";$("nh").textContent=m.nextHead+(m.nextChanged?" · ЗАМЕНА":"");$("ns").textContent=m.nextSubj;$("nr").textContent=m.nextRoom;$("nr").style.display=m.nextRoom?"":"none";
- if(sel===null){sel=s.kind==="LESSON"||s.kind==="BREAK"||s.kind==="BEFORE"||!s.nDate?now.getDay():s.nDate.getDay();if(!WEEK[sel])sel=1}
- const days=$("days");days.innerHTML="";
- for(let wd=1;wd<=(WEEK[6]?6:5);wd++){const b=document.createElement("button");b.textContent=["","Пн","Вт","Ср","Чт","Пт","Сб"][wd];b.className=(wd===sel?"on ":"")+(wd===now.getDay()?"t":"");b.onclick=()=>{sel=wd;render()};days.appendChild(b)}
- const date=dateOf(sel,s.nDays>6&&!(s.kind==="LESSON"||s.kind==="BREAK"||s.kind==="BEFORE")?s.nDate:now),off=dayOff(date),isT=sel===now.getDay()&&!off,nowMin=now.getHours()*60+now.getMinutes();
- const ls=off?(WEEK[sel]||[]).map((p,i)=>p&&p[0]&&BELLS[i]?{num:i+1,start:BELLS[i][0],end:BELLS[i][1],subject:p[0],room:p[1]}:null).filter(Boolean):lessonsOn(date);
- const ch=chDay(date);
- $("note").textContent=off?dm(date)+": "+off[2]+". Ниже обычное расписание этого дня.":ch&&ch.note?clean(ch.note):"";
- const list=$("list");list.innerHTML="";
- ls.forEach((l,i)=>{
-  if(i){const len=l.start-ls[i-1].end,on=isT&&s.kind==="BREAK"&&n&&n.num===l.num,b=document.createElement("div");b.className="brk"+(on?" on":"");b.textContent=on?"● перемена сейчас · до "+hm(l.start):(len>25?"окно ":"перемена ")+len+" мин";list.appendChild(b)}
-  const cur=isT&&s.kind==="LESSON"&&s.cur.num===l.num,nx=isT&&(s.kind==="BREAK"||s.kind==="BEFORE")&&n&&n.num===l.num,past=isT&&!cur&&l.end<=nowMin;
-  const r=document.createElement("div");r.className="les"+(cur?" cur":nx?" nx2":past?" past":"");
-  const t=document.createElement("div");t.className="t num";t.innerHTML=hm(l.start)+"<small>"+hm(l.end)+"</small>";
-  const bb=document.createElement("div");bb.className="b";const sc=D.COL&&D.COL[l.subject];if(sc)bb.style.background="#"+sc[D.LT?0:1];
-  const mm=document.createElement("div");mm.className="m";mm.textContent=l.subject;
-  const sm=document.createElement("small");sm.textContent=(cur?"сейчас · ":nx?"следующий · ":"")+"урок "+l.num;mm.appendChild(sm);
-  r.append(t,bb,mm);
-  if(l.changed){const z=document.createElement("span");z.className="sub";z.textContent="замена";r.appendChild(z)}
-  if(l.room){const p=document.createElement("span");p.className="pl"+(cur?"":" s");p.textContent=l.room;r.appendChild(p)}
-  list.appendChild(r)});
- if(!ls.length)list.innerHTML='<div class="brk" style="padding:20px 0;text-align:center">Уроков нет. Отдыхай.</div>';
- $("vac").textContent=vacationText(vacation(now,{at:lessonsOn,real:true}));
+// ---------- кабинеты (как во вкладке «Кабинеты» на сайте) ----------
+const splitRooms = r => (r || "").split("/").map(x => x.trim()).filter(Boolean);
+const ROOMS = (() => {
+  const set = new Set();
+  for (const c of Object.keys(DATA.classes)) for (const day of classWeek(c)) for (const l of day) splitRooms(l.room).forEach(r => set.add(r));
+  return [...set].sort((a, b) => (parseInt(a) || 999) - (parseInt(b) || 999) || a.localeCompare(b, "ru"));
+})();
+/** Свободные кабинеты сейчас (или на ближайшем уроке) и на следующем; edge: ближайший звонок, когда список поменяется. */
+function freeRooms(now) {
+  const off = dayOff(now), min = now.getHours() * 60 + now.getMinutes(), use = {};
+  if (!off) for (const c of Object.keys(DATA.classes)) for (const l of dayLessons(c, now)) splitRooms(l.room).forEach(r => (use[r] = use[r] || []).push(l.num));
+  const bells = dayBells(now), slots = bells.map((b, i) => b && Object.values(use).some(u => u.includes(i + 1)) ? i + 1 : 0).filter(Boolean);
+  const free = n => ROOMS.filter(r => r !== "спортзал" && !(use[r] || []).includes(n));
+  const live = slots.find(n => min >= bells[n - 1][0] && min < bells[n - 1][1]) || 0, next = slots.find(n => bells[n - 1][0] > min) || 0;
+  const edges = slots.flatMap(n => bells[n - 1]).filter(x => x > min);
+  const r = {edge: edges.length ? at(now, Math.min(...edges)) : null};
+  if (off || !slots.length) return Object.assign(r, {head: off ? off[2] : "Сегодня уроков нет", list: "Все кабинеты свободны"});
+  if (!live && !next) return Object.assign(r, {head: "Уроки закончились", list: "Все кабинеты свободны"});
+  const first = live || next, after = slots.find(n => n > first) || 0, f = free(first);
+  Object.assign(r, {count: f.length, list: f.length ? f.join("  ") : "свободных нет",
+    head: live ? "Свободны сейчас · " + live + " урок" : "Свободны на " + next + " уроке · " + hm(bells[next - 1][0])});
+  if (after) { const f2 = free(after); Object.assign(r, {head2: "На " + after + " уроке · " + hm(bells[after - 1][0]), list2: f2.length ? f2.join("  ") : "свободных нет"}); }
+  return r;
 }
-render();setInterval(render,1000);
-</script></body></html>`;
+function roomsWidget(f, r) {
+  const w = new ListWidget();
+  const text = (p, s, font, a, lines) => { const t = T(p, s, font, a, String(f).startsWith("accessory") ? null : c(1), 0.7); t.lineLimit = lines; return t; };
+  if (f === "accessoryInline") { w.addText(r.count != null ? "Свободны: " + r.list : r.head); return w; }
+  if (f === "accessoryCircular") {
+    w.addAccessoryWidgetBackground = true;
+    w.addSpacer();
+    centered(w, x => T(x, r.count != null ? String(r.count) : "все", Font.boldRoundedSystemFont(20), 1));
+    centered(w, x => T(x, "свободны", Font.mediumSystemFont(9), 0.7));
+    w.addSpacer();
+    return w;
+  }
+  if (f === "accessoryRectangular") {
+    text(w, r.head.toUpperCase(), Font.semiboldSystemFont(11), 0.7, 1);
+    text(w, r.list, Font.boldRoundedSystemFont(14), 1, 2);
+    return w;
+  }
+  background(w);
+  w.setPadding(14, 16, 14, 16);
+  text(w, r.head.toUpperCase(), Font.semiboldSystemFont(11), 0.42, 1);
+  w.addSpacer(4);
+  text(w, r.list, Font.semiboldRoundedSystemFont(f === "small" ? 15 : 17), 1, f === "small" ? 5 : f === "medium" ? 3 : 7);
+  if (r.head2 && f !== "small") {
+    w.addSpacer(8);
+    text(w, r.head2.toUpperCase(), Font.semiboldSystemFont(11), 0.42, 1);
+    w.addSpacer(2);
+    text(w, r.list2, Font.mediumRoundedSystemFont(15), 0.7, f === "medium" ? 1 : 5);
+  }
+  w.addSpacer();
+  return w;
+}
+
+// ---------- экран приложения ----------
+// Запуск скрипта в Scriptable открывает сам сайт «Звонка»: «Сейчас», «Неделя», «Кабинеты» и «Ещё», как на сайте.
+// Он скачивается один раз и хранится на телефоне, поэтому дальше открывается и без интернета; свежая копия
+// подтягивается в фоне, когда есть сеть (не чаще раза в 6 часов). С ключом подписи в скрипте копия должна быть им подписана.
+// Класс и своё расписание, выбранные там, сохраняются в настройки, и виджеты показывают то же самое.
+function appPath() { const fm = FileManager.local(); return fm.joinPath(fm.documentsDirectory(), "zvonok-app.html"); }
+async function fetchApp() {
+  try {
+    const r = new Request(SITE + "index.html");
+    r.timeoutInterval = 10;
+    const v = UPDATE_KEY ? new Request(SITE + "ios/versions.json") : null;
+    if (v) v.timeoutInterval = 6;
+    const [html, ver] = await Promise.all([r.loadString(), v ? v.loadJSON() : null]);
+    if (!html || html.length < 50000 || !html.includes("zvNext")) return null;
+    if (UPDATE_KEY && !signedByZvonok(html, ver && ver.app)) return null;
+    FileManager.local().writeString(appPath(), html);
+    return html;
+  } catch (e) { return null; } // нет сети: откроется сохранённая копия
+}
+/** Без интернета и без сохранённой копии: коротко, что сейчас, и как открыть всё приложение. */
+function offlineHtml(m, now) {
+  const e = t => String(t).replace(/[&<>"]/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"})[ch]);
+  return "<!doctype html><html lang=\"ru\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+    + "<body style=\"font:-apple-system-body;background:#000;color:#fff;padding:max(24px,env(safe-area-inset-top)) 22px 24px\">"
+    + "<h1>Звонок " + e(OWN ? "· своё" : CLS) + "</h1><p style=\"font-size:1.3em\">" + e(spoken(m, now)) + "</p>"
+    + "<p style=\"opacity:.7\">Чтобы открыть всё приложение (неделя, кабинеты, настройки), один раз подключись к интернету и запусти скрипт снова. "
+    + "Потом оно будет открываться и без сети.</p></body></html>";
+}
+async function app(m, now) {
+  const fm = FileManager.local();
+  let html = null, age = Infinity;
+  try { if (fm.fileExists(appPath())) { html = fm.readString(appPath()); age = Math.abs(Date.now() - fm.modificationDate(appPath()).getTime()); } } catch (e) { html = null; }
+  if (!html) { html = await fetchApp(); age = 0; }
+  const wv = new WebView(), base = SITE + "?app=scriptable";
+  let page = base, wake = null;
+  wv.shouldAllowRequest = req => {
+    const u = String(req.url || ""), doc = u.split("#")[0];
+    if (doc !== page.split("#")[0] && wake) { const f = wake; wake = null; f("nav"); } // открылась другая страница
+    if (u.startsWith("about:") || u.startsWith(base)) { page = u; return true; }
+    if (html && (doc === SITE || doc === SITE + "index.html")) { page = base; wv.loadHTML(html, base); return false; } // «на главную»: копия на телефоне
+    if (u.startsWith(SITE)) { page = u; return true; } // другие страницы сайта: конструктор, «Написать нам», «Что нового»
+    if (/^(https?|webcal|tg|mailto):/i.test(u)) Safari.open(u);
+    return false;
+  };
+  if (!html) { await wv.loadHTML(offlineHtml(m, now)); await wv.present(true); return; }
+  await wv.loadHTML(html, base);
+  let open = true;
+  const shown = wv.present(true).then(() => { open = false; return null; }, () => { open = false; return null; });
+  // настройки: у новой копии страницы берём выбранное в виджетах, иначе запоминаем выбранное в приложении
+  try {
+    const st = JSON.parse(await wv.evaluateJavaScript("zvState()"));
+    if (st && st.cls) saveSettings(st);
+    else if (SET.cls || SET.custom) { await wv.evaluateJavaScript("zvSync(" + JSON.stringify(SET) + ")"); await wv.waitForLoad(); }
+  } catch (e) { /* страница без моста (старая копия): просто показываем */ }
+  if (age > 6 * 3600000) fetchApp(); // в фоне; в следующий раз откроется свежая версия
+  while (open) {
+    const nav = new Promise(r => { wake = r; });
+    const raw = await Promise.race([wv.evaluateJavaScript("typeof zvNext === \"function\" ? zvNext(completion) : completion(\"\")", true), shown, nav]).catch(() => "");
+    if (!open || raw == null) break;
+    if (raw === "nav") { await wv.waitForLoad().catch(() => {}); continue; }
+    if (!raw) { await Promise.race([shown, nav]); continue; } // на странице без моста ждём, пока вернутся на главную
+    let msg = {};
+    try { msg = JSON.parse(raw); } catch (e) { continue; }
+    try {
+      if (msg.set) saveSettings(msg.set);
+      if (typeof msg.open === "string" && /^(https?|webcal|tg|mailto):/i.test(msg.open)) Safari.open(msg.open);
+      if (typeof msg.share === "string") await ShareSheet.present([msg.share]);
+      if (typeof msg.copy === "string") Pasteboard.copy(msg.copy);
+    } catch (e) { /* отказ поделиться и т. п. */ }
+  }
 }
 
 // ---------- самообновление: новая версия скрипта для своего класса с сайта ----------
@@ -938,27 +995,32 @@ function spoken(m, now) {
 netPlan();
 CHANGES = cleanChanges((await Promise.all([loadChanges(NET.changes), NET.update ? selfUpdate() : null]))[0]);
 const now = new Date();
-const m = model(now);
-// «цвет урока»: кольцо и кабинет в цвете текущего предмета, на перемене следующего
-if (TH.sc) {
-  const subj = m.s.kind === "LESSON" ? m.s.cur && m.s.cur.subject : m.s.next && m.s.next.subject;
-  const col = subj && COLORS[subj];
-  if (col) ACC = col[LIGHT ? 0 : 1];
-  if (col && hasLessonToday(m)) TINT = col[1]; // в выходной фон не красим уроком понедельника
-}
-
-if (config.runsInWidget || config.runsInAccessoryWidget) {
-  const f = config.widgetFamily;
-  const w = f === "accessoryRectangular" ? lockRect(m) : f === "accessoryCircular" ? lockCircle(m) : f === "accessoryInline" ? lockInline(m)
-    : f === "medium" ? medium(m) : f === "large" || f === "extraLarge" ? large(m, now) : small(m);
-  w.refreshAfterDate = nextRefresh(m, now);
+const inWidget = config.runsInWidget || config.runsInAccessoryWidget;
+if (inWidget && ROOMS_MODE) {
+  // виджет «кабинеты»: перерисовка на ближайшем звонке, когда список поменяется
+  const r = freeRooms(now), w = roomsWidget(config.widgetFamily, r);
+  w.refreshAfterDate = r.edge ? new Date(r.edge.getTime() + 1000) : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
   Script.setWidget(w);
-} else if (config.runsWithSiri || config.runsInShortcuts) {
-  Script.setShortcutOutput(spoken(m, now));
 } else {
-  Script.setShortcutOutput(spoken(m, now));
-  const wv = new WebView();
-  await wv.loadHTML(appHtml(m, now));
-  await wv.present(true);
+  const m = model(now);
+  // «цвет урока»: кольцо и кабинет в цвете текущего предмета, на перемене следующего
+  if (TH.sc) {
+    const subj = m.s.kind === "LESSON" ? m.s.cur && m.s.cur.subject : m.s.next && m.s.next.subject;
+    const col = subj && COLORS[subj];
+    if (col) ACC = col[LIGHT ? 0 : 1];
+    if (col && hasLessonToday(m)) TINT = col[1]; // в выходной фон не красим уроком понедельника
+  }
+  if (inWidget) {
+    const f = config.widgetFamily;
+    const w = f === "accessoryRectangular" ? lockRect(m) : f === "accessoryCircular" ? lockCircle(m) : f === "accessoryInline" ? lockInline(m)
+      : f === "medium" ? medium(m) : f === "large" || f === "extraLarge" ? large(m, now) : small(m);
+    w.refreshAfterDate = nextRefresh(m, now);
+    Script.setWidget(w);
+  } else if (config.runsWithSiri || config.runsInShortcuts) {
+    Script.setShortcutOutput(spoken(m, now));
+  } else {
+    Script.setShortcutOutput(spoken(m, now));
+    await app(m, now);
+  }
 }
 Script.complete();

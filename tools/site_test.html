@@ -308,10 +308,10 @@ async function pages() {
     }
     probe.remove();
     ok(weak.length === 0, "страница iPhone: серый текст читается на всех фонах (AA)" + (weak.length ? ": " + weak.join("; ") : ""));
-    const cls = w.eval("CLASSES");
+    const cls = w.eval("CLASSES"), SCR = (window.SIG_FIXTURE || {}).scripts || {};
     let broken = 0;
     for (const c of cls) {
-      const src = w.scriptFor(c);
+      const src = SCR[c] || "";
       try { new (Object.getPrototypeOf(async function () {}).constructor)(src); } catch (e) { broken++; }
       if (src.includes("__") || !src.includes('const VERSION = "' + w.eval("IOS_VERSIONS")[c.replace(/[АБВГ]/g, x => ({"А": "A", "Б": "B", "В": "V", "Г": "G"})[x])] + '"')) broken++;
     }
@@ -319,21 +319,27 @@ async function pages() {
     ok(d.getElementById("kCal").href.startsWith("webcal://") && d.getElementById("kOpen").getAttribute("href").startsWith("scriptable://"), "календарь и кнопка «Открыть Scriptable»");
     // код темы из испорченного хранилища: в скрипт виджета попадают только проверенные поля
     w.localStorage.setItem("zv.theme", JSON.stringify({bg: '"; alert(1); //', ac: "60a5fa", op: "70", r: 99, s: 1, x: "y"}));
-    const thc = w.eval("themeCode()"), src7 = w.scriptFor("7Б");
+    const thc = w.eval("themeCode()"), src7 = w.personalize(SCR["7Б"], null);
     let compiles7 = true;
     try { new (Object.getPrototypeOf(async function () {}).constructor)(src7); } catch (e) { compiles7 = false; }
     ok(thc === "ZV1;bg=000000;ac=60A5FA;op=70;r=26;s=1;p=1;n=1;d=1;sc=1" &&src7.includes('const THEME = "' + thc + '"') && compiles7,
       "испорченная тема в хранилище: в скрипт попадают только проверенные поля (" + thc + ")");
     w.localStorage.removeItem("zv.theme");
+    const own = w.personalize(SCR["7Б"], {v: 1, days: [[["Шахматы", "12"]]]});
+    let compilesOwn = true;
+    try { new (Object.getPrototypeOf(async function () {}).constructor)(own); } catch (e) { compilesOwn = false; }
+    ok(compilesOwn && own.includes('const START = {"v":1,') && own.includes('const VERSION = "' + w.eval("IOS_VERSIONS")["7B"] + '"'),
+      "скрипт под своё расписание: своё внутри, версия класса (обновляется сам)");
     await iosScript(w);
+    await embedded();
   } catch (e) { ok(false, "страницы: " + e); }
 }
 
 // Скрипт iPhone в «Scriptable»: самообновление и ответ для Siri
 async function iosScript(w) {
-  const src = w.scriptFor("7Б"), ver = w.eval("IOS_VERSIONS")["7B"];
+  const SCR = (window.SIG_FIXTURE || {}).scripts || {}, src = SCR["7Б"], ver = w.eval("IOS_VERSIONS")["7B"];
   const run = async (opts, code) => {
-    const files = {}, logs = [], notes = [];
+    const files = Object.assign({}, opts.files || {}), logs = [], notes = [];
     let out = null;
     const fm = {documentsDirectory: () => "/docs", joinPath: (a, b) => a + "/" + b, fileExists: p => p in files, readString: p => files[p],
       writeString: (p, s) => { files[p] = s; }, modificationDate: () => new Date(), isFileStoredIniCloud: p => p.startsWith("/icloud/")};
@@ -341,7 +347,7 @@ async function iosScript(w) {
       loadJSON() { return /versions\.json$/.test(this.url) ? Promise.resolve(opts.versions) : Promise.reject(new Error("офлайн")); }
       loadString() { return /ios\/7B\.js$/.test(this.url) ? Promise.resolve(opts.code) : Promise.reject(new Error("офлайн")); } }
     class Stub { constructor() { return new Proxy(function () {}, {get: (t, k) => k === "then" ? undefined : new Stub(), apply: () => new Stub(), construct: () => new Stub(), set: () => true}); } }
-    const env = {config: {runsInApp: true, runsWithSiri: !!opts.siri, runsInWidget: false}, args: {widgetParameter: ""}, module: {filename: "/icloud/Звонок.js"},
+    const env = {config: {runsInApp: true, runsWithSiri: !!opts.siri, runsInWidget: false}, args: {widgetParameter: opts.param || ""}, module: {filename: "/icloud/Звонок.js"},
       Script: {complete() {}, setWidget() {}, setShortcutOutput(v) { out = v; }}, FileManager: {local: () => fm, iCloud: () => fm}, Request,
       Notification: class { schedule() { notes.push(this.title + " / " + this.body); return Promise.resolve(); } },
       WebView: class { loadHTML() { return Promise.resolve(); } present() { return Promise.resolve(); } },
@@ -393,7 +399,7 @@ async function iosScript(w) {
     // сайт и виджет iPhone считают одно и то же: целая неделя с шагом 7 минут, три класса
     let diff = 0, checks = 0;
     for (const c of ["7Б", "9А", "11Г"]) {
-      const res = await run({versions: {classes: {}}}, w.scriptFor(c).replace("Script.complete();", "Script.complete(); return d => compute(d, {at: lessonsOn, real: true});"));
+      const res = await run({versions: {classes: {}}}, SCR[c].replace("Script.complete();", "Script.complete(); return d => compute(d, {at: lessonsOn, real: true});"));
       const fn = res.ret, sig = s => [s.kind, s.cur && s.cur.subject, s.next && s.next.subject, s.target == null ? "" : +s.target].join("|");
       for (let t = +new Date("2026-11-02T06:00:00"); t < +new Date("2026-11-09T00:00:00"); t += 7 * 60000) {
         const a = w.compute(new Date(t), {at: d => w.dayLessons(c, d), real: true}), b = fn(new Date(t));
@@ -401,6 +407,41 @@ async function iosScript(w) {
       }
     }
     ok(diff === 0 && checks > 4000, "сайт и виджет iPhone совпадают в " + checks + " моментах недели" + (diff ? " (расхождений " + diff + ")" : ""));
+    // настройки приложения: класс и своё расписание из zvonok-settings.json, параметр виджета важнее
+    const probe = code => code.replace("Script.complete();", "Script.complete(); return {CLS, OWN: !!OWN, lessonsOn, freeRooms};");
+    const set10 = {"/docs/zvonok-settings.json": JSON.stringify({cls: "10А"})}, tue = new Date("2026-11-10T09:00:00");
+    let st = (await run({versions: {classes: {}}, files: set10}, probe(src))).ret;
+    ok(st.CLS === "10А" && JSON.stringify(st.lessonsOn(tue).map(l => l.subject + l.room)) === JSON.stringify(w.dayLessons("10А", tue).map(l => l.subject + l.room)),
+      "виджет iPhone показывает класс, выбранный в приложении");
+    st = (await run({versions: {classes: {}}, files: set10, param: "9а"}, probe(src))).ret;
+    ok(st.CLS === "9А" && !st.OWN, "параметр виджета «9а» важнее выбранного в приложении");
+    st = (await run({versions: {classes: {}}}, probe(w.personalize(src, {v: 1, days: [[["Шахматы", "12"]]]})))).ret;
+    ok(st.OWN && st.lessonsOn(new Date("2026-11-09T09:00:00"))[0].subject === "Шахматы", "своё расписание со страницы iPhone попадает в виджет");
+    // виджет «кабинеты»: те же свободные кабинеты, что во вкладке «Кабинеты» на сайте
+    st = (await run({versions: {classes: {}}}, probe(src))).ret;
+    let roomsDiff = 0;
+    for (const [t, n] of [["2026-11-10T10:20:00", 3], ["2026-11-12T08:10:00", 1], ["2026-11-11T13:00:00", 6]]) {
+      const d = new Date(t), use = w.roomDay(d), site = w.eval("ROOMS").filter(r => r !== "спортзал" && !(use[r] || []).some(u => u.num === n)).join("  ");
+      if (st.freeRooms(d).list !== site) roomsDiff++;
+    }
+    ok(roomsDiff === 0, "виджет «кабинеты» совпадает с сайтом" + (roomsDiff ? " (расхождений " + roomsDiff + ")" : ""));
   } catch (e) { ok(false, "скрипт iPhone: " + e); }
+}
+
+// Сайт внутри приложения Scriptable (?app=scriptable): мост к нему и ничего лишнего на экране
+async function embedded() {
+  const keep = ["zv.class", "zv.useCustom"].map(k => [k, localStorage.getItem(k)]);
+  try {
+    const e = await load("_site_under_test.html?app=scriptable", 390, 800), d = e.document;
+    ok(d.documentElement.classList.contains("embed") && typeof e.zvNext === "function" && d.getElementById("promo").hidden,
+      "сайт в Scriptable: мост на месте, без приглашения поставить сайт");
+    e.eval('setClass("8А")');
+    const msg = JSON.parse(await new Promise(r => e.zvNext(r)));
+    ok(msg.set && msg.set.cls === "8А" && msg.set.useCustom === false, "смена класса в приложении уходит виджетам iPhone");
+    e.eval('copyText("проверка")');
+    ok(JSON.parse(await new Promise(r => e.zvNext(r))).copy === "проверка", "копирование в приложении через Scriptable");
+    ok(JSON.parse(e.zvState()).cls === "8А", "zvState отдаёт выбранный класс");
+  } catch (x) { ok(false, "сайт в Scriptable: " + x); }
+  keep.forEach(([k, v]) => v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v));
 }
 </script>

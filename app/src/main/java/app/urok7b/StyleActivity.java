@@ -250,9 +250,14 @@ public class StyleActivity extends Activity {
         widgets.addView(w2);
         widgets.addView(w1);
         wall.addView(widgets);
+        FrameLayout rooms = new FrameLayout(this);
+        rooms.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 150)));
+        ((LinearLayout.LayoutParams) rooms.getLayoutParams()).topMargin = Ui.dp(this, 12);
+        add(rooms, RoomsWidget.build(this, java.time.ZonedDateTime.now(), t), ViewGroup.LayoutParams.MATCH_PARENT);
+        wall.addView(rooms);
         preview.addView(wall);
 
-        TextView note = Ui.text(this, "Так будут выглядеть уведомление и виджеты 2×2 и 2×1. Пример.", 12, Ui.MUTED, null);
+        TextView note = Ui.text(this, "Так будут выглядеть уведомление и виджеты: 2×2, 2×1 и «Кабинеты» (в нём кабинеты на сегодня).", 12, Ui.MUTED, null);
         note.setPadding(Ui.dp(this, 4), Ui.dp(this, 8), 0, 0);
         preview.addView(note);
     }

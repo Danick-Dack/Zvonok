@@ -260,7 +260,7 @@ body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-ins
 .facts li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--line-2)}
 
 /* приложение с экрана «Домой»: без лишнего про установку */
-.standalone .web-only{display:none!important}
+.standalone .web-only,.embed .web-only{display:none!important}
 
 /* змейка */
 .game canvas{display:block;width:100%;max-width:320px;aspect-ratio:1;margin:0 auto;border-radius:16px;touch-action:none;cursor:pointer}

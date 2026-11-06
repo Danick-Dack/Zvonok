@@ -427,7 +427,7 @@ final class Ui {
             for (int i = 0; i < getChildCount(); i++) {
                 View v = getChildAt(i);
                 if (v.getVisibility() == GONE) continue;
-                v.measure(MeasureSpec.makeMeasureSpec(max, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                measureChild(v, MeasureSpec.makeMeasureSpec(max, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
                 if (x > 0 && x + v.getMeasuredWidth() > max) {
                     x = 0;
                     y += row + gap;

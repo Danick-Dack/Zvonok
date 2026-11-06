@@ -80,12 +80,10 @@ final class MoreTab {
             g.setColor(0xFF000000 | Integer.parseInt(acc[Ui.DARK ? 3 : 2], 16));
             g.setStroke(a.dp(on ? 3 : 1), on ? Ui.TEXT : Ui.LINE);
             dot.setBackground(g);
-            dot.setMinimumWidth(a.dp(44));
-            dot.setMinimumHeight(a.dp(44));
             dot.setSelected(on);
             dot.setContentDescription("Цвет: " + acc[1] + (on ? ", выбран" : ""));
             dot.setOnClickListener(v -> { Ui.tick(v); Updater.prefs(a).edit().putString(Ui.KEY_ACCENT, acc[0]).apply(); a.recreate(); });
-            colors.addView(dot);
+            colors.addView(dot, new android.view.ViewGroup.LayoutParams(a.dp(44), a.dp(44)));
         }
         look.addView(colors, Ui.mw(a, 8));
         look.addView(Ui.switchRow(a, "Цвет предметов", "Алгебра синяя, физика фиолетовая, химия бирюзовая", !Ui.PLAIN,

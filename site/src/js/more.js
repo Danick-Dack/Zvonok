@@ -51,8 +51,9 @@ function renderBrand() {
   Object.keys(BRANDS).forEach(k => sel.append(h("option", {value: k, text: BRANDS[k][0]})));
   sel.onchange = renderBrand;
   $("apk").href = APK;
-  $("iosDone").hidden = !STANDALONE;
-  $("shareBtn").onclick = () => navigator.share ? navigator.share({title: "Звонок", text: shareMsg().split("\n")[0], url: shareUrl()}).catch(() => {}) : copyText(shareUrl(), "Ссылка скопирована");
+  $("iosDone").hidden = !STANDALONE && !EMBED;
+  $("shareBtn").onclick = () => bridge({share: shareMsg()})
+    || (navigator.share ? navigator.share({title: "Звонок", text: shareMsg().split("\n")[0], url: shareUrl()}).catch(() => {}) : copyText(shareUrl(), "Ссылка скопирована"));
   $("copyBtn").onclick = () => copyText(shareUrl(), "Ссылка скопирована");
   $("msgBtn").onclick = () => copyText(shareMsg(), "Сообщение для чата скопировано");
   $("useCustom").onchange = e => { setCustom(e.target.checked); toast(useCustom ? "Показываю своё расписание" : "Показываю расписание " + cls); };
@@ -117,7 +118,7 @@ function download(name, text, type) {
    iPhone берёт apple-touch-icon, Android манифест; оба читают их в момент добавления на экран. */
 function homeIcon() {
   const apple = document.querySelector('link[rel="apple-touch-icon"]'), man = document.querySelector('link[rel="manifest"]');
-  if (!apple || !man || !ONLINE_SITE) return;
+  if (!apple || !man || !ONLINE_SITE || EMBED) return;
   if (!homeIcon.orig) homeIcon.orig = [apple.getAttribute("href"), man.getAttribute("href")];
   if (!store.get("classIcon", false) || pick || useCustom) { apple.setAttribute("href", homeIcon.orig[0]); man.setAttribute("href", homeIcon.orig[1]); return; }
   const png = size => {

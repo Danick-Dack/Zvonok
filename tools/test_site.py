@@ -45,6 +45,11 @@ try:  # сверка с libsodium, если она есть (на GitHub Actions
         sys.exit("Ed25519 в tools/ed25519.py разошёлся с libsodium")
 except ImportError:
     pass
+# скрипты всех классов, как их отдаёт сайт (страница iPhone теперь берёт их с сайта, а не собирает сама)
+LAT = {"А": "A", "Б": "B", "В": "V", "Г": "G"}
+classes = json.load(open(os.path.join(ROOT, "data", "schedule.json"), encoding="utf-8"))["classes"]
+fixture["scripts"] = {c: open(os.path.join(ROOT, "site", "ios", re.sub("[АБВГ]", lambda m: LAT[m.group(0)], c) + ".js"), encoding="utf-8").read()
+                      for c in classes}
 copies.append(os.path.join(ROOT, "tools", "_sig_fixture.js"))
 open(copies[-1], "w", encoding="utf-8").write("window.SIG_FIXTURE = " + json.dumps(fixture, ensure_ascii=False) + ";\n")
 

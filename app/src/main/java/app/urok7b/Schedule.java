@@ -415,7 +415,7 @@ public final class Schedule {
     }
 
     private static boolean space(char c) {
-        return Character.isWhitespace(c) || Character.isSpaceChar(c) || c == '﻿';
+        return Character.isWhitespace(c) || Character.isSpaceChar(c) || c == '\uFEFF';
     }
 
     private static String subjectName(String code) {
