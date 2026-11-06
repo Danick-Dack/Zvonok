@@ -194,6 +194,11 @@ final class RoomsTab {
             });
             c.setMinWidth(a.dp(56));
             c.setMinHeight(a.dp(44));
+            // свободные кабинеты зелёные, как на сайте; спортзал в общем списке нейтральный
+            if (!Schedule.SPORT.equals(r)) {
+                c.setTextColor(Ui.OK);
+                c.setBackground(Ui.round(a, (Ui.OK & 0x00FFFFFF) | 0x24000000, 14, 0));
+            }
             c.setContentDescription(Character.isDigit(r.charAt(0)) ? "Кабинет " + r : r);
             f.addView(c);
         }

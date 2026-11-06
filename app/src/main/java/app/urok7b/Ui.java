@@ -275,10 +275,18 @@ final class Ui {
         r.addView(t);
         Switch sw = new Switch(c);
         sw.setChecked(on);
-        sw.setThumbTintList(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
-                new int[]{Color.WHITE, DARK ? 0xFF8A8A8A : 0xFFFFFFFF}));
-        sw.setTrackTintList(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
-                new int[]{OK, DARK ? 0xFF3A3A3E : 0xFFCFCFCA}));
+        // как на iPhone и на сайте: сплошная дорожка (зелёная, когда включено) и белый кружок; видно в обеих темах
+        GradientDrawable track = new GradientDrawable();
+        track.setCornerRadius(dp(c, 15));
+        track.setColor(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}}, new int[]{OK, DARK ? 0xFF3A3A3E : 0xFFD3D3CE}));
+        track.setSize(dp(c, 50), dp(c, 30));
+        GradientDrawable thumb = new GradientDrawable();
+        thumb.setShape(GradientDrawable.OVAL);
+        thumb.setColor(Color.WHITE);
+        thumb.setStroke(dp(c, 3), Color.TRANSPARENT);
+        thumb.setSize(dp(c, 30), dp(c, 30));
+        sw.setTrackDrawable(track);
+        sw.setThumbDrawable(thumb);
         sw.setOnCheckedChangeListener(l);
         r.addView(sw);
         r.setOnClickListener(v -> sw.toggle());

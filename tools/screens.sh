@@ -61,7 +61,7 @@ adb shell cmd statusbar expand-notifications; sleep 2; shot dark_7_notification
 adb shell cmd statusbar collapse; sleep 1
 # таймер в строке состояния виден, когда само приложение свёрнуто
 adb shell input keyevent KEYCODE_HOME; sleep 3; shot dark_8_statusbar
-flags=$(adb shell dumpsys notification --noredact | grep -A 40 "pkg=$PKG" | grep -m 3 -oE "flags=0x[0-9a-f]+|promot[A-Za-z]*=[a-z0-9]+")
+flags=$(adb shell dumpsys notification --noredact | grep -A 40 "$PKG" | grep -m 3 -oE "flags=0x[0-9a-f]+|promot[A-Za-z]*=[a-z0-9]+")
 echo "::notice::API $API: уведомление «Звонка»: $(echo $flags) (FLAG_PROMOTED_ONGOING = 0x40000)"
 
 # крупный шрифт
