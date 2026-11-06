@@ -444,6 +444,10 @@ async function embedded() {
     e.eval('copyText("проверка")');
     ok(JSON.parse(await new Promise(r => e.zvNext(r))).copy === "проверка", "копирование в приложении через Scriptable");
     ok(JSON.parse(e.zvState()).cls === "8А", "zvState отдаёт выбранный класс");
+    localStorage.removeItem("zv.class"); // как при первом запуске: страница ещё не знает класса
+    const fresh = await load("_site_under_test.html?app=scriptable&fresh", 390, 800), wasPick = fresh.eval("pick");
+    ok(wasPick && fresh.zvSync({cls: "10Б"}) === true && fresh.eval("cls") === "10Б" && fresh.eval("pick") === false && fresh.document.getElementById("hello").hidden,
+      "первый запуск в Scriptable: класс виджета подхватывается без перезагрузки страницы");
     e.eval("openLog()");
     ok(d.getElementById("logSheet").open && d.querySelectorAll("#logList .log-item").length === Math.min(4, e.eval("LOG.length")) && e.eval("LOG.length") > 0,
       "«Что нового» открывается листом прямо на главной (без интернета)");

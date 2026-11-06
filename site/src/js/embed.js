@@ -20,10 +20,16 @@ if (EMBED) {
   window.zvState = () => JSON.stringify(zvState());
   // Свежая установка (пустое хранилище страницы): берём то, что уже выбрано в виджетах
   window.zvSync = s => {
-    if (store.get("class", null) || !s || typeof s !== "object") return;
+    if (store.get("class", null) || !s || typeof s !== "object") return false;
     if (typeof s.cls === "string" && DATA.classes[s.cls]) store.set("class", s.cls);
     if (s.custom && typeof s.custom === "object") { store.set("custom", s.custom); store.set("useCustom", !!s.useCustom); }
-    location.reload();
+    // как после выбора класса в шапке, но без перезагрузки: она пошла бы в сеть за живой страницей
+    custom = store.get("custom", null);
+    useCustom = !!store.get("useCustom", false) && !!custom;
+    if (DATA.classes[store.get("class", null)]) cls = store.get("class", null);
+    pick = !useCustom && !DATA.classes[store.get("class", null)];
+    rebuild(); refresh();
+    return true;
   };
   const set0 = store.set;
   let syncT = 0;

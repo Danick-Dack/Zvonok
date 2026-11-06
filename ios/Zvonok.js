@@ -812,7 +812,7 @@ async function app(m, now) {
   try {
     const st = JSON.parse(await wv.evaluateJavaScript("zvState()"));
     if (st && st.cls) saveSettings(st);
-    else { await wv.evaluateJavaScript("zvSync(" + JSON.stringify(Object.assign({cls: CLS}, SET)) + ")"); await wv.waitForLoad(); } // сразу свой класс
+    else await wv.evaluateJavaScript("zvSync(" + JSON.stringify(Object.assign({cls: CLS}, SET)) + ")"); // сразу свой класс
   } catch (e) { /* страница без моста (старая копия): просто показываем */ }
   if (age > 6 * 3600000) fetchApp(); // в фоне; в следующий раз откроется свежая версия
   while (open) {

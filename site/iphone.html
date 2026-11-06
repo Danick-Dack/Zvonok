@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-mNt/Gt9d9vo7QHpBVdDvribm/TwYP9Yeo35QwokBrJU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-yzXvTSLuU78DCJhsaQ+YkantOfaNGw9KRk3sYfBRGUg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="description" content="«Звонок» на iPhone: виджет с таймером до звонка на экране блокировки, ответ Siri и напоминания перед уроком. Скрипт для своего класса и пошаговая анимация.">
 <meta name="theme-color" content="#09090a">
 <title>Звонок на iPhone: виджет, Siri и напоминания</title>
@@ -820,7 +820,7 @@ function vacationText(v) {
 }
 
 /* Звонок · iPhone: скрипт для Scriptable (виджеты и приложение «Звонок»), календарь класса */
-const IOS_VERSIONS = {"7A":"7f4bd7b68d","7B":"5f6f53368e","7V":"17e5bf6eea","8A":"d80cf1d59c","8B":"4987b62e56","8V":"eac5f32772","8G":"1af8553f6f","9A":"70a4d2cd2a","9B":"599f91f9f6","9V":"742ea446af","9G":"e37de8860c","10A":"a97e578a1e","10B":"6d2c2fecd4","10V":"c6782ba0d7","10G":"78d640f34e","11A":"722101d39f","11B":"549db7d8b5","11V":"916d063e20","11G":"4907dce25c"} || {}; // версии скриптов классов: виджет сам скачает новую
+const IOS_VERSIONS = {"7A":"4e69cffd53","7B":"0b1c97d507","7V":"42072eb748","8A":"9b3d4e3d85","8B":"1546d3475c","8V":"4f0e67cc2c","8G":"7e3e4dd64d","9A":"7c8db9003a","9B":"e6596b65e0","9V":"2359f5d720","9G":"6a36a827a4","10A":"5d8b17e1b6","10B":"e57b5f4a3d","10V":"57619674e3","10G":"d0a85a39a4","11A":"d5648d280b","11B":"5637347ed2","11V":"8f633db651","11G":"bdc28abba0"} || {}; // версии скриптов классов: виджет сам скачает новую
 const SITE_URL = "https://danick-dack.github.io/Zvonok/";
 const OWN = "__own__";
 const upSlug = c => c.replace(/[АБВГ]/g, x => LAT[x].toUpperCase());
