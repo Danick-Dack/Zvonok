@@ -28,6 +28,10 @@ body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-ins
 .news a{flex:1;min-width:0;text-decoration:none;font-size:14.5px;line-height:1.35;padding:8px 0}
 .news b{color:var(--accent);margin-right:6px}
 .news .icon-btn{width:40px;height:40px;color:var(--muted)}
+.log-item{padding:12px 0;border-top:1px solid var(--line)}.log-item:first-child{border-top:0;padding-top:0}
+.log-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.log-item h3{font-size:17px;margin:6px 0 4px}.log-item ul{padding-left:18px;font-size:15px;color:var(--text-2)}
+#logSheet .sheet-body>.btn{margin-top:8px}
 
 /* первый заход */
 .hello{padding:14px 0 6px}

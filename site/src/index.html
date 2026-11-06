@@ -254,7 +254,7 @@
         <p class="note age" id="age"></p>
         <div class="row" style="margin-top:12px">
           <a class="btn btn-line btn-sm" href="about.html">Сайт о проекте</a>
-          <a class="btn btn-line btn-sm" href="changelog.html">Что нового</a>
+          <a class="btn btn-line btn-sm" href="changelog.html" id="logBtn">Что нового</a>
           <a class="btn btn-line btn-sm" href="feedback.html">Написать нам</a>
           <a class="btn btn-line btn-sm" href="https://github.com/Danick-Dack/Zvonok" target="_blank" rel="noopener noreferrer">Исходный код</a>
         </div>
@@ -284,6 +284,11 @@
     <p class="note" id="gameScore"></p>
     <div class="pad" role="group" aria-label="Управление"><span></span><button type="button" data-d="0,-1" aria-label="Вверх">↑</button><span></span><button type="button" data-d="-1,0" aria-label="Влево">←</button><button type="button" data-d="0,1" aria-label="Вниз">↓</button><button type="button" data-d="1,0" aria-label="Вправо">→</button></div>
   </div>
+</dialog>
+<dialog class="sheet" id="logSheet" aria-labelledby="logSheetH">
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-head"><h2 id="logSheetH">Что нового</h2><button class="icon-btn" type="button" data-close aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="sheet-body"><div id="logList"></div><a class="btn btn-line btn-sm" href="changelog.html">Все обновления</a></div>
 </dialog>
 <div class="sr-only" aria-live="polite" id="announce"></div>
 <div class="zv-toast" id="zvToast" role="status" aria-live="polite"></div>

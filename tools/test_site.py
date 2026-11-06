@@ -56,7 +56,7 @@ open(copies[-1], "w", encoding="utf-8").write("window.SIG_FIXTURE = " + json.dum
 url = "file:///" + os.path.join(ROOT, "tools", "site_test.html").replace("\\", "/").lstrip("/")
 try:
     dom = subprocess.run([chrome, "--headless=new", "--no-sandbox", "--disable-gpu", "--allow-file-access-from-files",
-                          "--virtual-time-budget=20000", "--dump-dom", url],
+                          "--virtual-time-budget=90000", "--dump-dom", url],
                          capture_output=True, text=True, encoding="utf-8", timeout=180).stdout
 finally:
     for c in copies:

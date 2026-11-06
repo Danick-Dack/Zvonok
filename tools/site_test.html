@@ -23,7 +23,10 @@ function lum(c) {
 }
 const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
 
-document.getElementById("f").onload = () => setTimeout(main, 500);
+// окно сайта могло загрузиться раньше, чем дошла очередь до этого скрипта (большой _sig_fixture.js): тогда сразу
+const frameF = document.getElementById("f"), frameDoc = frameF.contentDocument;
+if (frameDoc && frameDoc.readyState === "complete" && frameDoc.URL !== "about:blank") setTimeout(main, 500);
+else frameF.onload = () => setTimeout(main, 500);
 async function main() {
   const w = document.getElementById("f").contentWindow, d = w.document, ev = s => w.eval(s);
   // выполнить код сайта «как будто сейчас» T
@@ -441,6 +444,11 @@ async function embedded() {
     e.eval('copyText("проверка")');
     ok(JSON.parse(await new Promise(r => e.zvNext(r))).copy === "проверка", "копирование в приложении через Scriptable");
     ok(JSON.parse(e.zvState()).cls === "8А", "zvState отдаёт выбранный класс");
+    e.eval("openLog()");
+    ok(d.getElementById("logSheet").open && d.querySelectorAll("#logList .log-item").length === Math.min(4, e.eval("LOG.length")) && e.eval("LOG.length") > 0,
+      "«Что нового» открывается листом прямо на главной (без интернета)");
+    ok(/^intent:[/][/]danick-dack[.]github[.]io[/]Zvonok[/]8a#Intent;scheme=https;package=app[.]urok7b;/.test(e.eval("appLink()")),
+      "«Открыть в приложении» для Android ведёт сразу на класс");
   } catch (x) { ok(false, "сайт в Scriptable: " + x); }
   keep.forEach(([k, v]) => v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v));
 }

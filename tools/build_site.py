@@ -604,7 +604,8 @@ def main():
 
     news = next(({"date": r["date"], "title": r["title"]} for r in changelog if {"site", "ios"} & set(r["platforms"])), None)
     index = page("index.html", ["tokens", "base", "components", "app"], ["core", "embed", "schedule", "rules", "app", "now", "week", "rooms", "more", "snake", "start"],
-                 dict(data_js, **{"/*@QRS@*/null": js_literal(qrs), "/*@NEWS@*/null": js_literal(news), "@HEAD_JS@": HEAD_JS + HEAD_PC}), common=common)
+                 dict(data_js, **{"/*@QRS@*/null": js_literal(qrs), "/*@NEWS@*/null": js_literal(news), "/*@LOG@*/[]": js_literal(changelog[:4]),
+                                  "@HEAD_JS@": HEAD_JS + HEAD_PC}), common=common)
     page("make.html", ["tokens", "base", "components", "pages", "make"], ["core", "schedule", "rules", "make"], data_js, common=common)
     page("about.html", ["tokens", "base", "components", "pages", "about"], ["core", "schedule", "rules", "pages", "about"], data_js, common=common)
     page("changelog.html", ["tokens", "base", "components", "pages"], ["core", "pages", "changelog"],

@@ -160,6 +160,9 @@ function announce() {
   $("announce").textContent = [M.status, M.title, M.room ? "кабинет " + M.room : ""].filter(Boolean).join(". ");
 }
 
+/** Открыть приложение Android сразу на этом классе; если его нет, Chrome покажет, как установить. */
+const appLink = () => "intent://" + SITE.replace(/^https?:\/\//, "") + (pick || useCustom ? "" : slugOf(cls))
+  + "#Intent;scheme=https;package=app.urok7b;S.browser_fallback_url=" + encodeURIComponent(SITE + "#install") + ";end";
 /* приглашение поставить на телефон */
 function renderPromo() {
   const box = $("promo");
@@ -171,12 +174,30 @@ function renderPromo() {
     ? h("div", null, h("b", {text: "Звонок на экране «Домой»"}), h("p", {text: "Добавь сайт как приложение: откроется сразу на твоём расписании, даже в подвале без сети."}),
       h("a", {class: "btn btn-primary btn-sm", href: "#install", text: "Как добавить"}))
     : h("div", null, h("b", {text: "Приложение для Android"}), h("p", {text: "Таймер до звонка прямо на экране блокировки. Весит 130 КБ и не жрёт батарею."}),
-      h("div", {class: "row"}, h("a", {class: "btn btn-primary btn-sm", href: APK, rel: "noopener", text: "Скачать"}), h("a", {class: "btn btn-quiet btn-sm", href: "#install", text: "Как установить"}))),
+      h("div", {class: "row"}, h("a", {class: "btn btn-primary btn-sm", href: APK, rel: "noopener", text: "Скачать"}),
+        h("a", {class: "btn btn-quiet btn-sm", href: appLink(), text: "Уже стоит? Открыть"}), h("a", {class: "btn btn-quiet btn-sm", href: "#install", text: "Как установить"}))),
     close);
 }
 
-/* «Что нового» после обновления: показываем один раз тем, кто уже пользовался сайтом */
-const NEWS = /*@NEWS@*/null;
+/* «Что нового»: лист прямо на главной (открывается и без интернета, и в приложении на iPhone).
+   Свежую запись после обновления показываем один раз тем, кто уже пользовался сайтом. */
+const NEWS = /*@NEWS@*/null, LOG = /*@LOG@*/[];
+const PLATFORM = {site: "Сайт", android: "Android", ios: "iPhone"};
+function openLog() {
+  const box = $("logList"), d = $("logSheet");
+  box.textContent = "";
+  LOG.forEach((r, i) => box.append(h("article", {class: "log-item"},
+    h("p", {class: "log-meta"}, i === 0 ? h("span", {class: "tag hot", text: "Новое"}) : null,
+      r.platforms.map(p => h("span", {class: "tag", text: PLATFORM[p] + (p === "android" && r.version ? " " + r.version : "")})),
+      h("span", {text: dm(new Date(r.date + "T12:00:00"))})),
+    h("h3", {text: r.title}), h("ul", null, r.items.map(t => h("li", {text: t}))))));
+  if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
+}
+$("logSheet").addEventListener("click", e => {
+  const d = $("logSheet");
+  if (e.target === d || e.target.closest("[data-close]")) { if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
+});
+$("logBtn").onclick = e => { if (!LOG.length) return; e.preventDefault(); openLog(); };
 (function initNews() {
   if (!NEWS) return;
   const key = NEWS.date + "|" + NEWS.title, seen = store.get("seenLog", null);
@@ -185,5 +206,5 @@ const NEWS = /*@NEWS@*/null;
   $("newsText").textContent = NEWS.title; $("news").hidden = false;
   store.set("seenLog", key); // один раз: в следующий раз уже не покажем
   $("newsClose").onclick = () => { store.set("seenLog", key); $("news").hidden = true; };
-  $("newsLink").onclick = () => store.set("seenLog", key);
+  $("newsLink").onclick = e => { store.set("seenLog", key); if (!LOG.length) return; e.preventDefault(); $("news").hidden = true; openLog(); };
 })();
