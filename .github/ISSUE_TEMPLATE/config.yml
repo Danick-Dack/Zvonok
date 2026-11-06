@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Написать без аккаунта GitHub
+    url: https://danick-dack.github.io/Zvonok/feedback.html
+    about: "Анонимная форма на сайте: ошибка, идея или вопрос"
+  - name: Сообщить об уязвимости
+    url: https://github.com/Danick-Dack/Zvonok/blob/main/SECURITY.md
+    about: "Не публикуй детали в открытом Issue, сначала прочитай SECURITY.md"

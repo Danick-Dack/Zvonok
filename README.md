@@ -1,5 +1,9 @@
 # Звонок. Расписание лицея №165
 
+[![Сборка](https://github.com/Danick-Dack/Zvonok/actions/workflows/build.yml/badge.svg)](https://github.com/Danick-Dack/Zvonok/actions/workflows/build.yml)
+[![Проверки](https://github.com/Danick-Dack/Zvonok/actions/workflows/checks.yml/badge.svg)](https://github.com/Danick-Dack/Zvonok/actions/workflows/checks.yml)
+[![Лицензия MIT](https://img.shields.io/badge/лицензия-MIT-blue.svg)](LICENSE)
+
 Сколько до звонка, какой следующий урок и в каком он кабинете. Для всех 19 классов лицея (7А–11Г).
 
 **Открыть:** [danick-dack.github.io/Zvonok](https://danick-dack.github.io/Zvonok) ·
@@ -36,7 +40,8 @@
 ## Нашёл ошибку или есть идея
 
 Напиши через [форму на сайте](https://danick-dack.github.io/Zvonok/feedback.html) или открой
-[Issue](https://github.com/Danick-Dack/Zvonok/issues). Расписание и замены меняет только автор проекта.
+[Issue](https://github.com/Danick-Dack/Zvonok/issues/new/choose): там готовые формы для ошибки в расписании, бага и идеи.
+Правки кода присылай Pull Request. Изменения расписания и замен проверяет автор проекта.
 
 ## Устройство
 
@@ -48,9 +53,9 @@
 | `ios/` | скрипт виджетов для Scriptable |
 | `tools/` | сборка сайта, проверка данных, автотесты |
 
-## Лицензия
+## Открытый проект
 
-Все права защищены (`LICENSE`). Код можно смотреть, но копировать, выкладывать свои версии
-и использовать его в других проектах без разрешения автора нельзя. Предложения правок не принимаются,
-об ошибках пиши через форму или Issue.
-Официальная версия «Звонка» только та, что на этом сайте и в Releases этого репозитория.
+Лицензия [MIT](LICENSE): код можно смотреть, копировать, менять, выкладывать свои версии и брать в свои проекты,
+если сохранить строку об авторе. Хочешь такой же для своей школы: сделай форк, поменяй `data/` и назови его по-своему.
+Как всё устроено и как прислать правку: [CONTRIBUTING.md](CONTRIBUTING.md). Об уязвимостях: [SECURITY.md](SECURITY.md).
+Официальные сборки «Звонка» только на этом сайте и в Releases этого репозитория.

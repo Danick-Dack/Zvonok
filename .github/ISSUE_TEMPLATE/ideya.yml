@@ -1,0 +1,16 @@
+name: Идея
+description: Чего не хватает в «Звонке»
+title: "Идея: "
+labels: ["идея"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Что сделать
+      placeholder: "Хочу видеть в виджете, во сколько заканчиваются уроки"
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Зачем это тебе и одноклассникам

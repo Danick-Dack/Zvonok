@@ -1,0 +1,9 @@
+# Раз в неделю проверять новые версии действий GitHub Actions (сборка, проверки, сайт)
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "CI"

@@ -1,0 +1,43 @@
+name: Что-то сломалось
+description: Баг на сайте, в приложении Android или в виджетах iPhone
+title: "Ошибка: "
+labels: ["ошибка"]
+body:
+  - type: dropdown
+    id: where
+    attributes:
+      label: Где
+      multiple: true
+      options:
+        - Сайт
+        - Android
+        - iPhone (виджет или приложение в Scriptable)
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Телефон и версия системы
+      placeholder: "Redmi Note 12, Android 14 / iPhone 13, iOS 18"
+  - type: input
+    id: version
+    attributes:
+      label: Версия «Звонка»
+      description: Android «Ещё» → «Обновления». Для сайта не обязательно
+      placeholder: "5.0 (сборка 42)"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Что сделал и что случилось
+      placeholder: "Открыл «Кабинеты», выбрал 3 урок, список пустой"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Как должно быть
+  - type: textarea
+    id: shot
+    attributes:
+      label: Снимок экрана
+      description: Перетащи картинку сюда, если есть

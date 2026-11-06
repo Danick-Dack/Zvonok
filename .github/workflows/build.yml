@@ -60,6 +60,9 @@ jobs:
           cp Zvonok-165.apk Uroki7B.apk   # копия под старым именем: по нему ищет обновление приложение v3.0
           cp site/index.html Zvonok-165.html
           echo "APK: $(stat -c %s Zvonok-165.apk) байт" >> "$GITHUB_STEP_SUMMARY"
+          # описание релиза с контрольной суммой: скачанный APK можно сверить
+          cp .github/release-notes.md notes.md
+          printf '\n\n**SHA-256** `Zvonok-165.apk`: `%s`\n' "$(sha256sum Zvonok-165.apk | cut -d' ' -f1)" >> notes.md
 
       - uses: actions/upload-artifact@v4
         with:
@@ -87,7 +90,7 @@ jobs:
         with:
           tag_name: v${{ steps.ver.outputs.name }}-build-${{ github.run_number }}
           name: Звонок v${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})
-          body_path: .github/release-notes.md
+          body_path: notes.md
           files: |
             Zvonok-165.apk
             Uroki7B.apk

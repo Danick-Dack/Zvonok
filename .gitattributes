@@ -1,0 +1,6 @@
+# Один перевод строки (LF) у всех: иначе на Windows меняются хеши версий скриптов iPhone и сборка не совпадает с CI
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jks binary
+*.apk binary
