@@ -70,6 +70,11 @@ final class Hues {
         return HASH[(int) (x % HASH.length)];
     }
 
+    /** Яркий цвет оттенка по номеру (значки разделов в «Ещё»). */
+    static int color(int hue, boolean dark) {
+        return C[hue][dark ? 2 : 0];
+    }
+
     /** Яркий цвет предмета: кольцо, точки, полоски. Без предмета — главный цвет. */
     static int vivid(String subject, boolean dark) {
         int i = index(subject);

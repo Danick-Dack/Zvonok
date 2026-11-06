@@ -57,13 +57,13 @@ final class MoreTab {
         root.addView(Ui.heading(Ui.text(a, "Ещё", 28, Ui.TEXT, "sans-serif-medium")));
         root.addView(Ui.text(a, Schedule.school() + " · " + Schedule.term(), 14, Ui.MUTED, null));
 
-        LinearLayout cls = section("КЛАСС И РАСПИСАНИЕ");
+        LinearLayout cls = section("Класс и расписание", R.drawable.ic_week, 7);
         cls.addView(Ui.linkRow(a, "Класс", Schedule.isCustom() ? "Сейчас включено своё расписание" : null,
                 Updater.prefs(a).getString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS), v -> Ui.pickClass(a, () -> { build(); a.rebuild(); })));
         cls.addView(Ui.linkRow(a, "Своё расписание", "Любые предметы, кабинеты и звонки", Schedule.isCustom() ? "вкл" : null,
                 v -> a.startActivity(new Intent(a, EditorActivity.class))));
 
-        LinearLayout look = section("ОФОРМЛЕНИЕ");
+        LinearLayout look = section("Оформление", R.drawable.ic_auto, 9);
         look.addView(caption("Тема"));
         String[] keys = {"auto", "light", "dark"};
         int cur = 0;
@@ -91,7 +91,7 @@ final class MoreTab {
         look.addView(Ui.linkRow(a, "Виджеты и уведомление", "Цвета, прозрачность, цвет урока", null,
                 v -> a.startActivity(new Intent(a, StyleActivity.class))));
 
-        LinearLayout notif = section("УВЕДОМЛЕНИЕ");
+        LinearLayout notif = section("Уведомление", R.drawable.ic_bell, 0);
         notif.addView(flag("Уведомление на экране блокировки", "С таймером, не смахивается", Updater.KEY_NOTIF, true));
         if (Build.VERSION.SDK_INT >= 36) {
             notif.addView(flag("Таймер в строке состояния", "Android 16: урок и минуты до звонка видны вверху экрана и на экране блокировки",
@@ -108,7 +108,7 @@ final class MoreTab {
 
         shareSection();
 
-        LinearLayout cal = section("КАЛЕНДАРЬ");
+        LinearLayout cal = section("Календарь", R.drawable.ic_week, 1);
         if (Schedule.isCustom()) {
             cal.addView(note("Своё расписание можно добавить в календарь на сайте: «Конструктор» → «Скачать для календаря»."));
         } else {
@@ -117,7 +117,7 @@ final class MoreTab {
                     v -> open(Uri.parse("https://calendar.google.com/calendar/render?cid=" + Uri.encode("webcal://danick-dack.github.io/Zvonok/cal/" + slug + ".ics")))));
         }
 
-        LinearLayout checks = section("ПРОВЕРКА ТЕЛЕФОНА");
+        LinearLayout checks = section("Проверка телефона", R.drawable.ic_phone, 8);
         for (Perms.Item i : Perms.list(a))
             checks.addView(check(i.title, i.why, i.ok, () -> { Perms.markSeen(a, i); i.fix.run(); }));
         if (Build.VERSION.SDK_INT >= 31) {
@@ -125,7 +125,7 @@ final class MoreTab {
                     null, v -> open(new Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, Uri.parse("package:" + a.getPackageName())))));
         }
 
-        LinearLayout upd = section("ОБНОВЛЕНИЯ");
+        LinearLayout upd = section("Обновления", R.drawable.ic_download, 5);
         boolean avail = Updates.available(a);
         upd.addView(Ui.linkRow(a, avail ? "Доступна версия " + Updates.latestText(a) : "Проверить обновления",
                 "Установлена " + Updates.currentName(a) + " (сборка " + Updates.currentBuild(a) + ")", avail ? "Скачать" : null, v -> {
@@ -145,7 +145,7 @@ final class MoreTab {
         upd.addView(flag("Проверять автоматически", "Новая версия раз в сутки, замены в расписании раз в 3 часа, когда приложение открыто. Нужен интернет",
                 Updates.KEY_AUTO, false));
 
-        LinearLayout about = section("О «ЗВОНКЕ»");
+        LinearLayout about = section("О «Звонке»", R.drawable.ic_info, 12);
         about.addView(Ui.linkRow(a, "Что нового", "Все обновления сайта, Android и iPhone", null, v -> a.startActivity(new Intent(a, Changelog.class))));
         about.addView(Ui.linkRow(a, "Написать нам", "Идея, ошибка или вопрос. Анонимно", null, v -> a.startActivity(new Intent(a, Feedback.class))));
         about.addView(Ui.linkRow(a, "Сайт «Звонка»", "Все классы, установка для iPhone", null, v -> open(Uri.parse(Updates.SITE))));
@@ -155,9 +155,7 @@ final class MoreTab {
         age.setPadding(0, a.dp(12), 0, a.dp(4));
         about.addView(age);
 
-        root.addView(Ui.caps(a, "ВОПРОСЫ"));
-        LinearLayout faq = Ui.card(a);
-        root.addView(faq);
+        LinearLayout faq = section("Вопросы", R.drawable.ic_help, 4);
         for (String[] qa : FAQ) faq.addView(question(qa[0], qa[1]));
 
         TextView privacy = Ui.text(a, "Про приватность: в интернет приложение выходит, только если ты разрешил, и только чтобы узнать "
@@ -171,7 +169,7 @@ final class MoreTab {
 
     /** Поделиться с классом: QR-код и ссылка сразу на класс, приложение без интернета, плакат. */
     private void shareSection() {
-        LinearLayout share = section("ПОДЕЛИТЬСЯ С КЛАССОМ");
+        LinearLayout share = section("Поделиться с классом", R.drawable.ic_share, 3);
         String cls = Schedule.isCustom() ? "" : Schedule.title();
         String url = Updates.SITE + (cls.isEmpty() ? "" : "#" + slug(cls));
         Qr qr = Qr.of(a, cls);
@@ -207,8 +205,19 @@ final class MoreTab {
         return cls.replace("А", "a").replace("Б", "b").replace("В", "v").replace("Г", "g").toLowerCase(java.util.Locale.ROOT);
     }
 
-    private LinearLayout section(String title) {
-        root.addView(Ui.heading(Ui.caps(a, title)));
+    /** Раздел, как на сайте: цветной значок, заголовок и карточка. hue: номер оттенка в Hues (7 синий, 9 фиолетовый...). */
+    private LinearLayout section(String title, int icon, int hue) {
+        LinearLayout head = Ui.horizontal(a);
+        head.setPadding(a.dp(2), a.dp(26), 0, a.dp(10));
+        android.widget.FrameLayout ic = new android.widget.FrameLayout(a);
+        ic.setBackground(Ui.round(a, Hues.color(hue, Ui.DARK), 9, 0));
+        android.widget.ImageView img = Ui.icon(a, icon, 0xFFFFFFFF, 18);
+        ic.addView(img, new android.widget.FrameLayout.LayoutParams(a.dp(18), a.dp(18), Gravity.CENTER));
+        head.addView(ic, new LinearLayout.LayoutParams(a.dp(30), a.dp(30)));
+        TextView t = Ui.heading(Ui.text(a, title, 17, Ui.TEXT, "sans-serif-medium"));
+        t.setPadding(a.dp(12), 0, 0, 0);
+        head.addView(t);
+        root.addView(head);
         LinearLayout card = Ui.card(a);
         root.addView(card);
         return card;
