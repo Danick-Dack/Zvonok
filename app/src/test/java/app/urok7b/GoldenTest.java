@@ -44,7 +44,7 @@ public class GoldenTest {
     }
 
     /** Данные эталона; "custom": своё расписание из эталона поверх 7Б. */
-    private void use(String cls) {
+    private void use(String cls) throws Exception {
         if (cls.equals(loaded)) return;
         boolean own = "custom".equals(cls);
         Schedule.init(G.getJSONObject("schedule").toString(), G.getJSONObject("changes").toString(),
@@ -65,12 +65,12 @@ public class GoldenTest {
         return l == null ? null : "[" + l.num + "," + l.subject + "," + l.room + "]";
     }
 
-    private static String lesson(JSONArray a) {
+    private static String lesson(JSONArray a) throws Exception {
         return a == null ? null : "[" + a.getInt(0) + "," + a.getString(1) + "," + a.getString(2) + "]";
     }
 
     @Test
-    public void stateAtEveryMoment() {
+    public void stateAtEveryMoment() throws Exception {
         JSONArray cases = G.getJSONArray("cases");
         for (int i = 0; i < cases.length(); i++) {
             JSONObject c = cases.getJSONObject(i), e = c.getJSONObject("expect");
@@ -107,7 +107,7 @@ public class GoldenTest {
     }
 
     @Test
-    public void lessonsOfEveryDay() {
+    public void lessonsOfEveryDay() throws Exception {
         JSONObject days = G.getJSONObject("days"), cancelled = G.getJSONObject("cancelled");
         int total = 0;
         for (Iterator<String> it = days.keys(); it.hasNext(); ) {
@@ -142,7 +142,7 @@ public class GoldenTest {
     }
 
     @Test
-    public void rooms() {
+    public void rooms() throws Exception {
         use("7Б");
         JSONObject r = G.getJSONObject("rooms");
         List<String> all = new ArrayList<>();
@@ -178,7 +178,7 @@ public class GoldenTest {
     }
 
     @Test
-    public void subjectColors() {
+    public void subjectColors() throws Exception {
         use("7Б");
         JSONObject hues = G.getJSONObject("hues");
         for (Iterator<String> it = hues.keys(); it.hasNext(); ) {
