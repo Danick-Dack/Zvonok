@@ -13,8 +13,6 @@ adb shell svc power stayon true
 adb shell input keyevent 82
 adb install -r "$APK" >/dev/null
 sleep 20   # система после загрузки ещё занята: так меньше окон «приложение не отвечает»
-adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
-adb shell dumpsys deviceidle whitelist +$PKG >/dev/null
 
 # настройки приложения: класс 7Б, вопрос про обновления уже задан, тема $1
 prefs() {
@@ -35,6 +33,13 @@ calm() {
 }
 shot() { calm; adb exec-out screencap -p > "$OUT/api${API}_$1.png"; echo "снимок $1"; }
 
+# первый запуск: обязательная настройка телефона, пока не выданы разрешения
+prefs dark
+at 111010202026.00
+adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 3; shot dark_0_setup
+adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
+adb shell dumpsys deviceidle whitelist +$PKG >/dev/null
+
 for scheme in dark light; do
   prefs $scheme
   at 111010202026.00   # вторник 10 ноября, 10:20: идёт 3 урок
@@ -53,7 +58,11 @@ prefs dark
 at 111010202026.00
 tab now
 adb shell cmd statusbar expand-notifications; sleep 2; shot dark_7_notification
-adb shell cmd statusbar collapse; sleep 1; shot dark_8_statusbar
+adb shell cmd statusbar collapse; sleep 1
+# таймер в строке состояния виден, когда само приложение свёрнуто
+adb shell input keyevent KEYCODE_HOME; sleep 3; shot dark_8_statusbar
+flags=$(adb shell dumpsys notification --noredact | grep -A 40 "pkg=$PKG" | grep -m 3 -oE "flags=0x[0-9a-f]+|promot[A-Za-z]*=[a-z0-9]+")
+echo "::notice::API $API: уведомление «Звонка»: $(echo $flags) (FLAG_PROMOTED_ONGOING = 0x40000)"
 
 # крупный шрифт
 adb shell settings put system font_scale 1.3

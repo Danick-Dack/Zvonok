@@ -8,10 +8,10 @@
 .kit-card h2{font-size:20px;margin:0 0 6px;letter-spacing:-.02em}
 .kit-card p{color:var(--muted);margin:0;font-size:15px}
 .kit-l{display:block;font-size:14px;font-weight:600;margin:16px 0 8px}
-.kit-sel{width:100%;min-height:48px;padding:10px 14px;border-radius:14px;background:var(--raise);border:1px solid var(--line);color:var(--fg);font:inherit;font-size:17px}
+.kit-sel{width:100%;min-height:48px;padding:10px 14px;border-radius:14px;background:var(--raise);border:1px solid var(--line);color:var(--fg);font-family:inherit;font-size:17px}
 .kit-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .kit-btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:10px 16px;border-radius:14px;background:var(--raise);border:1px solid var(--line);
-  color:var(--fg);font:600 15px/1.2 inherit;text-decoration:none;cursor:pointer;margin-top:12px}
+  color:var(--fg);font-family:inherit;font-weight:600;font-size:15px;line-height:1.2;text-decoration:none;cursor:pointer;margin-top:12px}
 .kit-row .kit-btn{margin-top:0}
 .kit-btn.main{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .kit-btn:active{transform:scale(.98)}

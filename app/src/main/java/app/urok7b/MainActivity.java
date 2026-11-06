@@ -1,11 +1,8 @@
 package app.urok7b;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -19,7 +16,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.time.ZonedDateTime;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,8 +50,7 @@ public class MainActivity extends Activity {
     private RoomsTab roomsTab;
     private MoreTab moreTab;
     private FrameLayout host;
-    private boolean askedNotif, askedClass, permsDue, linkHandled;
-    private long notifAskT;
+    private boolean askedClass, linkHandled;
     private String lastKey = "";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -69,7 +64,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        permsDue = state == null; // подсказка про разрешения: при каждом запуске, пока чего-то не хватает
         Ui.apply(this);
         builtVersion = Ui.version;
         Schedule.load(this);
@@ -203,11 +197,6 @@ public class MainActivity extends Activity {
         else super.onBackPressed();
     }
 
-    /** Только что показали системный запрос уведомлений: свою подсказку не накладываем сверху. */
-    private boolean askedNotifNow() {
-        return System.currentTimeMillis() - notifAskT < 1500;
-    }
-
     @Override
     protected void onResume() {
         super.onResume();
@@ -216,26 +205,15 @@ public class MainActivity extends Activity {
             recreate();
             return;
         }
-        if (Build.VERSION.SDK_INT >= 33 && !askedNotif
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            askedNotif = true;
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, Perms.REQ_NOTIF);
-            notifAskT = System.currentTimeMillis();
-        }
         Updater.update(this);
         if (!Updater.prefs(this).contains(Schedule.KEY_CLASS) && !askedClass) {
             askedClass = true;
             // запоминаем сразу: если окно закроют без выбора, больше не спрашиваем (класс меняется кнопкой сверху)
             Updater.prefs(this).edit().putString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS).apply();
             NowTab.markNewsSeen(this); // новичку «что нового» незачем
-            Ui.pickClass(this, () -> { rebuild(); Updates.askOnce(this, () -> Updates.check(this, ok -> rebuild())); });
-            permsDue = false;
-        } else {
+            Ui.pickClass(this, () -> { rebuild(); setup(); });
+        } else if (!setup()) {
             Updates.askOnce(this, () -> Updates.check(this, ok -> rebuild()));
-        }
-        if (permsDue && !askedNotifNow()) {
-            permsDue = false;
-            askPerms();
         }
         if (Updates.due(this)) Updates.check(this, ok -> rebuild());
         else if (Updates.changesDue(this)) Updates.checkChanges(this, this::rebuild);
@@ -282,44 +260,11 @@ public class MainActivity extends Activity {
         host.announceForAccessibility(NowTab.spoken(t));
     }
 
-    /** Необязательная подсказка: чего не хватает и что нажать. Можно закрыть «Не сейчас». */
-    private void askPerms() {
-        List<Perms.Item> miss = Perms.missing(this);
-        if (miss.isEmpty()) return;
-        LinearLayout box = Ui.vertical(this);
-        box.setPadding(dp(22), dp(4), dp(22), dp(4));
-        TextView intro = Ui.text(this, "Это не обязательно, но без этих разрешений таймер в уведомлении и на экране блокировки "
-                + "может не появиться или отставать. Нажми на пункт и разреши в открывшихся настройках.", 14, Ui.SOFT, null);
-        intro.setLineSpacing(0, 1.15f);
-        intro.setPadding(0, 0, 0, dp(8));
-        box.addView(intro);
-        android.app.AlertDialog[] dlg = new android.app.AlertDialog[1];
-        for (Perms.Item it : miss) {
-            LinearLayout r = Ui.horizontal(this);
-            r.setPadding(0, dp(10), 0, dp(10));
-            LinearLayout tl = Ui.twoLines(this, it.title, it.why);
-            tl.setLayoutParams(Ui.weight(1));
-            r.addView(tl);
-            TextView b = Ui.text(this, it.ok == null ? "Открыть" : "Включить", 13, it.ok == null ? Ui.TEXT : Ui.ON_ACCENT, "sans-serif-medium");
-            b.setBackground(it.ok == null ? Ui.round(this, 0, 12, Ui.LINE) : Ui.round(this, Ui.ACCENT, 12, 0));
-            b.setPadding(dp(12), dp(8), dp(12), dp(8));
-            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            bp.leftMargin = dp(10);
-            r.addView(b, bp);
-            r.setOnClickListener(v -> {
-                Perms.markSeen(this, it);
-                if (dlg[0] != null) dlg[0].dismiss();
-                it.fix.run();
-            });
-            box.addView(r);
-        }
-        ScrollView sv = new ScrollView(this);
-        sv.addView(box);
-        dlg[0] = new android.app.AlertDialog.Builder(this, Ui.dialogTheme())
-                .setTitle("Чтобы всё работало").setView(sv)
-                .setNegativeButton("Не сейчас", null)
-                .setPositiveButton("Все настройки", (d, w) -> show(MORE))
-                .show();
+    /** Обязательная настройка телефона, пока чего-то не хватает. true: экран настройки открыт. */
+    private boolean setup() {
+        if (Perms.missing(this).isEmpty()) return false;
+        startActivity(new Intent(this, Setup.class));
+        return true;
     }
 
     int dp(float v) {

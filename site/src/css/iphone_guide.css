@@ -23,7 +23,7 @@
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--font-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
-button{font:inherit;color:inherit}
+button{font-family:inherit;font-size:inherit;font-weight:inherit;line-height:inherit;color:inherit}
 .wrap{max-width:1100px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:40px 64px}
 
 /* ---------- header ---------- */
@@ -210,7 +210,7 @@ h1 em{font-style:normal;color:var(--muted);font-weight:500}
 .ic-cal small{color:#ff3b30;font-size:8px;font-weight:600;margin-top:6px}
 .ic-cal b{font-size:26px;font-weight:300;margin-top:1px}
 .ic-photos{background:#fff}
-.ic-photos i{width:30px;height:30px;border-radius:50%;background:conic-gradient(#f7b500,#ff6b2c,#ff3b6b,#b44fe0,#3d7bff,#2fc4d8,#57d158,#f7b500);-webkit-mask:radial-gradient(circle, transparent 5px, #000 5.5px);mask:radial-gradient(circle, transparent 5px, #000 5.5px)}
+.ic-photos i{width:30px;height:30px;border-radius:50%;background:conic-gradient(#f7b500,#ff6b2c,#ff3b6b,#b44fe0,#3d7bff,#2fc4d8,#57d158,#f7b500);-webkit-mask-image:radial-gradient(circle, transparent 5px, #000 5.5px);mask-image:radial-gradient(circle, transparent 5px, #000 5.5px)}
 .ic-cam{background:linear-gradient(180deg,#e8e8ea,#9c9ca2)}
 .ic-clock{background:#000}
 .ic-weather{background:linear-gradient(180deg,#3aa0ff,#1d63d8)}
@@ -318,7 +318,7 @@ h1 em{font-style:normal;color:var(--muted);font-weight:500}
 /* ---------- App Store ---------- */
 #s-appstore{background:#000}
 .as-head{position:absolute;top:52px;left:16px;right:16px}
-.as-head h4{margin:0 0 8px;font-size:28px;font-weight:700;letter-spacing:-.01em}
+.as-head .as-title{margin:0 0 8px;font-size:28px;font-weight:700;letter-spacing:-.01em}
 .field{display:flex;align-items:center;gap:6px;height:36px;border-radius:10px;background:rgba(118,118,128,.24);padding:0 10px;font-size:15px;color:rgba(235,235,245,.6)}
 .field svg{width:15px;height:15px;flex:none}
 .field .q{color:#fff}
@@ -570,7 +570,7 @@ h1 em{font-style:normal;color:var(--muted);font-weight:500}
 .promo-tag{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--signal);background:rgba(255,90,54,.13);padding:4px 9px;border-radius:999px}
 .promo-tag i{width:6px;height:6px;border-radius:50%;background:var(--signal);animation:blinkdot 1.2s ease-in-out infinite}
 @keyframes blinkdot{50%{opacity:.25}}
-.promo-card h6{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:10px 0 4px}
+.promo-card .promo-h{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:10px 0 4px}
 .promo-card p{font-size:12px;line-height:1.38;color:rgba(235,235,245,.66);margin:0 0 12px}
 .promo-prev{position:relative;height:178px;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
 .promo-prev .wall{border-radius:16px}
@@ -604,3 +604,4 @@ h1 em{font-style:normal;color:var(--muted);font-weight:500}
 .cfg-item{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;border-top:.5px solid rgba(255,255,255,.12)}
 .cfg-item i{width:22px;height:22px;border-radius:6px;background:linear-gradient(150deg,#e8a33c,#c4651d);display:grid;place-items:center}
 .cfg-item i svg{width:13px;height:13px}
+.cbtn-ic{display:contents}.cbtn-ic[hidden]{display:none}

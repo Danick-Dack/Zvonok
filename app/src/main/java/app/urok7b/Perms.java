@@ -64,6 +64,15 @@ final class Perms {
         return b.contains("oppo") || b.contains("realme") || b.contains("oneplus");
     }
 
+    static boolean isSamsung() {
+        return brand().contains("samsung");
+    }
+
+    static boolean isTranssion() {
+        String b = brand();
+        return b.contains("tecno") || b.contains("infinix") || b.contains("itel");
+    }
+
     static boolean isHuawei() {
         String b = brand();
         return b.contains("huawei") || b.contains("honor");
@@ -149,18 +158,49 @@ final class Perms {
         }
 
         // 8. автозапуск
-        if (isXiaomi() || isVivo() || isOppo() || isHuawei()) {
+        if (isXiaomi() || isVivo() || isOppo() || isHuawei() || isTranssion()) {
             out.add(new Item("autostart", "Автозапуск",
                     "Чтобы уведомление вернулось после перезагрузки телефона",
                     miuiOp(a, 10008), () -> openAutostart(a)));
         }
+
+        // 9. Samsung усыпляет «неиспользуемые» приложения, даже если батарея без ограничений
+        if (isSamsung()) {
+            out.add(new Item("samsung_sleep", "Не усыплять «Звонок»",
+                    "Обслуживание устройства → Батарея → Ограничения фонового использования: «Звонка» не должно быть среди спящих",
+                    null, () -> {
+                if (!open(a, new Intent().setComponent(new ComponentName("com.samsung.android.lool",
+                        "com.samsung.android.sm.battery.ui.BatteryActivity"))))
+                    open(a, new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg(a)));
+            }));
+        }
+
+        // 10. Android 16: таймер урока в строке состояния (на Samsung это Now Bar, на Xiaomi Super Island). Не обязательно
+        if (Build.VERSION.SDK_INT >= 36 && nm != null && Updater.prefs(a).getBoolean(Updater.KEY_LIVE, true)) {
+            out.add(new Item("live", "Таймер в строке состояния",
+                    "Урок и минуты до звонка вверху экрана и на экране блокировки (Samsung: Now Bar, Xiaomi: Super Island)",
+                    promoted(nm), () -> {
+                if (!open(a, new Intent("android.settings.MANAGE_APP_PROMOTED_NOTIFICATIONS").putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName())))
+                    open(a, new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName()));
+            }));
+        }
         return out;
     }
 
-    /** Чего не хватает: выключенные пункты и непроверяемые, которые ещё ни разу не открывали. */
+    /** Можно ли показывать таймер в строке состояния (Android 16); null, если не узнать. */
+    static Boolean promoted(NotificationManager nm) {
+        try {
+            return (Boolean) NotificationManager.class.getMethod("canPostPromotedNotifications").invoke(nm);
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
+    /** Чего не хватает: выключенные пункты и непроверяемые, которые ещё ни разу не открывали (таймер в строке состояния по желанию). */
     static List<Item> missing(Activity a) {
         List<Item> out = new ArrayList<>();
         for (Item i : list(a)) {
+            if ("live".equals(i.key)) continue;
             if (Boolean.FALSE.equals(i.ok) || (i.ok == null && !Updater.prefs(a).getBoolean("perm_seen_" + i.key, false)))
                 out.add(i);
         }
@@ -221,6 +261,7 @@ final class Perms {
                 new ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity"),
                 new ComponentName("com.oplus.safecenter", "com.oplus.safecenter.startupapp.StartupAppListActivity"),
                 new ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
+                new ComponentName("com.transsion.phonemaster", "com.cyin.himgr.autostart.AutoStartActivity"),
         };
         for (ComponentName c : tries) if (open(a, new Intent().setComponent(c))) return;
         open(a, new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg(a)));
