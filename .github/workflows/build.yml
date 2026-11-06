@@ -39,7 +39,11 @@ jobs:
 
       # Android считает день так же, как сайт: эталон снят с site/src/js/rules.js (tools/golden.py)
       - name: Tests
-        run: gradle testReleaseUnitTest --no-daemon
+        run: |
+          set -o pipefail
+          gradle testReleaseUnitTest --no-daemon 2>&1 | tee tests.log || {
+            # причина падения сразу в аннотациях сборки, без скачивания логов
+            grep -E "error:|FAILED|AssertionError|не совпало|ждали" tests.log | head -20 | sed 's/^/::error::/'; exit 1; }
 
       - name: Lint
         continue-on-error: true   # отчёт смотрим глазами; ошибки lint чиним, но сборку из-за предупреждений не роняем

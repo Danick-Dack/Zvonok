@@ -146,7 +146,8 @@ public class GoldenTest {
         use("7Б");
         JSONObject r = G.getJSONObject("rooms");
         List<String> all = new ArrayList<>();
-        for (Object x : r.getJSONArray("all")) all.add((String) x);
+        JSONArray ra = r.getJSONArray("all");
+        for (int i = 0; i < ra.length(); i++) all.add(ra.getString(i));
         assertEquals("все кабинеты по порядку", all, Schedule.rooms());
         JSONArray days = r.getJSONArray("days");
         int total = 0;
@@ -161,7 +162,8 @@ public class GoldenTest {
             for (int k = 0; k < slots.length(); k++, total++) {
                 JSONObject s = slots.getJSONObject(k);
                 List<String> free = new ArrayList<>();
-                for (Object x : s.getJSONArray("free")) free.add((String) x);
+                JSONArray fa = s.getJSONArray("free");
+                for (int f = 0; f < fa.length(); f++) free.add(fa.getString(f));
                 check(date + " урок " + s.getInt("n") + " свободны", free, Schedule.freeRooms(use, s.getInt("n")));
             }
         }
