@@ -18,3 +18,21 @@ jobs:
         env:
           IOS_SIGN_KEY: ${{ secrets.IOS_SIGN_KEY }}
         run: python3 tools/ed25519.py
+
+  # Lighthouse по собранному сайту из этой ветки (PageSpeed проверяет только опубликованный сайт из main)
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lighthouse, телефон и компьютер
+        run: |
+          python3 -m http.server 8080 --directory site >/dev/null 2>&1 &
+          sleep 2
+          for form in mobile desktop; do
+            for page in "index.html?app" about.html iphone.html changelog.html feedback.html make.html; do
+              name="lh-$form-${page%%.html*}.json"
+              npx -y lighthouse@12 "http://localhost:8080/$page" --quiet --chrome-flags="--headless=new --no-sandbox" \
+                $([ "$form" = desktop ] && echo --preset=desktop) --output=json --output-path="$name" || true
+            done
+          done
+          python3 tools/lh_summary.py lh-*.json
