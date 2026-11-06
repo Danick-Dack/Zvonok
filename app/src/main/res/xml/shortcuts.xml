@@ -9,8 +9,8 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="app.urok7b"
-            android:targetClass="app.urok7b.RoomsActivity">
-            <extra android:name="mode" android:value="free" />
+            android:targetClass="app.urok7b.MainActivity">
+            <extra android:name="tab" android:value="rooms" />
         </intent>
     </shortcut>
     <shortcut
@@ -23,7 +23,7 @@
             android:action="android.intent.action.VIEW"
             android:targetPackage="app.urok7b"
             android:targetClass="app.urok7b.MainActivity">
-            <extra android:name="week" android:value="true" />
+            <extra android:name="tab" android:value="week" />
         </intent>
     </shortcut>
     <shortcut
@@ -35,7 +35,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="app.urok7b"
-            android:targetClass="app.urok7b.RoomsActivity">
+            android:targetClass="app.urok7b.MainActivity">
             <extra android:name="mode" android:value="find" />
         </intent>
     </shortcut>

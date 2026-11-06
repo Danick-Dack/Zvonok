@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.text.Collator;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -17,12 +18,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Расписание лицея №165 и расчёт текущего состояния.
- * Данные всех классов — в data/schedule.json (тот же файл использует сайт).
+ * Данные всех классов в data/schedule.json (тот же файл у сайта). Правила дня те же, что в site/src/js/rules.js:
+ * юнит-тесты сверяют ответы с эталоном, который tools/golden.py снимает с rules.js.
  * Своё расписание хранится только на телефоне, в настройках приложения.
  */
 public final class Schedule {
@@ -92,10 +99,31 @@ public final class Schedule {
         public String name;
     }
 
+    /** Кто занимается в кабинете: урок, класс, предмет, время. */
+    public static final class Use {
+        public final int num, start, end;
+        public final String cls, subject;
+
+        Use(Lesson l, String cls) {
+            num = l.num; start = l.start; end = l.end; subject = l.subject; this.cls = cls;
+        }
+    }
+
+    /** Кабинет сейчас: занят ли и что сказать. */
+    public static final class RoomState {
+        public final boolean busy;
+        public final String text;
+
+        RoomState(boolean busy, String text) {
+            this.busy = busy;
+            this.text = text;
+        }
+    }
+
     /** За сколько минут до первого урока включать отсчёт. */
     public static final int LEAD_MINUTES = 60;
     public static final int MAX_DAYS = 6;      // Пн–Сб
-    public static final int MAX_SLOTS = 10;
+    private static final int MAX_BELLS = 20;   // защита от мусора в данных
     public static final String DEFAULT_CLASS = "7Б";
     public static final String SPORT = "спортзал";
 
@@ -109,10 +137,12 @@ public final class Schedule {
     private static String school = "Лицей №165";
     private static String term = "";
     private static int[][] baseBells;
-    private static final Map<String, String> SUBJECTS = new HashMap<>();
+    private static final Map<String, String> SUBJECTS = new LinkedHashMap<>();
     private static final Map<String, String[][]> CLASSES = new HashMap<>();
     private static final List<String> CLASS_ORDER = new ArrayList<>();
     private static final List<String[]> HOLIDAYS = new ArrayList<>(); // {с, по, название}
+    private static final Map<String, List<Lesson>[]> WEEKS = new HashMap<>(); // обычные недели классов
+    private static List<String> rooms;
     private static String termEnd = "";
     private static String assetChanges;                                // changes.json из APK
     private static JSONObject changes = new JSONObject();              // дата → замены
@@ -134,28 +164,48 @@ public final class Schedule {
         ensureBase(ctx);
         SharedPreferences p = Updater.prefs(ctx);
         String cls = p.getString(KEY_CLASS, DEFAULT_CLASS);
-        if (!CLASSES.containsKey(cls)) cls = DEFAULT_CLASS;
         boolean useCustom = p.getBoolean(KEY_USE_CUSTOM, false);
         String json = useCustom ? p.getString(KEY_CUSTOM, null) : null;
         String saved = p.getString(KEY_CHANGES, null);
         String key = cls + "|" + useCustom + "|" + (json == null ? 0 : json.hashCode()) + "|" + (saved == null ? 0 : saved.hashCode());
         if (key.equals(loadedKey)) return;
-        loadChanges(ctx, saved);
-        Schedule.cls = cls;
-
-        List<Lesson>[] w = null;
-        if (json != null) {
+        if (assetChanges == null) {
             try {
-                w = fromCustom(new JSONObject(json));
+                assetChanges = readAsset(ctx, "changes.json");
+            } catch (Exception e) {
+                assetChanges = "";
+            }
+        }
+        select(cls, json, saved);
+        loadedKey = key;
+    }
+
+    /** Данные без Android: для юнит-тестов (расписание, замены, класс, своё расписание или null). */
+    static synchronized void init(String scheduleJson, String changesJson, String cls, String customJson) {
+        resetBase();
+        try {
+            parseBase(new JSONObject(scheduleJson));
+        } catch (Exception e) {
+            baseBells = new int[0][];
+        }
+        assetChanges = "";
+        select(cls, customJson, changesJson);
+    }
+
+    private static void select(String c, String customJson, String savedChanges) {
+        loadChanges(savedChanges);
+        cls = CLASSES.containsKey(c) ? c : CLASSES.containsKey(DEFAULT_CLASS) || CLASS_ORDER.isEmpty() ? DEFAULT_CLASS : CLASS_ORDER.get(0);
+        List<Lesson>[] w = null;
+        if (customJson != null) {
+            try {
+                w = fromCustom(new JSONObject(customJson));
             } catch (Exception ignored) {
                 w = null;
             }
         }
         custom = w != null;
-        if (w == null) w = fromClass(cls);
-        week = w;
+        week = custom ? w : classWeek(cls);
         title = custom ? "Своё" : cls;
-        loadedKey = key;
     }
 
     public static synchronized void invalidate() {
@@ -169,6 +219,8 @@ public final class Schedule {
         SUBJECTS.clear();
         CLASSES.clear();
         CLASS_ORDER.clear();
+        WEEKS.clear();
+        rooms = null;
         loadedKey = null;
     }
 
@@ -191,43 +243,46 @@ public final class Schedule {
     private static void ensureBase(Context ctx) {
         if (baseBells != null) return;
         try {
-            JSONObject root = pickSchedule(ctx);
-            school = root.optString("school", school);
-            term = root.optString("term", "");
-            termEnd = root.optString("term_end", "");
-            JSONArray hol = root.optJSONArray("holidays");
-            for (int i = 0; hol != null && i < hol.length(); i++) {
-                JSONArray h = hol.optJSONArray(i);
-                if (h != null && h.length() >= 3) HOLIDAYS.add(new String[]{h.optString(0), h.optString(1), h.optString(2)});
-            }
-            baseBells = parseBells(root.getJSONArray("bells"));
-            JSONObject subj = root.getJSONObject("subjects");
-            for (Iterator<String> it = subj.keys(); it.hasNext(); ) {
-                String k = it.next();
-                SUBJECTS.put(k, subj.getString(k));
-            }
-            Hues.names(SUBJECTS);
-            JSONObject cls = root.getJSONObject("classes");
-            for (Iterator<String> it = cls.keys(); it.hasNext(); ) {
-                String k = it.next();
-                JSONArray days = cls.getJSONArray(k);
-                String[][] d = new String[days.length()][];
-                for (int i = 0; i < days.length(); i++) {
-                    JSONArray day = days.getJSONArray(i);
-                    d[i] = new String[day.length()];
-                    for (int j = 0; j < day.length(); j++) d[i][j] = day.optString(j, "");
-                }
-                CLASSES.put(k, d);
-                CLASS_ORDER.add(k);
-            }
-            Collections.sort(CLASS_ORDER, (a, b) -> {
-                int ga = grade(a), gb = grade(b);
-                return ga != gb ? Integer.compare(ga, gb) : a.compareTo(b);
-            });
+            parseBase(pickSchedule(ctx));
         } catch (Exception e) {
-            // файл расписания встроен в APK; если он повреждён — показываем пустую неделю
+            // файл расписания встроен в APK; если он повреждён, показываем пустую неделю
             baseBells = new int[0][];
         }
+    }
+
+    private static void parseBase(JSONObject root) throws Exception {
+        school = root.optString("school", school);
+        term = root.optString("term", "");
+        termEnd = root.optString("term_end", "");
+        JSONArray hol = root.optJSONArray("holidays");
+        for (int i = 0; hol != null && i < hol.length(); i++) {
+            JSONArray h = hol.optJSONArray(i);
+            if (h != null && h.length() >= 3) HOLIDAYS.add(new String[]{h.optString(0), h.optString(1), h.optString(2)});
+        }
+        JSONObject subj = root.getJSONObject("subjects");
+        for (Iterator<String> it = subj.keys(); it.hasNext(); ) {
+            String k = it.next();
+            SUBJECTS.put(k, subj.getString(k));
+        }
+        Hues.names(SUBJECTS);
+        JSONObject cls = root.getJSONObject("classes");
+        for (Iterator<String> it = cls.keys(); it.hasNext(); ) {
+            String k = it.next();
+            JSONArray days = cls.getJSONArray(k);
+            String[][] d = new String[days.length()][];
+            for (int i = 0; i < days.length(); i++) {
+                JSONArray day = days.optJSONArray(i);
+                d[i] = new String[day == null ? 0 : day.length()];
+                for (int j = 0; j < d[i].length; j++) d[i][j] = day.isNull(j) ? "" : day.optString(j, "");
+            }
+            CLASSES.put(k, d);
+            CLASS_ORDER.add(k);
+        }
+        Collections.sort(CLASS_ORDER, (a, b) -> {
+            int ga = grade(a), gb = grade(b);
+            return ga != gb ? Integer.compare(ga, gb) : a.compareTo(b);
+        });
+        baseBells = parseBells(root.getJSONArray("bells"));
     }
 
     private static String readAsset(Context ctx, String name) throws Exception {
@@ -241,14 +296,7 @@ public final class Schedule {
     }
 
     /** Замены: из APK или скачанные с сайта, берём более свежие (по полю updated). */
-    private static void loadChanges(Context ctx, String saved) {
-        if (assetChanges == null) {
-            try {
-                assetChanges = readAsset(ctx, "changes.json");
-            } catch (Exception e) {
-                assetChanges = "";
-            }
-        }
+    private static void loadChanges(String saved) {
         JSONObject best = null;
         for (String src : new String[]{assetChanges, saved}) {
             if (src == null || src.isEmpty()) continue;
@@ -271,35 +319,41 @@ public final class Schedule {
         return g;
     }
 
-    static int[][] parseBells(JSONArray arr) throws Exception {
-        int n = Math.min(arr.length(), MAX_SLOTS);
+    /** Звонки [[с, по]]: кривая пара (или не пара) даёт null, урока с таким номером нет. */
+    static int[][] parseBells(JSONArray arr) {
+        int n = Math.min(arr.length(), MAX_BELLS);
         int[][] b = new int[n][];
-        for (int i = 0; i < n; i++) {
-            JSONArray p = arr.getJSONArray(i);
-            int s = parseTime(p.getString(0)), e = parseTime(p.getString(1));
-            b[i] = s >= 0 && e > s ? new int[]{s, e} : null;
-        }
+        for (int i = 0; i < n; i++) b[i] = bell(arr.optJSONArray(i));
         return b;
     }
 
-    /** "8:05" → 485, ошибка → -1. */
-    public static int parseTime(String t) {
-        if (t == null) return -1;
-        t = t.trim().replace('.', ':');
-        int c = t.indexOf(':');
-        if (c <= 0 || c >= t.length() - 1) return -1;
-        try {
-            int h = Integer.parseInt(t.substring(0, c));
-            int m = Integer.parseInt(t.substring(c + 1));
-            if (h < 0 || h > 23 || m < 0 || m > 59) return -1;
-            return h * 60 + m;
-        } catch (NumberFormatException e) {
-            return -1;
-        }
+    private static int[] bell(JSONArray p) {
+        if (p == null) return null;
+        int s = parseTime(text(p.opt(0))), e = parseTime(text(p.opt(1)));
+        return s >= 0 && e > s ? new int[]{s, e} : null;
     }
 
+    /** Строка из JSON или null, если там не строка. */
+    private static String text(Object o) {
+        return o instanceof String ? (String) o : null;
+    }
+
+    private static final Pattern TIME = Pattern.compile("^\\s*(\\d{1,2})[:.](\\d{2})\\s*$");
+
+    /** "8:05" или "8.05" → 485, ошибка → -1 (как toMin на сайте). */
+    public static int parseTime(String t) {
+        if (t == null) return -1;
+        Matcher m = TIME.matcher(t);
+        if (!m.matches()) return -1;
+        int h = Integer.parseInt(m.group(1)), min = Integer.parseInt(m.group(2));
+        return h < 24 && min < 60 ? h * 60 + min : -1;
+    }
+
+    /** Обычная неделя класса (без замен и каникул), один раз на класс. */
     @SuppressWarnings("unchecked")
-    private static List<Lesson>[] fromClass(String cls) {
+    private static List<Lesson>[] classWeek(String cls) {
+        List<Lesson>[] cached = WEEKS.get(cls);
+        if (cached != null) return cached;
         List<Lesson>[] w = new List[7];
         String[][] days = CLASSES.get(cls);
         for (int d = 0; d < 7; d++) {
@@ -311,47 +365,57 @@ public final class Schedule {
                     if (r == null || r.isEmpty() || baseBells[i] == null) continue;
                     int sp = r.indexOf(' ');
                     String code = sp < 0 ? r : r.substring(0, sp);
-                    String room = sp < 0 ? "" : r.substring(sp + 1).trim();
-                    out.add(new Lesson(i + 1, baseBells[i][0], baseBells[i][1],
-                            subjectName(code), roomName(room)));
+                    String room = sp < 0 ? "" : r.substring(sp + 1);
+                    out.add(new Lesson(i + 1, baseBells[i][0], baseBells[i][1], subjectName(code), roomName(room)));
                 }
             }
-            w[d] = out;
+            w[d] = Collections.unmodifiableList(out);
         }
+        WEEKS.put(cls, w);
         return w;
     }
 
     /**
      * Своё расписание: {"v":1,"bells":[["8:00","8:45"],...],"days":[[["Алгебра","24/35"],...],...]}
-     * Пустой предмет — урока нет.
+     * Пустой предмет или кривой звонок: урока нет. Каникулы и замены своё расписание не трогают.
      */
     @SuppressWarnings("unchecked")
     static List<Lesson>[] fromCustom(JSONObject o) throws Exception {
-        int[][] bells = o.has("bells") ? parseBells(o.getJSONArray("bells")) : baseBells;
+        int[][] bells = o.optJSONArray("bells") != null ? parseBells(o.getJSONArray("bells")) : baseBells;
         JSONArray days = o.getJSONArray("days");
         List<Lesson>[] w = new List[7];
         for (int d = 0; d < 7; d++) {
             List<Lesson> out = new ArrayList<>();
-            if (d < days.length() && d < MAX_DAYS) {
-                JSONArray day = days.getJSONArray(d);
-                for (int i = 0; i < day.length() && i < bells.length; i++) {
-                    JSONArray l = day.optJSONArray(i);
-                    if (l == null || bells[i] == null) continue;
-                    String subj = clean(l.optString(0, ""));
-                    if (subj.isEmpty()) continue;
-                    out.add(new Lesson(i + 1, bells[i][0], bells[i][1], subj, roomName(clean(l.optString(1, "")))));
-                }
+            JSONArray day = d < MAX_DAYS ? days.optJSONArray(d) : null;
+            for (int i = 0; day != null && i < day.length() && i < bells.length; i++) {
+                JSONArray l = day.optJSONArray(i);
+                if (l == null || bells[i] == null) continue;
+                String subj = clean(l.optString(0, ""));
+                if (subj.isEmpty()) continue;
+                out.add(new Lesson(i + 1, bells[i][0], bells[i][1], subj, roomName(clean(l.optString(1, "")))));
             }
             w[d] = out;
         }
         return w;
     }
 
-    /** Убрать переводы строк и ограничить длину (данные из чужого кода импорта). */
+    /** Убрать управляющие символы и ограничить длину (данные из чужого кода импорта и замен). */
     static String clean(String s) {
         if (s == null) return "";
-        s = s.replaceAll("[\\p{Cntrl}]", " ").trim();
+        s = trim(s.replaceAll("[\\x00-\\x1f\\x7f]", " "));
         return s.length() > 40 ? s.substring(0, 40) : s;
+    }
+
+    /** trim как в JavaScript: убирает и неразрывные пробелы. */
+    static String trim(String s) {
+        int a = 0, b = s.length();
+        while (a < b && space(s.charAt(a))) a++;
+        while (b > a && space(s.charAt(b - 1))) b--;
+        return s.substring(a, b);
+    }
+
+    private static boolean space(char c) {
+        return Character.isWhitespace(c) || Character.isSpaceChar(c) || c == '﻿';
     }
 
     private static String subjectName(String code) {
@@ -372,39 +436,32 @@ public final class Schedule {
 
     /** Каникулы или праздник по schedule.json (только для расписания класса). */
     public static synchronized String holidayName(LocalDate d) {
-        if (custom) return null;
+        return custom ? null : holiday(d);
+    }
+
+    private static String holiday(LocalDate d) {
         String t = d.toString();
         for (String[] h : HOLIDAYS) if (t.compareTo(h[0]) >= 0 && t.compareTo(h[1]) <= 0) return h[2];
         return null;
     }
 
-    /** Последний день каникул, в которые попадает дата, иначе null. */
-    public static synchronized LocalDate holidayEnd(LocalDate d) {
-        String t = d.toString();
-        for (String[] h : HOLIDAYS) {
-            if (t.compareTo(h[0]) >= 0 && t.compareTo(h[1]) <= 0) {
-                try {
-                    return LocalDate.parse(h[1]);
-                } catch (RuntimeException e) {
-                    return null;
-                }
-            }
-        }
-        return null;
-    }
-
-    /** День без уроков у всех: каникулы, праздник или «off» в заменах. Название или null. */
-    public static synchronized String dayOff(LocalDate d) {
-        String h = holidayName(d);
-        if (h != null || custom) return h;
+    /** День без уроков у всех (каникулы, праздник или «off» в заменах), даже если включено своё расписание. */
+    public static synchronized String offDay(LocalDate d) {
+        String h = holiday(d);
+        if (h != null) return h;
         JSONObject ch = changes.optJSONObject(d.toString());
         Object off = ch == null ? null : ch.opt("off");
-        if (off instanceof String && !clean((String) off).isEmpty()) return clean((String) off);
-        return null;
+        if (off instanceof String && !trim((String) off).isEmpty()) return clean((String) off);
+        return Boolean.TRUE.equals(off) ? "Уроков нет" : null;
+    }
+
+    /** То же для экрана: у своего расписания каникул и замен нет. */
+    public static synchronized String dayOff(LocalDate d) {
+        return custom ? null : offDay(d);
     }
 
     public static boolean isVacation(String name) {
-        return name != null && name.toLowerCase().contains("каникул");
+        return name != null && name.toLowerCase(Locale.ROOT).contains("каникул");
     }
 
     /** Замены на дату (для пометок на главном экране), иначе null. */
@@ -415,65 +472,61 @@ public final class Schedule {
     /** Номера уроков класса, отменённых заменой в этот день. */
     public static synchronized List<Integer> cancelledOn(LocalDate d) {
         List<Integer> out = new ArrayList<>();
-        JSONObject ch = changesOn(d);
-        JSONObject classes = ch == null ? null : ch.optJSONObject("classes");
-        JSONObject fix = classes == null ? null : classes.optJSONObject(cls);
+        JSONObject fix = fixFor(changesOn(d), cls);
         if (fix == null) return out;
         for (Iterator<String> it = fix.keys(); it.hasNext(); ) {
             String k = it.next();
-            try {
-                if (noLesson(fix.opt(k))) out.add(Integer.parseInt(k));
-            } catch (NumberFormatException ignored) {
-                // не номер урока
-            }
+            if (k.matches("\\d{1,2}") && noLesson(fix.opt(k))) out.add(Integer.parseInt(k));
         }
         Collections.sort(out);
         return out;
     }
 
+    private static JSONObject fixFor(JSONObject ch, String c) {
+        JSONObject classes = ch == null ? null : ch.optJSONObject("classes");
+        return classes == null ? null : classes.optJSONObject(c);
+    }
+
     private static boolean noLesson(Object f) {
         return f == null || f == JSONObject.NULL
-                || (f instanceof String && ((String) f).trim().toLowerCase().startsWith("нет"));
+                || (f instanceof String && trim((String) f).toLowerCase(Locale.ROOT).startsWith("нет"));
+    }
+
+    /** Звонки на дату: свои на весь день из замен или обычные (пустой список в заменах: обычные). */
+    public static synchronized int[][] dayBells(LocalDate date) {
+        JSONObject ch = changes.optJSONObject(date.toString());
+        JSONArray cb = ch == null ? null : ch.optJSONArray("bells");
+        if (cb == null || cb.length() == 0) return baseBells;
+        int[][] bells = new int[Math.min(cb.length(), MAX_BELLS)][];
+        for (int i = 0; i < bells.length; i++) {
+            int[] b = bell(cb.optJSONArray(i));
+            bells[i] = b != null ? b : i < baseBells.length ? baseBells[i] : null;
+        }
+        return bells;
     }
 
     /**
-     * Уроки на конкретную дату: каникулы, замены и сокращённые звонки (как на сайте и на iPhone).
-     * Своё расписание замены и каникулы не трогают.
+     * Уроки класса на дату: каникулы, замены и сокращённые звонки (как на сайте и на iPhone).
+     * Урока без звонка в этот день нет.
      */
-    public static synchronized List<Lesson> lessonsOn(LocalDate date) {
-        if (custom) return lessons(date.getDayOfWeek());
-        if (dayOff(date) != null) return Collections.emptyList();
-        List<Lesson> base = lessons(date.getDayOfWeek());
+    private static List<Lesson> dayLessons(String c, LocalDate date) {
+        if (offDay(date) != null) return Collections.emptyList();
+        List<Lesson> base = classWeek(c)[date.getDayOfWeek().getValue() - 1];
         JSONObject ch = changes.optJSONObject(date.toString());
         if (ch == null) return base;
-        // звонки на этот день целиком: урока без звонка в этот день нет
-        int[][] bells = baseBells;
-        JSONArray cb = ch.optJSONArray("bells");
-        if (cb != null && cb.length() > 0) {
-            bells = new int[Math.min(cb.length(), MAX_SLOTS)][];
-            for (int i = 0; i < bells.length; i++) {
-                JSONArray p = cb.optJSONArray(i);
-                int s = p == null ? -1 : parseTime(p.optString(0, ""));
-                int e = p == null ? -1 : parseTime(p.optString(1, ""));
-                bells[i] = s >= 0 && e > s ? new int[]{s, e} : (i < baseBells.length ? baseBells[i] : null);
-            }
-        }
+        int[][] bells = dayBells(date);
         boolean shortDay = bells != baseBells;
-        JSONObject classes = ch.optJSONObject("classes");
-        JSONObject fix = classes == null ? null : classes.optJSONObject(cls);
+        JSONObject fix = fixFor(ch, c);
         int n = 0;
         for (Lesson l : base) n = Math.max(n, l.num);
         if (fix != null) {
             for (Iterator<String> it = fix.keys(); it.hasNext(); ) {
-                try {
-                    n = Math.max(n, Integer.parseInt(it.next()));
-                } catch (NumberFormatException ignored) {
-                    // не номер урока
-                }
+                String k = it.next();
+                if (k.matches("\\d{1,2}")) n = Math.max(n, Integer.parseInt(k));
             }
         }
         List<Lesson> out = new ArrayList<>();
-        for (int i = 1; i <= n && i <= MAX_SLOTS; i++) {
+        for (int i = 1; i <= n; i++) {
             Lesson b = null;
             for (Lesson l : base) if (l.num == i) b = l;
             String subject = b == null ? "" : b.subject;
@@ -486,9 +539,12 @@ public final class Schedule {
                 if (f instanceof JSONObject) {
                     JSONObject o = (JSONObject) f;
                     changed = true;
-                    String sj = clean(o.optString("subject", ""));
-                    if (!sj.isEmpty()) subject = subjectName(sj);
-                    if (o.has("room") && !o.isNull("room")) room = roomName(clean(o.optString("room", "")));
+                    Object sj = o.opt("subject"), rm = o.opt("room");
+                    if (sj instanceof String && !((String) sj).isEmpty()) {
+                        String name = SUBJECTS.get(sj);
+                        subject = name != null ? name : clean((String) sj);
+                    }
+                    if (rm instanceof String || rm instanceof Number) room = roomName(clean(rm.toString()));
                 }
             }
             if (subject.isEmpty() || i > bells.length || bells[i - 1] == null) continue;
@@ -497,14 +553,23 @@ public final class Schedule {
         return out;
     }
 
+    /** Уроки на дату для выбранного класса; своё расписание замены и каникулы не трогают. */
+    public static synchronized List<Lesson> lessonsOn(LocalDate date) {
+        return custom ? lessons(date.getDayOfWeek()) : dayLessons(cls, date);
+    }
+
     /** Уроки класса из встроенного расписания (для редактора: «взять за основу»). */
     public static synchronized List<Lesson> classLessons(Context ctx, String cls, DayOfWeek day) {
         ensureBase(ctx);
-        return fromClass(cls)[day.getValue() - 1];
+        return classWeek(cls)[day.getValue() - 1];
     }
 
     public static synchronized List<String> classes(Context ctx) {
         ensureBase(ctx);
+        return new ArrayList<>(CLASS_ORDER);
+    }
+
+    static synchronized List<String> classes() {
         return new ArrayList<>(CLASS_ORDER);
     }
 
@@ -515,7 +580,7 @@ public final class Schedule {
 
     public static synchronized List<String> subjectNames(Context ctx) {
         ensureBase(ctx);
-        List<String> l = new ArrayList<>(SUBJECTS.values());
+        List<String> l = new ArrayList<>(new LinkedHashSet<>(SUBJECTS.values()));
         Collections.sort(l);
         return l;
     }
@@ -523,8 +588,120 @@ public final class Schedule {
     /** "7Б" или "Своё". */
     public static synchronized String title() { return title; }
     public static synchronized boolean isCustom() { return custom; }
+    /** Класс из настроек (и когда включено своё расписание). */
+    public static synchronized String cls() { return cls; }
     public static String school() { return school; }
     public static String term() { return term; }
+    public static String termEnd() { return termEnd; }
+
+    // ================= кабинеты =================
+
+    /** "42/21": две группы в двух кабинетах. */
+    public static List<String> splitRooms(String r) {
+        List<String> out = new ArrayList<>();
+        for (String x : (r == null ? "" : r).split("/")) if (!trim(x).isEmpty()) out.add(trim(x));
+        return out;
+    }
+
+    /** Все кабинеты из обычного расписания всех классов: по номеру, спортзал и прочие в конце. */
+    public static synchronized List<String> rooms() {
+        if (rooms != null) return rooms;
+        LinkedHashSet<String> set = new LinkedHashSet<>();
+        for (String c : CLASS_ORDER) for (List<Lesson> day : classWeek(c)) for (Lesson l : day) set.addAll(splitRooms(l.room));
+        List<String> out = new ArrayList<>(set);
+        Collator ru = Collator.getInstance(new Locale("ru"));
+        Collections.sort(out, (a, b) -> {
+            int x = roomNum(a), y = roomNum(b);
+            return x != y ? Integer.compare(x, y) : ru.compare(a, b);
+        });
+        return rooms = Collections.unmodifiableList(out);
+    }
+
+    /** Номер в начале названия (как parseInt на сайте), без номера 999. */
+    private static int roomNum(String r) {
+        int i = 0, n = 0;
+        while (i < r.length() && i < 6 && Character.isDigit(r.charAt(i))) n = n * 10 + (r.charAt(i++) - '0');
+        return i == 0 || n == 0 ? 999 : n;
+    }
+
+    /** Кто где сидит в эту дату (с заменами). В день без уроков показываем обычный день недели. */
+    public static synchronized Map<String, List<Use>> roomDay(LocalDate date) {
+        boolean off = offDay(date) != null;
+        int d = date.getDayOfWeek().getValue() - 1;
+        Map<String, List<Use>> use = new HashMap<>();
+        for (String c : CLASS_ORDER) {
+            for (Lesson l : off ? classWeek(c)[d] : dayLessons(c, date)) {
+                for (String r : splitRooms(l.room)) {
+                    List<Use> list = use.get(r);
+                    if (list == null) use.put(r, list = new ArrayList<>());
+                    list.add(new Use(l, c));
+                }
+            }
+        }
+        return use;
+    }
+
+    /** Номера уроков, на которых в эту дату кто-то занимается. */
+    public static synchronized List<Integer> slots(LocalDate date, Map<String, List<Use>> use) {
+        int[][] bells = dayBells(date);
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < bells.length; i++) {
+            if (bells[i] == null) continue;
+            boolean used = false;
+            for (List<Use> us : use.values()) for (Use u : us) if (u.num == i + 1) used = true;
+            if (used) out.add(i + 1);
+        }
+        return out;
+    }
+
+    /** Свободные кабинеты на уроке (спортзал не в счёт). */
+    public static synchronized List<String> freeRooms(Map<String, List<Use>> use, int slot) {
+        List<String> out = new ArrayList<>();
+        for (String r : rooms()) {
+            if (SPORT.equals(r)) continue;
+            boolean busy = false;
+            List<Use> us = use.get(r);
+            if (us != null) for (Use u : us) if (u.num == slot) busy = true;
+            if (!busy) out.add(r);
+        }
+        return out;
+    }
+
+    /** Короткий ответ: кто сейчас в кабинете и когда он освободится. */
+    public static RoomState roomNow(String room, Map<String, List<Use>> use, int nowMin) {
+        List<Use> u = new ArrayList<>(use.containsKey(room) ? use.get(room) : Collections.<Use>emptyList());
+        Collections.sort(u, (a, b) -> Integer.compare(a.num, b.num));
+        List<Use> cur = new ArrayList<>();
+        for (Use x : u) if (nowMin >= x.start && nowMin < x.end) cur.add(x);
+        if (!cur.isEmpty()) {
+            int n = cur.get(0).num, end = cur.get(0).end;
+            for (Use x; (x = find(u, n + 1)) != null; n++) end = x.end; // уроки подряд: занят до конца цепочки
+            return new RoomState(true, "Сейчас " + who(cur) + ". Освободится в " + hm(end));
+        }
+        for (Use x : u) {
+            if (x.start < nowMin) continue;
+            List<Use> same = new ArrayList<>();
+            for (Use y : u) if (y.num == x.num) same.add(y);
+            return new RoomState(false, "Сейчас свободен. Дальше " + who(same) + " в " + hm(x.start));
+        }
+        return new RoomState(false, "Свободен до конца дня");
+    }
+
+    private static Use find(List<Use> u, int num) {
+        for (Use x : u) if (x.num == num) return x;
+        return null;
+    }
+
+    private static String who(List<Use> list) {
+        LinkedHashSet<String> classes = new LinkedHashSet<>();
+        for (Use x : list) classes.add(x.cls);
+        return String.join(", ", classes) + ", " + lowFirst(list.get(0).subject);
+    }
+
+    /** «Физика» → «физика», а «НВП» и «Python» как есть. */
+    static String lowFirst(String t) {
+        return t.matches("^[А-ЯЁ][а-яё].*") ? Character.toLowerCase(t.charAt(0)) + t.substring(1) : t;
+    }
 
     // ================= расчёт состояния =================
 
@@ -615,7 +792,7 @@ public final class Schedule {
     public static synchronized Vacation vacation(ZonedDateTime now) {
         LocalDate today = now.toLocalDate();
         String t = today.toString();
-        if (custom || holidayName(today) != null || (!termEnd.isEmpty() && t.compareTo(termEnd) > 0)) return null;
+        if (custom || holiday(today) != null || (!termEnd.isEmpty() && t.compareTo(termEnd) > 0)) return null;
         String[] v = null;
         for (String[] h : HOLIDAYS) {
             if (isVacation(h[2]) && h[0].compareTo(t) > 0 && (v == null || h[0].compareTo(v[0]) < 0)) v = h;
@@ -642,8 +819,9 @@ public final class Schedule {
     /** "До каникул 18 учебных дней" (тот же текст, что на сайте и на iPhone). */
     public static String vacationText(Vacation v) {
         if (v == null) return "";
-        if (v.days == 0) return "Дальше " + v.name.toLowerCase();
-        if (v.days == 1 && v.today) return "Сегодня последний учебный день, потом " + v.name.toLowerCase();
+        String name = v.name.toLowerCase(Locale.ROOT);
+        if (v.days == 0) return "Дальше " + name;
+        if (v.days == 1 && v.today) return "Сегодня последний учебный день, потом " + name;
         return "До каникул " + word(v.days, "учебный день", "учебных дня", "учебных дней");
     }
 
@@ -707,7 +885,8 @@ public final class Schedule {
         return (minutes / 60) + ":" + (m < 10 ? "0" : "") + m;
     }
 
-    private static long at(LocalDate date, int minutes, ZoneId zone) {
-        return date.atStartOfDay(zone).plusMinutes(minutes).toInstant().toEpochMilli();
+    /** Момент «min минут от начала дня» по стенным часам: в день перевода часов звонок в 8:00 остаётся в 8:00. */
+    static long at(LocalDate date, int minutes, ZoneId zone) {
+        return date.atStartOfDay().plusMinutes(minutes).atZone(zone).toInstant().toEpochMilli();
     }
 }

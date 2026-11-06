@@ -43,6 +43,7 @@ public final class Updater {
     public static final String KEY_NOTIF = "notif_enabled";
     public static final String KEY_SCHOOL_ONLY = "school_only";
     public static final String KEY_BUZZ = "buzz_before_lesson";   // вибрация за 2 мин до урока
+    public static final String KEY_LIVE = "live_update";          // Android 16: таймер урока в строке состояния
     static final String ACTION_BUZZ = "app.urok7b.BUZZ";
     static final String CHANNEL_BUZZ = "lesson_buzz";
     static final int BUZZ_ID = 8;
@@ -106,20 +107,25 @@ public final class Updater {
         Theme t = Theme.load(ctx).forDisplay(d);
 
         boolean notif = notifWanted(ctx, d);
-        boolean widgets = widgetIds(ctx, LessonWidget.class).length > 0
+        boolean rooms = widgetIds(ctx, RoomsWidget.class).length > 0;
+        boolean widgets = rooms || widgetIds(ctx, LessonWidget.class).length > 0
                 || widgetIds(ctx, MiniWidget.class).length > 0
                 || widgetIds(ctx, DayWidget.class).length > 0;
+        // свободные кабинеты меняются на любом звонке, даже когда у своего класса уроки кончились
+        long bell = rooms ? nextBell(now) : 0;
+        String sig = d.sig + "|" + (rooms ? bell : 0);
 
-        if (force || screenOn || !d.sig.equals(lastSig)) {
-            lastSig = d.sig;
+        if (force || screenOn || !sig.equals(lastSig)) {
+            lastSig = sig;
             notif = updateNotification(ctx, d, t, notif);
             LessonWidget.updateAll(ctx, d, t);
             MiniWidget.updateAll(ctx, d, t);
             DayWidget.updateAll(ctx, d, t, s);
+            RoomsWidget.updateAll(ctx, now, t);
         }
         scheduleBuzz(ctx, now, prefs(ctx).getBoolean(KEY_BUZZ, false));
         // без секунд таймер — это текст, и его надо обновлять раз в минуту, пока экран включён
-        scheduleNext(ctx, s, d, nowMs, screenOn, notif || widgets);
+        scheduleNext(ctx, s, d, nowMs, screenOn, notif || widgets, bell);
     }
 
     /** Уведомление включено и (если выбрано «только в учебное время») сейчас учебное время. */
@@ -429,7 +435,45 @@ public final class Updater {
         return big;
     }
 
+    /** Android 16 и включён «Таймер в строке состояния»: идёт отсчёт до звонка. */
+    static boolean live(Context ctx, Display d) {
+        return Build.VERSION.SDK_INT >= 36 && d.timer && prefs(ctx).getBoolean(KEY_LIVE, true);
+    }
+
+    /**
+     * Android 16 (Live Updates): обычное уведомление без своей разметки и заливки. Система поднимает его наверх
+     * и показывает отсчёт до звонка чипом в строке состояния; цифры тикают силами системы, приложение не просыпается.
+     */
+    @android.annotation.TargetApi(31)
+    private static Notification buildLive(Context ctx, Display d) {
+        String subj = d.kind == Schedule.Kind.LESSON ? d.title : d.nextSubject;
+        Notification.Builder b = new Notification.Builder(ctx, CHANNEL)
+                .setSmallIcon(R.drawable.ic_notif)
+                .setContentTitle(d.compactTitle)
+                .setContentText(d.notifText)
+                .setSubText(d.label.isEmpty() ? null : d.label.charAt(0) + d.label.substring(1).toLowerCase())
+                .setProgress(100, Math.max(0, d.progress), false)
+                .setUsesChronometer(true)
+                .setChronometerCountDown(true)
+                .setWhen(d.target)
+                .setShowWhen(true)
+                .setColor(Hues.vivid(subj, true))
+                .setOnlyAlertOnce(true)
+                .setOngoing(true)
+                .setLocalOnly(true)
+                .setDeleteIntent(repost(ctx))
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setCategory(Notification.CATEGORY_PROGRESS)
+                .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+                .setContentIntent(openFromNotif(ctx));
+        b.getExtras().putBoolean("android.requestPromotedOngoing", true); // Notification.EXTRA_REQUEST_PROMOTED_ONGOING
+        Notification n = b.build();
+        n.flags |= Notification.FLAG_ONGOING_EVENT | Notification.FLAG_NO_CLEAR;
+        return n;
+    }
+
     private static Notification build(Context ctx, Display d, Theme t) {
+        if (live(ctx, d)) return buildLive(ctx, d);
         Notification.Builder b = new Notification.Builder(ctx, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notif)
                 .setContentTitle(d.notifTitle)
@@ -519,8 +563,23 @@ public final class Updater {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
+    /** Ближайший звонок сегодня (начало или конец урока, на котором кто-то учится), 0: таких нет. */
+    static long nextBell(ZonedDateTime now) {
+        java.time.LocalDate today = now.toLocalDate();
+        if (Schedule.offDay(today) != null) return 0;
+        int[][] bells = Schedule.dayBells(today);
+        long nowMs = now.toInstant().toEpochMilli(), best = 0;
+        for (int n : Schedule.slots(today, Schedule.roomDay(today))) {
+            for (int edge : bells[n - 1]) {
+                long t = Schedule.at(today, edge, now.getZone());
+                if (t > nowMs && (best == 0 || t < best)) best = t;
+            }
+        }
+        return best;
+    }
+
     private static void scheduleNext(Context ctx, Schedule.Status s, Display d, long nowMs,
-                                     boolean screenOn, boolean active) {
+                                     boolean screenOn, boolean active, long bell) {
         AlarmManager am = ctx.getSystemService(AlarmManager.class);
         if (am == null) return;
         ZonedDateTime now = ZonedDateTime.now();
@@ -537,6 +596,7 @@ public final class Updater {
             boundary = nextMidnight;
         }
 
+        if (bell > 0) boundary = Math.min(boundary, bell);
         long when = boundary;
         if (d.live && active) {
             // Каждую минуту — только когда на экран смотрят. Если экран выключен, а служба жива,

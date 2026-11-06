@@ -626,6 +626,10 @@ def main():
     classes = sorted(data["classes"], key=lambda c: (int(re.match(r"\d+", c)[0]), c))
     favicon = png_data_uri(icon(64))
     qrs = dict([("", qr_code(SITE_URL))] + [(c, qr_code(SITE_URL + "#" + slug(c).lower())) for c in classes])
+    # те же QR-коды в приложение Android («Поделиться с классом»): кодировщик QR в APK не нужен
+    os.makedirs(os.path.join(ROOT, "app", "src", "main", "assets"), exist_ok=True)
+    with open(os.path.join(ROOT, "app", "src", "main", "assets", "qr.json"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(qrs, ensure_ascii=False, separators=(",", ":")) + "\n")
     startup = splash_images()
     jsonld = js_literal({
         "@context": "https://schema.org", "@type": "WebApplication", "name": "Звонок", "url": SITE_URL, "inLanguage": "ru",

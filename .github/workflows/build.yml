@@ -37,16 +37,25 @@ jobs:
         run: |
           if [ -n "$SIGNING_KEY_B64" ]; then echo "$SIGNING_KEY_B64" | base64 -d > app/zvonok.jks; fi
 
+      # Android считает день так же, как сайт: эталон снят с site/src/js/rules.js (tools/golden.py)
+      - name: Tests
+        run: gradle testReleaseUnitTest --no-daemon
+
+      - name: Lint
+        continue-on-error: true   # отчёт смотрим глазами; ошибки lint чиним, но сборку из-за предупреждений не роняем
+        run: gradle lintDebug --no-daemon
+
       - name: Build
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: gradle assembleRelease --no-daemon
+        run: gradle assembleRelease assembleDebug --no-daemon
 
       - name: Collect files
         run: |
           cp app/build/outputs/apk/release/app-release.apk Zvonok-165.apk
           cp Zvonok-165.apk Uroki7B.apk   # копия под старым именем: по нему ищет обновление приложение v3.0
           cp site/index.html Zvonok-165.html
+          echo "APK: $(stat -c %s Zvonok-165.apk) байт" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -55,7 +64,21 @@ jobs:
             Zvonok-165.apk
             Zvonok-165.html
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.html
+
       - name: Release
+        # Релиз только из main (основной) или пробный (-beta) из любой ветки. Сборки -dev в рабочих ветках остаются
+        # артефактом: приложение ищет обновление в releases/latest, и незаконченная версия до людей не доберётся.
+        if: github.ref == 'refs/heads/main' || contains(steps.ver.outputs.name, '-beta')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.name }}-build-${{ github.run_number }}
@@ -69,3 +92,42 @@ jobs:
           # и ссылка на сайте ведёт туда же, так что пробную сборку ставит себе только тот, кто проверяет
           prerelease: ${{ contains(steps.ver.outputs.name, '-beta') }}
           make_latest: ${{ !contains(steps.ver.outputs.name, '-beta') }}
+
+  # Снимки экранов на эмуляторе: обе темы, урок, перемена, выходной, крупный шрифт, уведомление.
+  # Android 16 (API 36) показывает ещё и таймер урока в строке состояния.
+  screens:
+    needs: build
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 36]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: debug-apk
+
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -timezone Asia/Almaty
+          disable-animations: true
+          script: bash tools/screens.sh app-debug.apk screens ${{ matrix.api }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screens-api${{ matrix.api }}
+          path: screens/

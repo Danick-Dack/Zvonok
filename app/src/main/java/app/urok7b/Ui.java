@@ -11,10 +11,12 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
@@ -28,6 +30,7 @@ final class Ui {
 
     static final String KEY_SCHEME = "app_scheme"; // auto | light | dark
     static final String KEY_ACCENT = "app_accent"; // blue, indigo, ...
+    static final String KEY_PLAIN = "app_plain";   // true: экран без цветов предметов (как «Цвет предметов» на сайте)
 
     /** Главный цвет: ключ, название, цвет в светлой теме, цвет в тёмной (как на сайте). */
     static final String[][] ACCENTS = {
@@ -42,7 +45,7 @@ final class Ui {
             {"mono", "Без цвета", "141414", "F3F3F1"},
     };
 
-    static boolean DARK = true;
+    static boolean DARK = true, PLAIN;
     static int BG, CARD, RAISED, FIELD, LINE, TEXT, SOFT, MUTED, FAINT, TRACK;
     static int ACCENT, ON_ACCENT, OK, WARN, BAD;
     /** Меняется при каждой смене оформления: экраны по нему понимают, что пора перерисоваться. */
@@ -87,6 +90,11 @@ final class Ui {
         for (String[] a : ACCENTS) if (a[0].equals(key)) acc = a;
         int before = ACCENT ^ (DARK ? 1 : 0);
         int nowAcc = 0xFF000000 | Integer.parseInt(acc[dark ? 3 : 2], 16);
+        boolean plain = Updater.prefs(c).getBoolean(KEY_PLAIN, false);
+        if (plain != PLAIN) {
+            PLAIN = plain;
+            version++;
+        }
         if (dark != DARK || nowAcc != ACCENT || before == 0) set(dark, acc);
     }
 
@@ -301,12 +309,19 @@ final class Ui {
         return v;
     }
 
+    // цвета предмета на экране приложения; с выключенным «Цвет предметов» всё в главном цвете
+    static int vivid(String subject) { return PLAIN ? ACCENT : Hues.vivid(subject, DARK); }
+    static int strong(String subject) { return PLAIN ? ACCENT : Hues.strong(subject, DARK); }
+    static int soft(String subject) { return PLAIN ? (ACCENT & 0x00FFFFFF) | 0x26000000 : Hues.soft(subject, DARK); }
+    static int onStrong() { return PLAIN ? ON_ACCENT : Hues.onStrong(DARK); }
+
     /** Плашка кабинета в цвете предмета: «сейчас» залита, остальные на мягком фоне. */
     static TextView room(Context c, String room, String subject, boolean now, float sp) {
-        TextView t = text(c, room, sp, now ? Hues.onStrong(DARK) : Hues.strong(subject, DARK), "sans-serif-medium");
+        TextView t = text(c, room, sp, now ? onStrong() : strong(subject), "sans-serif-medium");
         t.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         t.setPadding(dp(c, 10), dp(c, 4), dp(c, 10), dp(c, 4));
-        t.setBackground(round(c, now ? Hues.strong(subject, DARK) : Hues.soft(subject, DARK), 10, 0));
+        t.setBackground(round(c, now ? strong(subject) : soft(subject), 10, 0));
+        t.setContentDescription(roomSpoken(room));
         return t;
     }
 
@@ -342,67 +357,104 @@ final class Ui {
                 .setTitle("Твой класс").setView(sv).setNegativeButton("Закрыть", null).show();
     }
 
-    /** Оформление приложения: тема и главный цвет. После выбора вызывает done (экран перерисуется). */
-    static void pickLook(Activity a, Runnable done) {
-        LinearLayout box = vertical(a);
-        box.setPadding(dp(a, 20), dp(a, 4), dp(a, 20), dp(a, 8));
-        android.app.AlertDialog[] dlg = new android.app.AlertDialog[1];
-        box.addView(caps(a, "ТЕМА"));
-        LinearLayout themes = horizontal(a);
-        String[][] modes = {{"auto", "Как в системе"}, {"light", "Светлая"}, {"dark", "Тёмная"}};
-        String curMode = scheme(a);
-        for (String[] m : modes) {
-            themes.addView(pill(a, m[1], m[0].equals(curMode), v -> {
-                Updater.prefs(a).edit().putString(KEY_SCHEME, m[0]).apply();
-                if (dlg[0] != null) dlg[0].dismiss();
-                done.run();
-            }));
-        }
-        box.addView(themes);
-        box.addView(caps(a, "ГЛАВНЫЙ ЦВЕТ"));
-        String curAcc = accentKey(a);
-        View[] dots = new View[ACCENTS.length];
-        for (int i = 0; i < ACCENTS.length; i++) {
-            String[] acc = ACCENTS[i];
-            LinearLayout cell = vertical(a);
-            cell.setGravity(Gravity.CENTER_HORIZONTAL);
-            cell.setPadding(0, 0, dp(a, 6), dp(a, 10));
-            View dot = new View(a);
-            GradientDrawable g = new GradientDrawable();
-            g.setShape(GradientDrawable.OVAL);
-            g.setColor(0xFF000000 | Integer.parseInt(acc[DARK ? 3 : 2], 16));
-            g.setStroke(dp(a, acc[0].equals(curAcc) ? 3 : 1), acc[0].equals(curAcc) ? TEXT : LINE);
-            dot.setBackground(g);
-            cell.addView(dot, new LinearLayout.LayoutParams(dp(a, 40), dp(a, 40)));
-            TextView name = text(a, acc[1], 11, SOFT, null);
-            name.setGravity(Gravity.CENTER);
-            cell.addView(name, new LinearLayout.LayoutParams(dp(a, 74), ViewGroup.LayoutParams.WRAP_CONTENT));
-            cell.setContentDescription("Цвет: " + acc[1]);
-            cell.setOnClickListener(v -> {
-                Updater.prefs(a).edit().putString(KEY_ACCENT, acc[0]).apply();
-                if (dlg[0] != null) dlg[0].dismiss();
-                done.run();
-            });
-            dots[i] = cell;
-        }
-        box.addView(wrapRows(a, dots, 4));
-        ScrollView sv = new ScrollView(a);
-        sv.addView(box);
-        dlg[0] = new android.app.AlertDialog.Builder(a, dialogTheme())
-                .setTitle("Оформление").setView(sv).setNegativeButton("Закрыть", null).show();
+    /** «кабинет 48 или 49» или «спортзал»: так диктор читает кабинет понятнее, чем «48 косая 49». */
+    static String roomSpoken(String room) {
+        if (room == null || room.isEmpty()) return "";
+        return Character.isDigit(room.charAt(0)) ? "кабинет " + room.replace("/", " или ") : room;
     }
 
-    /** Ряд таблеток с переносом строк (простая «сетка»). */
-    static LinearLayout wrapRows(Context c, View[] items, int perRow) {
-        LinearLayout col = vertical(c);
-        LinearLayout row = null;
-        for (int i = 0; i < items.length; i++) {
-            if (i % perRow == 0) {
-                row = horizontal(c);
-                col.addView(row);
-            }
-            row.addView(items[i]);
+    /** Текстовый файл из APK (data/ и src/main/assets). */
+    static String asset(Context c, String name) throws java.io.IOException {
+        try (java.io.InputStream in = c.getAssets().open(name)) {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+            return new String(out.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
         }
-        return col;
+    }
+
+    /** Значок из res/drawable (белый вектор), перекрашенный в нужный цвет. Для диктора он не виден. */
+    static ImageView icon(Context c, int res, int color, int sizeDp) {
+        ImageView v = new ImageView(c);
+        v.setImageResource(res);
+        v.setColorFilter(color);
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(c, sizeDp), dp(c, sizeDp)));
+        v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return v;
+    }
+
+    /** Лёгкий отклик на касание (если вибрация касаний включена в системе). */
+    static void tick(View v) {
+        v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+    }
+
+    /** Заголовок для экранного диктора: по ним листают экран жестом. */
+    static <T extends View> T heading(T v) {
+        if (Build.VERSION.SDK_INT >= 28) v.setAccessibilityHeading(true);
+        return v;
+    }
+
+    /** Переключатель из нескольких вариантов (как сегменты на сайте). */
+    static LinearLayout segments(Context c, String[] names, int selected, java.util.function.IntConsumer pick) {
+        LinearLayout seg = horizontal(c);
+        seg.setBackground(round(c, FIELD, 16, LINE));
+        seg.setPadding(dp(c, 4), dp(c, 4), dp(c, 4), dp(c, 4));
+        for (int i = 0; i < names.length; i++) {
+            final int k = i;
+            TextView b = text(c, names[i], 14, i == selected ? ON_ACCENT : TEXT, "sans-serif-medium");
+            b.setGravity(Gravity.CENTER);
+            b.setMinHeight(dp(c, 40));
+            b.setBackground(i == selected ? round(c, ACCENT, 12, 0) : null);
+            b.setSelected(i == selected);
+            b.setOnClickListener(v -> { tick(v); pick.accept(k); });
+            seg.addView(b, weight(1));
+        }
+        return seg;
+    }
+
+    /** Ряд элементов с переносом строк по ширине: кабинеты, классы, цвета. */
+    static final class Flow extends ViewGroup {
+        private final int gap;
+
+        Flow(Context c, int gapDp) {
+            super(c);
+            gap = dp(c, gapDp);
+        }
+
+        @Override
+        protected void onMeasure(int ws, int hs) {
+            int max = MeasureSpec.getSize(ws), x = 0, y = 0, row = 0;
+            for (int i = 0; i < getChildCount(); i++) {
+                View v = getChildAt(i);
+                if (v.getVisibility() == GONE) continue;
+                v.measure(MeasureSpec.makeMeasureSpec(max, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                if (x > 0 && x + v.getMeasuredWidth() > max) {
+                    x = 0;
+                    y += row + gap;
+                    row = 0;
+                }
+                x += v.getMeasuredWidth() + gap;
+                row = Math.max(row, v.getMeasuredHeight());
+            }
+            setMeasuredDimension(max, y + row);
+        }
+
+        @Override
+        protected void onLayout(boolean changed, int l, int t, int r, int b) {
+            int max = r - l, x = 0, y = 0, row = 0;
+            for (int i = 0; i < getChildCount(); i++) {
+                View v = getChildAt(i);
+                if (v.getVisibility() == GONE) continue;
+                int w = v.getMeasuredWidth(), h = v.getMeasuredHeight();
+                if (x > 0 && x + w > max) {
+                    x = 0;
+                    y += row + gap;
+                    row = 0;
+                }
+                v.layout(x, y, x + w, y + h);
+                x += w + gap;
+                row = Math.max(row, h);
+            }
+        }
     }
 }

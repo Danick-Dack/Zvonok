@@ -25,8 +25,10 @@ final class Updates {
     private static final String KEY_BUILD = "update_latest_build";
     private static final String KEY_NAME = "update_latest_name";
     private static final String API = "https://api.github.com/repos/Danick-Dack/Zvonok/releases/latest";
-    private static final String CHANGES = SettingsActivity.SITE + "changes.json";
-    private static final String SCHEDULE = SettingsActivity.SITE + "schedule.json";
+    static final String SITE = "https://danick-dack.github.io/Zvonok/";
+    static final String APK_URL = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk";
+    private static final String CHANGES = SITE + "changes.json";
+    private static final String SCHEDULE = SITE + "schedule.json";
     private static final String KEY_CH_LAST = "changes_last_check";
 
     interface Done { void done(boolean ok); }

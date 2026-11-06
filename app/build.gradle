@@ -11,7 +11,7 @@ android {
         minSdk 26
         targetSdk 34
         versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "4").toInteger()) // = номер сборки, для проверки обновлений
-        versionName "4.0"
+        versionName "5.0-dev" // -dev: сборка в рабочей ветке, релиз не выходит; -beta: пробный выпуск
     }
 
     // Постоянный ключ (из секретов GitHub): каждая новая сборка ставится поверх старой.
@@ -42,6 +42,11 @@ android {
         checkReleaseBuilds false
     }
 
+    // юнит-тесты на обычной JVM: настоящий org.json вместо заглушек android.jar
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
     // Общий файл расписания всех классов (его же использует сайт)
     sourceSets {
         main.assets.srcDirs += ['../data']
@@ -52,4 +57,10 @@ android {
         targetCompatibility JavaVersion.VERSION_17
         encoding 'UTF-8'
     }
+}
+
+dependencies {
+    // только для тестов, в APK не попадают
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
 }

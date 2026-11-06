@@ -1,6 +1,8 @@
 package app.urok7b;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -40,7 +42,7 @@ final class Hues {
         for (String[] p : m) CODE.put(p[0], Integer.parseInt(p[1]));
     }
 
-    private static final Map<String, Integer> BY_NAME = new HashMap<>();
+    private static final Map<String, Integer> BY_NAME = new LinkedHashMap<>(); // в порядке предметов в schedule.json, как на сайте
 
     private Hues() {}
 
@@ -58,10 +60,10 @@ final class Hues {
         if (s.isEmpty()) return -1;
         Integer h = BY_NAME.get(s);
         if (h != null) return h;
-        String low = s.toLowerCase();
+        String low = s.toLowerCase(Locale.ROOT);
         String head = low.length() > 5 ? low.substring(0, 5) : low;
         for (Map.Entry<String, Integer> e : BY_NAME.entrySet()) {
-            if (e.getKey().toLowerCase().startsWith(head)) return e.getValue();
+            if (e.getKey().toLowerCase(Locale.ROOT).startsWith(head)) return e.getValue();
         }
         long x = 0;
         for (int i = 0; i < low.length(); i++) x = (x * 31 + low.charAt(i)) & 0xFFFFFFFFL;

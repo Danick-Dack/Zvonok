@@ -11,3 +11,5 @@ jobs:
         run: python3 tools/check_data.py
       - name: Тесты сайта
         run: python3 tools/test_site.py
+      - name: Эталон Android совпадает с правилами сайта
+        run: python3 tools/golden.py --check

@@ -19,7 +19,8 @@ function cleanChanges(j) {
     if (str(c.note)) day.note = c.note;
     if (str(c.off) && c.off.trim()) day.off = c.off;
     else if (c.off === true) day.off = "Уроков нет"; // off: true тоже значит «уроков нет», пустая строка нет
-    if (Array.isArray(c.bells)) day.bells = c.bells.map(b => Array.isArray(b) && str(b[0]) && str(b[1]) ? [b[0], b[1]] : null);
+    // пустой список звонков считаем ошибкой правки: звонки в этот день обычные
+    if (Array.isArray(c.bells) && c.bells.length) day.bells = c.bells.map(b => Array.isArray(b) && str(b[0]) && str(b[1]) ? [b[0], b[1]] : null);
     if (obj(c.classes)) {
       day.classes = {};
       for (const cls of Object.keys(c.classes)) {

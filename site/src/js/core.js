@@ -88,8 +88,8 @@ const iso = d => d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.get
 const dm = d => d.getDate() + " " + MONTHS[d.getMonth()];
 const toMin = t => { const m = /^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(t || ""); if (!m) return -1; const H = +m[1], M = +m[2]; return H < 24 && M < 60 ? H * 60 + M : -1; };
 const hm = m => Math.floor(m / 60) + ":" + two(m % 60);
-/** Время в мс: полночь даты плюс min минут. */
-function at(date, min) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d.getTime() + min * 60000; }
+/** Время в мс: min минут от начала дня по стенным часам (в день перевода часов звонок остаётся в 8:00, а не в 9:00). */
+function at(date, min) { const d = new Date(date); d.setHours(0, min, 0, 0); return d.getTime(); }
 /* «Звонку» столько дней: первая версия вышла 1 ноября 2026 (первый коммит) */
 const BORN = new Date(2026, 10, 1);
 const projectAge = now => Math.max(1, Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - BORN) / 864e5));
