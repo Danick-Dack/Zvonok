@@ -5,6 +5,7 @@ const abSrc = {at: d => dayLessons(abCls, d), real: true};
 let abT = 0;
 
 function abTick() {
+  abAge(); // в полночь счётчик дней сам прибавит день
   clearTimeout(abT);
   if (document.hidden) return; // свернули вкладку: ничего не считаем
   const now = new Date(), s = compute(now, abSrc), n = s.next;
@@ -41,7 +42,12 @@ function abTick() {
   abT = setTimeout(abTick, live ? 1000 - ms % 1000 + 15 : 60000 - ms % 60000 + 15);
 }
 
+let abDay = "";
+/** Счётчик дней «Звонка»: пересчитывается сам, когда наступает новый день (вызывается из abTick). */
 function abAge() {
+  const today = new Date().toDateString();
+  if (today === abDay) return;
+  abDay = today;
   const age = projectAgeText(new Date());
   $("abAgeN").textContent = age.n;
   $("abAgeT").textContent = age.days + " «Звонку»";
@@ -60,7 +66,6 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && DATA.classes[c] && c !== abCls) { abCls = c; sel.value = c; }
   abTick();
 });
-abAge();
 // скачивания приложения и сколько раз за сутки приложения проверили обновление: числа от GitHub,
 // сборка сайта обновляет stats.json раз в сутки
 const stat = (id, n, forms) => {

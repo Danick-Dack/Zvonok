@@ -21,6 +21,17 @@ final class MoreTab {
 
     /** «Звонку» столько дней: первая версия вышла 1 ноября 2026 (как на сайте). */
     static final LocalDate BORN = LocalDate.of(2026, 11, 1);
+    private TextView age;
+
+    private static String ageText() {
+        long n = Math.max(1, ChronoUnit.DAYS.between(BORN, LocalDate.now()));
+        return "«Звонку» " + Schedule.word((int) n, "день", "дня", "дней") + ". Первая версия вышла 1 ноября 2026.";
+    }
+
+    /** Счётчик дней «Звонка»: экран вызывает при каждой смене ключа, в том числе в полночь. */
+    void updateAge() {
+        if (age != null) age.setText(ageText());
+    }
     private static final String[][] FAQ = {
             {"Это официальное приложение лицея?", "Нет. «Звонок» сделал ученик лицея для своих. Расписание взято из утверждённого "
                     + "расписания четверти. Если где-то ошибка, напиши нам, исправим."},
@@ -150,8 +161,7 @@ final class MoreTab {
         about.addView(Ui.linkRow(a, "Написать нам", "Идея, ошибка или вопрос. Анонимно", null, v -> a.startActivity(new Intent(a, Feedback.class))));
         about.addView(Ui.linkRow(a, "Сайт «Звонка»", "Все классы, установка для iPhone", null, v -> open(Uri.parse(Updates.SITE))));
         about.addView(Ui.linkRow(a, "Исходный код", "Открытый проект (MIT): можно копировать и менять", null, v -> open(Uri.parse("https://github.com/Danick-Dack/Zvonok"))));
-        long n = Math.max(1, ChronoUnit.DAYS.between(BORN, LocalDate.now()));
-        TextView age = note("«Звонку» " + Schedule.word((int) n, "день", "дня", "дней") + ". Первая версия вышла 1 ноября 2026.");
+        age = note(ageText());
         age.setPadding(0, a.dp(12), 0, a.dp(4));
         about.addView(age);
 

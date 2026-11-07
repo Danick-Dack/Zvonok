@@ -257,6 +257,7 @@ public class MainActivity extends Activity {
         if (tab == NOW) nowTab.render(t, changed);
         else if (changed && tab == WEEK) weekTab.render(t);
         else if (changed && tab == ROOMS) roomsTab.render(t);
+        if (changed && moreTab != null) moreTab.updateAge(); // в полночь счётчик дней сам прибавит день
     }
 
     /** Для экранного диктора: только смена урока, а не каждая минута (как на сайте). */

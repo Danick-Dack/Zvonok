@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-/a+J2iNYlltM0YhkYZGE7zV0PY8MA85wwf+CMiWvjEk=' 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-pMZ2coCyeNMlubOHays4h1qZy3O6or+aHA4Bfc514ZA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -478,6 +478,7 @@ const abSrc = {at: d => dayLessons(abCls, d), real: true};
 let abT = 0;
 
 function abTick() {
+  abAge(); // в полночь счётчик дней сам прибавит день
   clearTimeout(abT);
   if (document.hidden) return; // свернули вкладку: ничего не считаем
   const now = new Date(), s = compute(now, abSrc), n = s.next;
@@ -514,7 +515,12 @@ function abTick() {
   abT = setTimeout(abTick, live ? 1000 - ms % 1000 + 15 : 60000 - ms % 60000 + 15);
 }
 
+let abDay = "";
+/** Счётчик дней «Звонка»: пересчитывается сам, когда наступает новый день (вызывается из abTick). */
 function abAge() {
+  const today = new Date().toDateString();
+  if (today === abDay) return;
+  abDay = today;
   const age = projectAgeText(new Date());
   $("abAgeN").textContent = age.n;
   $("abAgeT").textContent = age.days + " «Звонку»";
@@ -533,7 +539,6 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && DATA.classes[c] && c !== abCls) { abCls = c; sel.value = c; }
   abTick();
 });
-abAge();
 // скачивания приложения и сколько раз за сутки приложения проверили обновление: числа от GitHub,
 // сборка сайта обновляет stats.json раз в сутки
 const stat = (id, n, forms) => {

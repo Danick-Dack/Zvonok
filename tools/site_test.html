@@ -276,6 +276,12 @@ async function pages() {
     ok([...d.querySelectorAll(".rel")].every(c => c.textContent.includes("iPhone")) && d.querySelectorAll(".rel").length < n, "фильтр по iPhone");
     ok(!/—/.test(d.body.innerText) && !/undefined|null/.test(d.body.innerText), "что нового: без длинных тире и мусора");
 
+    w = await load("_about_under_test.html"); d = w.document;
+    const ageAt = T => w.eval(`(() => { const R = Date, T = ${JSON.stringify(T)};
+      window.Date = class extends R { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return new R(T).getTime(); } };
+      try { abTick(); return document.getElementById("abAgeN").textContent; } finally { window.Date = R; } })()`);
+    ok(ageAt("2026-11-07T23:59:30") === "6" && ageAt("2026-11-08T00:00:20") === "7", "о проекте: счётчик дней сам прибавляет день в полночь");
+
     w = await load("_feedback_under_test.html?about=schedule&class=9%D0%90&day=2"); d = w.document;
     ok(d.getElementById("pTitle").textContent === "Анонимно" && /formsubmit\.co\/ajax\//.test(d.documentElement.innerHTML), "анонимно, запасной FormSubmit");
     ok(d.getElementById("cls").value === "9А" && d.getElementById("text").value.startsWith("Ошибка в расписании 9А, среда") && d.querySelector('#kind [aria-pressed="true"]').textContent === "Ошибка", "из расписания: класс, день и тип подставлены");

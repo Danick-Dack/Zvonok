@@ -17,7 +17,7 @@ if not chrome:
 copies = []
 for src, dst in (("index.html", "_site_under_test.html"), ("changelog.html", "_changelog_under_test.html"),
                  ("feedback.html", "_feedback_under_test.html"), ("make.html", "_make_under_test.html"),
-                 ("iphone.html", "_iphone_under_test.html")):
+                 ("iphone.html", "_iphone_under_test.html"), ("about.html", "_about_under_test.html")):
     page = open(os.path.join(ROOT, "site", src), encoding="utf-8").read()
     page = re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]*>', "", page)
     copies.append(os.path.join(ROOT, "tools", dst))
