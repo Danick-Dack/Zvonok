@@ -330,7 +330,7 @@ async function loadChanges(fetch) {
 // ---------- оформление ----------
 
 // Код темы с сайта (make.html). op, r и s (непрозрачность, углы, секунды) нужны только Android:
-// фон и скругление виджета на iPhone рисует система, а секунды в виджете Scriptable не тикают.
+// фон, скругление и тикающий таймер виджета на iPhone рисует сама iOS, их не настроить.
 function parseTheme(code) {
   const t = {bg: "000000", ac: "FFFFFF", p: 1, n: 1, d: 1, sc: 0, tx: ""};
   code = String(code || "").trim();
