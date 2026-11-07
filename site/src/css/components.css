@@ -161,3 +161,10 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 .cls-btn::after{content:"";position:absolute;inset:-3px -2px}
 .seg button,.seg a{position:relative}
 .seg button::after,.seg a::after{content:"";position:absolute;inset:-3px 0}
+/* Высокий контраст Windows (forced-colors): заливки браузер убирает, поэтому рамки и системные цвета */
+@media (forced-colors:active){
+  .switch input{border:1px solid CanvasText}
+  .switch input::after{background:CanvasText}
+  .switch input:checked{background:Highlight}
+  .btn,.card{border:1px solid CanvasText}
+}
