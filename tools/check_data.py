@@ -21,6 +21,12 @@ for i, (a, b) in enumerate(bells):
     elif i and bells[i - 1][1] is not None and a < bells[i - 1][1]:
         errors.append(f"звонок {i + 1} начинается раньше конца предыдущего")
 
+# названия предметов и праздников показываются везде как есть: без управляющих символов и не длиннее 40 знаков
+# (столько оставляют приложения и сайт у чужих данных: замен, своего расписания)
+for name in list(data["subjects"].values()) + [h[2] for h in data.get("holidays", []) if len(h) == 3]:
+    if not isinstance(name, str) or not name.strip() or len(name) > 40 or re.search(r"[\x00-\x1f\x7f]", name):
+        errors.append(f"название «{name}»: пустое, длиннее 40 знаков или с управляющими символами")
+
 classes = data["classes"]
 if len(classes) != 19:
     errors.append(f"классов {len(classes)}, ожидалось 19")

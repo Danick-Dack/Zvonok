@@ -36,7 +36,7 @@ py tools/preview_iphone.py  # снимки виджетов и приложен�
 ```
 
 Приложение Android собирает GitHub Actions (`.github/workflows/build.yml`): там же юнит-тесты, lint и снимки
-экранов на эмуляторе. Локально подойдёт Android Studio или `gradle assembleDebug`.
+экранов на эмуляторе. Локально подойдёт Android Studio или `gradle assembleDebug` (Gradle 8.7 и JDK 17, как в CI).
 
 ## Правила изменений
 
