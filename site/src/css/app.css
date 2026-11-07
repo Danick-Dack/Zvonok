@@ -12,10 +12,10 @@
 body.has-tabbar{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
 body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
 @media (min-width:760px){.tabbar{display:none}body.has-tabbar{padding-bottom:0}body.has-tabbar .zv-toast{bottom:28px}}
-.top .install-btn{display:none}
+.top .install-btn{display:inline-flex;gap:4px;padding-inline:10px;margin-right:2px} /* «Загрузить» видна и на телефоне */
 #schemeBtn{display:none}
 @media (min-width:760px){#schemeBtn{display:inline-grid}}
-@media (min-width:760px){.top .install-btn{display:inline-flex;margin-right:6px}}
+@media (min-width:760px){.top .install-btn{margin-right:6px}}
 
 .view{padding:18px 0 36px;animation:view-in .22s var(--ease)}
 @keyframes view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
