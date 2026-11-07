@@ -231,7 +231,9 @@ public final class Schedule {
         if (saved != null) {
             try {
                 JSONObject o = new JSONObject(saved);
-                if (o.optJSONObject("classes") != null && o.optJSONArray("bells") != null
+                JSONObject cls = o.optJSONObject("classes"), subj = o.optJSONObject("subjects");
+                // разумные размеры (в лицее 19 классов и 22 предмета): иначе берём встроенное в APK
+                if (cls != null && subj != null && cls.length() <= 100 && subj.length() <= 300 && o.optJSONArray("bells") != null
                         && o.optString("updated", "").compareTo(best.optString("updated", "")) >= 0) best = o;
             } catch (Exception ignored) {
                 // испорченный файл пропускаем

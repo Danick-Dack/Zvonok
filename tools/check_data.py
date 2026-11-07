@@ -65,6 +65,8 @@ for h in data.get("holidays", []):
         errors.append(f"странные каникулы {h}")
 if not re.fullmatch(DATE, data.get("term_end", "")):
     errors.append("нет term_end (последний день четверти)")
+elif data["term_end"] < data.get("updated", ""):
+    errors.append("term_end раньше даты обновления: забыли поменять четверть")
 
 # замены: data/changes.json
 changes = json.load(open(os.path.join(ROOT, "data", "changes.json"), encoding="utf-8"))

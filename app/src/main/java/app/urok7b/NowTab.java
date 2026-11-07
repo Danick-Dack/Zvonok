@@ -36,7 +36,7 @@ final class NowTab {
     private final TextView nextH, nextS, foot, vac, tz, dayTitle, dayMeta;
     private final Chronometer chrono;
     private final RingView ring;
-    private final FrameLayout roomBox, nextRoomBox, noteBox;
+    private final FrameLayout roomBox, nextRoomBox, noteBox, ringBox;
     private long lastTarget = -1;
     private String lastList = "";
     private int taps;
@@ -98,10 +98,8 @@ final class NowTab {
         top.addView(dots);
         hero.addView(top, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // крупный шрифт в системе: кольцо и цифры растут, но не вылезают за экран
-        float k = Math.min(1.25f, Math.max(1f, a.getResources().getConfiguration().fontScale));
-        FrameLayout ringBox = new FrameLayout(a);
-        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(a.dp(236 * k), a.dp(236 * k));
+        ringBox = new FrameLayout(a);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(0, 0); // размер задаёт fitRing()
         rp.topMargin = a.dp(14);
         ring = new RingView(a);
         ringBox.addView(ring, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -112,7 +110,6 @@ final class NowTab {
         big = Ui.text(a, "", 50, Ui.TEXT, null);
         for (TextView x : new TextView[]{chrono, big}) {
             x.setTextColor(Ui.TEXT);
-            x.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 50 * k);
             x.setTypeface(Typeface.create("sans-serif-thin", Typeface.NORMAL));
             x.setFontFeatureSettings("tnum");
             x.setIncludeFontPadding(false);
@@ -126,6 +123,7 @@ final class NowTab {
         center.addView(caption);
         ringBox.addView(center, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         hero.addView(ringBox, rp);
+        fitRing();
 
         LinearLayout titleRow = Ui.horizontal(a);
         titleRow.setGravity(Gravity.CENTER);
@@ -213,6 +211,20 @@ final class NowTab {
         c.addView(h);
         c.addView(Ui.text(a, "", 17, Ui.TEXT, "sans-serif-medium"));
         return c;
+    }
+
+    /**
+     * Кольцо 236 dp, при крупном шрифте в системе до 1,25 раза больше. Экран набок: не выше 45% высоты,
+     * чтобы таймер был виден сразу. Цифры меняются вместе с кольцом. Вызывается и при повороте экрана.
+     */
+    void fitRing() {
+        android.content.res.Configuration c = a.getResources().getConfiguration();
+        float k = Math.min(1.25f, Math.max(1f, c.fontScale));
+        float side = Math.min(236 * k, c.screenHeightDp * 0.45f);
+        ViewGroup.LayoutParams p = ringBox.getLayoutParams();
+        p.width = p.height = a.dp(side);
+        ringBox.setLayoutParams(p);
+        for (TextView x : new TextView[]{chrono, big}) x.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 50 * side / 236);
     }
 
     void pause() {

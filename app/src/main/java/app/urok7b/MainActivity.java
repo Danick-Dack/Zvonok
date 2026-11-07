@@ -192,6 +192,12 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onConfigurationChanged(android.content.res.Configuration c) {
+        super.onConfigurationChanged(c);
+        if (nowTab != null) nowTab.fitRing(); // экран повернули: кольцо по новой высоте
+    }
+
+    @Override
     public void onBackPressed() {
         if (tab != NOW) show(NOW); // «Назад» с другой вкладки ведёт на «Сейчас», а не закрывает приложение
         else super.onBackPressed();

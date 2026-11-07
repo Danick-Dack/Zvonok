@@ -84,62 +84,56 @@ final class Updates {
         }).start();
     }
 
-    /** Всё расписание с сайта (data/schedule.json). @return true, если оно изменилось. Не в главном потоке. */
-    private static boolean fetchSchedule(Context app) {
-        HttpURLConnection c = null;
+    /** GET по HTTPS: текст ответа, не больше max байт. Исключение, если сети нет. Не в главном потоке. */
+    private static String get(String url, int max) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         try {
-            c = (HttpURLConnection) new URL(SCHEDULE).openConnection();
             c.setConnectTimeout(6000);
             c.setReadTimeout(8000);
             c.setUseCaches(false);
+            if (url.equals(API)) c.setRequestProperty("Accept", "application/vnd.github+json");
             try (InputStream in = c.getInputStream()) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buf = new byte[8192];
                 int n;
-                while ((n = in.read(buf)) > 0 && out.size() < 2_000_000) out.write(buf, 0, n);
-                String text = new String(out.toByteArray(), StandardCharsets.UTF_8);
-                JSONObject o = new JSONObject(text);
-                if (o.optJSONObject("classes") == null || o.optJSONArray("bells") == null) return false; // не расписание
-                SharedPreferences p = Updater.prefs(app);
-                boolean changed = !text.equals(p.getString(Schedule.KEY_SCHEDULE, null));
-                if (changed) {
-                    p.edit().putString(Schedule.KEY_SCHEDULE, text).apply();
-                    Schedule.resetBase();
-                }
-                return changed;
+                while ((n = in.read(buf)) > 0 && out.size() < max) out.write(buf, 0, n);
+                return new String(out.toByteArray(), StandardCharsets.UTF_8);
             }
+        } finally {
+            c.disconnect();
+        }
+    }
+
+    /** Всё расписание с сайта (data/schedule.json). @return true, если оно изменилось. Не в главном потоке. */
+    private static boolean fetchSchedule(Context app) {
+        try {
+            String text = get(SCHEDULE, 2_000_000);
+            JSONObject o = new JSONObject(text);
+            if (o.optJSONObject("classes") == null || o.optJSONArray("bells") == null) return false; // не расписание
+            SharedPreferences p = Updater.prefs(app);
+            boolean changed = !text.equals(p.getString(Schedule.KEY_SCHEDULE, null));
+            if (changed) {
+                p.edit().putString(Schedule.KEY_SCHEDULE, text).apply();
+                Schedule.resetBase();
+            }
+            return changed;
         } catch (Exception ignored) {
             return false; // нет сети: работаем по сохранённому расписанию
-        } finally {
-            if (c != null) c.disconnect();
         }
     }
 
     /** @return true, если файл замен изменился. Вызывать не в главном потоке. */
     private static boolean fetchChanges(Context app) {
-        HttpURLConnection c = null;
         try {
-            c = (HttpURLConnection) new URL(CHANGES).openConnection();
-            c.setConnectTimeout(6000);
-            c.setReadTimeout(6000);
-            c.setUseCaches(false);
-            try (InputStream in = c.getInputStream()) {
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) > 0 && out.size() < 512_000) out.write(buf, 0, n);
-                String text = new String(out.toByteArray(), StandardCharsets.UTF_8);
-                if (new JSONObject(text).optJSONObject("days") == null) return false; // не файл замен
-                SharedPreferences p = Updater.prefs(app);
-                boolean changed = !text.equals(p.getString(Schedule.KEY_CHANGES, null));
-                p.edit().putString(Schedule.KEY_CHANGES, text).putLong(KEY_CH_LAST, System.currentTimeMillis()).apply();
-                if (changed) Schedule.invalidate();
-                return changed;
-            }
+            String text = get(CHANGES, 512_000);
+            if (new JSONObject(text).optJSONObject("days") == null) return false; // не файл замен
+            SharedPreferences p = Updater.prefs(app);
+            boolean changed = !text.equals(p.getString(Schedule.KEY_CHANGES, null));
+            p.edit().putString(Schedule.KEY_CHANGES, text).putLong(KEY_CH_LAST, System.currentTimeMillis()).apply();
+            if (changed) Schedule.invalidate();
+            return changed;
         } catch (Exception ignored) {
             return false; // нет сети: работаем по сохранённым заменам
-        } finally {
-            if (c != null) c.disconnect();
         }
     }
 
@@ -172,31 +166,18 @@ final class Updates {
         Handler main = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             boolean ok = false;
-            HttpURLConnection c = null;
             try {
-                c = (HttpURLConnection) new URL(API).openConnection();
-                c.setConnectTimeout(6000);
-                c.setReadTimeout(6000);
-                c.setRequestProperty("Accept", "application/vnd.github+json");
-                try (InputStream in = c.getInputStream()) {
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) > 0 && out.size() < 512_000) out.write(buf, 0, n);
-                    // тег вида v3.1-build-12
-                    String tag = new JSONObject(new String(out.toByteArray(), StandardCharsets.UTF_8)).getString("tag_name");
-                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("^v([\\d.]+)-build-(\\d+)$").matcher(tag);
-                    if (m.find()) {
-                        Updater.prefs(app).edit().putString(KEY_NAME, m.group(1))
-                                .putLong(KEY_BUILD, Long.parseLong(m.group(2)))
-                                .putLong(KEY_LAST, System.currentTimeMillis()).apply();
-                        ok = true;
-                    }
+                // тег вида v3.1-build-12
+                String tag = new JSONObject(get(API, 512_000)).getString("tag_name");
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("^v([\\d.]+)-build-(\\d+)$").matcher(tag);
+                if (m.find()) {
+                    Updater.prefs(app).edit().putString(KEY_NAME, m.group(1))
+                            .putLong(KEY_BUILD, Long.parseLong(m.group(2)))
+                            .putLong(KEY_LAST, System.currentTimeMillis()).apply();
+                    ok = true;
                 }
             } catch (Exception ignored) {
                 // нет сети: не страшно, проверим в другой раз
-            } finally {
-                if (c != null) c.disconnect();
             }
             // заодно свежее расписание и замены (тот же разрешённый выход в интернет)
             boolean changed = fetchSchedule(app) | fetchChanges(app);
