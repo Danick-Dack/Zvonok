@@ -89,7 +89,8 @@ final class MoreTab {
             GradientDrawable g = new GradientDrawable();
             g.setShape(GradientDrawable.OVAL);
             g.setColor(0xFF000000 | Integer.parseInt(acc[Ui.DARK ? 3 : 2], 16));
-            g.setStroke(a.dp(on ? 3 : 1), on ? Ui.TEXT : Ui.LINE);
+            // обводка видна на любом фоне: чёрный круг не сливается с тёмной темой
+            g.setStroke(a.dp(on ? 3 : 1), on ? Ui.TEXT : (Ui.MUTED & 0x00FFFFFF) | 0x99000000);
             dot.setBackground(g);
             dot.setSelected(on);
             dot.setContentDescription("Цвет: " + acc[1] + (on ? ", выбран" : ""));
