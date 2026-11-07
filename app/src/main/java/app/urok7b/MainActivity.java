@@ -203,6 +203,7 @@ public class MainActivity extends Activity {
     public void onConfigurationChanged(android.content.res.Configuration c) {
         super.onConfigurationChanged(c);
         if (nowTab != null) nowTab.fitRing(); // экран повернули: кольцо по новой высоте
+        refresh(true); // и строка статуса (набок в ней ещё и класс)
     }
 
     @Override
