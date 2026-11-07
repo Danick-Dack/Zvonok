@@ -105,7 +105,7 @@ function renderGrades(box, after) {
       onclick: () => { setClass(c); if (after) after(); }})))));
   box.append(h("div", {class: "grade own"}, h("b", {"aria-hidden": "true"}, icon("edit", "sm")), store.get("custom", null)
     ? h("button", {type: "button", "aria-pressed": String(useCustom), text: "Своё расписание", onclick: () => { setCustom(true); if (after) after(); }})
-    : h("a", {class: "own-link", href: "make.html", text: "Собрать своё расписание"})));
+    : h("a", {class: "own-link", href: "make.html"}, "Собрать своё расписание", h("small", {text: "для другой школы, колледжа или кружков"}))));
 }
 const sheet = $("clsSheet");
 function openSheet() {

@@ -3,8 +3,9 @@
 const calPath = c => "cal/" + c.replace(/[АБВГ]/g, x => LAT[x].toUpperCase()) + ".ics";
 const calWebcal = c => SITE.replace(/^https?:/, "webcal:") + calPath(c);
 const shareUrl = () => pick || useCustom ? SITE : SITE + "#" + slugOf(cls);
-const shareMsg = () => "«Звонок»: расписание всех классов лицея №165. Сколько до звонка, какой урок дальше и в каком кабинете. Работает без интернета.\n"
-  + (pick || useCustom ? "" : "Сразу на " + cls + ": ") + shareUrl();
+// сообщение для чата класса: сначала знакомая всем боль, потом польза, потом «ничего не надо делать»
+const shareMsg = () => "Больше не надо спрашивать в чате «а какой кабинет?». «Звонок» показывает, сколько до звонка, какой урок дальше и в каком кабинете, с заменами. Без регистрации и рекламы, работает без интернета.\n"
+  + (pick || useCustom ? "Открыть: " : "Наш " + cls + " сразу тут: ") + shareUrl();
 function qrSvg(code) {
   const [n, hex] = code.split(":"), N = +n;
   let bits = "", p = "";

@@ -127,8 +127,9 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 .grade button:active{transform:scale(.97)}
 .grade button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .grades .own{grid-template-columns:28px 1fr}
-.own-link{display:flex;align-items:center;min-height:50px;padding:0 16px;border-radius:var(--r-md);border:1px dashed var(--line-2);color:var(--text-2);font-weight:600;text-decoration:none}
+.own-link{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-height:50px;padding:6px 16px;border-radius:var(--r-md);border:1px dashed var(--line-2);color:var(--text-2);font-weight:600;text-decoration:none}
 .own-link:hover{background:var(--surface-2)}
+.own-link small{font-weight:500;font-size:13px;color:var(--muted)}
 
 /* всплывающее сообщение */
 .zv-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;transform:translate(-50%,16px);opacity:0;pointer-events:none;
