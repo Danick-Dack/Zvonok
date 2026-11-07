@@ -227,7 +227,7 @@ final class NowTab {
         for (TextView x : new TextView[]{chrono, big}) x.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 50 * side / 236);
         // набок высоты мало: сразу показываем карточку с таймером, шапка остаётся выше (прокрутка вверх)
         if (c.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
-            view.post(() -> view.scrollTo(0, hero.getTop() - a.dp(8)));
+            view.postOnAnimation(() -> view.scrollTo(0, hero.getTop() - a.dp(8)));
     }
 
     void pause() {
@@ -247,7 +247,8 @@ final class NowTab {
         update.setVisibility(avail ? View.VISIBLE : View.GONE);
         if (avail) update.setText("Вышла версия " + Updates.latestText(a) + ". Нажми, чтобы обновить");
 
-        status.setText((d.live ? "●  " : "") + d.label);
+        boolean side = a.getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        status.setText((d.live ? "●  " : "") + d.label + (side ? "  ·  " + Schedule.title() : "")); // набок шапка с классом выше
         status.setTextColor(d.live ? Ui.TEXT : Ui.SOFT);
         buildDots(d);
         if (d.timer) {

@@ -101,13 +101,14 @@ final class Updates {
             c.setUseCaches(false);
             if (url.equals(API)) c.setRequestProperty("Accept", "application/vnd.github+json");
             if (etag != null) c.setRequestProperty("If-None-Match", etag);
-            if (c.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) return new String[]{null, etag};
+            String fresh = c.getHeaderField("ETag"); // сервер может прислать новый ETag и в ответе 304
+            if (c.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) return new String[]{null, fresh != null ? fresh : etag};
             try (InputStream in = c.getInputStream()) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buf = new byte[8192];
                 int n;
                 while ((n = in.read(buf)) > 0 && out.size() < max) out.write(buf, 0, n);
-                return new String[]{new String(out.toByteArray(), StandardCharsets.UTF_8), c.getHeaderField("ETag")};
+                return new String[]{new String(out.toByteArray(), StandardCharsets.UTF_8), fresh};
             }
         } finally {
             c.disconnect();
@@ -119,7 +120,10 @@ final class Updates {
         try {
             SharedPreferences p = Updater.prefs(app);
             String[] r = get(SCHEDULE, 2_000_000, p.getString(KEY_SCHEDULE_TAG, null));
-            if (r[0] == null) return false; // на сайте то же самое
+            if (r[0] == null) { // на сайте то же самое
+                p.edit().putString(KEY_SCHEDULE_TAG, r[1]).apply();
+                return false;
+            }
             JSONObject o = new JSONObject(r[0]);
             if (o.optJSONObject("classes") == null || o.optJSONArray("bells") == null) return false; // не расписание
             boolean changed = !r[0].equals(p.getString(Schedule.KEY_SCHEDULE, null));
@@ -139,7 +143,8 @@ final class Updates {
             if (r[0] != null && new JSONObject(r[0]).optJSONObject("days") == null) return false; // не файл замен
             boolean changed = r[0] != null && !r[0].equals(p.getString(Schedule.KEY_CHANGES, null));
             SharedPreferences.Editor ed = p.edit().putLong(KEY_CH_LAST, System.currentTimeMillis());
-            if (r[0] != null) ed.putString(Schedule.KEY_CHANGES, r[0]).putString(KEY_CHANGES_TAG, r[1]);
+            ed.putString(KEY_CHANGES_TAG, r[1]);
+            if (r[0] != null) ed.putString(Schedule.KEY_CHANGES, r[0]);
             ed.apply();
             if (changed) Schedule.invalidate();
             return changed;
