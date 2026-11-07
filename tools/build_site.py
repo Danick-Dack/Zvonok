@@ -578,7 +578,7 @@ NAV = [("./#now", "Сейчас"), ("./#week", "Неделя"), ("./#rooms", "К
 def header(active=None):
     """Шапка отдельных страниц: тот же знак и меню, что на главной."""
     links = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == active else "", t) for h, t in NAV)
-    return ('<header class="top"><div class="wrap top-in"><a class="brand" href="./" aria-label="Звонок, главная">%s<span>Звонок</span></a>'
+    return ('<header class="top"><div class="wrap top-in"><a class="brand" href="about.html" aria-label="Звонок, о проекте">%s<span>Звонок</span></a>'
             '<nav class="nav-top" aria-label="Разделы">%s</nav>'
             '<button class="icon-btn" id="schemeBtn" type="button" aria-label="Тема"></button></div></header>' % (MARK, links))
 

@@ -1,10 +1,14 @@
-/* Пасхалка. Ткни в «Звонок» в шапке десять раз подряд: откроется змейка, скоротать перемену.
+/* Пасхалка. Ткни в «Звонок» в шапке десять раз быстро подряд: откроется змейка, скоротать перемену.
+   Одно нажатие, как обычно, открывает «О проекте» (через треть секунды, если следом не тапают).
    Цвета у змейки как у предметов, рекорд хранится в этом браузере. Проверять, сколько времени ушло, никто не будет. */
 (() => {
   let taps = 0, t;
   $$(".brand").forEach(b => b.addEventListener("click", e => {
-    taps++; clearTimeout(t); t = setTimeout(() => { taps = 0; }, 1600);
-    if (taps >= 10) { taps = 0; e.preventDefault(); snake(); }
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; // в новой вкладке: обычная ссылка
+    e.preventDefault();
+    taps++; clearTimeout(t);
+    if (taps >= 10) { taps = 0; snake(); return; }
+    t = setTimeout(() => { taps = 0; location.href = b.href; }, 350);
   }));
 })();
 function snake() {
