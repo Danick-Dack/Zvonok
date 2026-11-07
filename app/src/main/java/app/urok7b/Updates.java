@@ -33,6 +33,8 @@ final class Updates {
     private static final String CHANGES = SITE + "changes.json";
     private static final String SCHEDULE = SITE + "schedule.json";
     private static final String KEY_CH_LAST = "changes_last_check";
+    // ETag файлов сайта: сохраняется вместе с самим файлом, по нему сайт отвечает «не изменилось»
+    private static final String KEY_SCHEDULE_TAG = "schedule_etag", KEY_CHANGES_TAG = "changes_etag";
 
     interface Done { void done(boolean ok); }
 
@@ -87,20 +89,25 @@ final class Updates {
         }).start();
     }
 
-    /** GET по HTTPS: текст ответа, не больше max байт. Исключение, если сети нет. Не в главном потоке. */
-    private static String get(String url, int max) throws Exception {
+    /**
+     * GET по HTTPS: {текст не больше max байт, ETag}. С etag сайт отвечает «не изменилось» (304) без тела,
+     * тогда текст null: ничего не качаем и не разбираем. Исключение, если сети нет. Не в главном потоке.
+     */
+    private static String[] get(String url, int max, String etag) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         try {
             c.setConnectTimeout(6000);
             c.setReadTimeout(8000);
             c.setUseCaches(false);
             if (url.equals(API)) c.setRequestProperty("Accept", "application/vnd.github+json");
+            if (etag != null) c.setRequestProperty("If-None-Match", etag);
+            if (c.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) return new String[]{null, etag};
             try (InputStream in = c.getInputStream()) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buf = new byte[8192];
                 int n;
                 while ((n = in.read(buf)) > 0 && out.size() < max) out.write(buf, 0, n);
-                return new String(out.toByteArray(), StandardCharsets.UTF_8);
+                return new String[]{new String(out.toByteArray(), StandardCharsets.UTF_8), c.getHeaderField("ETag")};
             }
         } finally {
             c.disconnect();
@@ -110,15 +117,14 @@ final class Updates {
     /** Всё расписание с сайта (data/schedule.json). @return true, если оно изменилось. Не в главном потоке. */
     private static boolean fetchSchedule(Context app) {
         try {
-            String text = get(SCHEDULE, 2_000_000);
-            JSONObject o = new JSONObject(text);
-            if (o.optJSONObject("classes") == null || o.optJSONArray("bells") == null) return false; // не расписание
             SharedPreferences p = Updater.prefs(app);
-            boolean changed = !text.equals(p.getString(Schedule.KEY_SCHEDULE, null));
-            if (changed) {
-                p.edit().putString(Schedule.KEY_SCHEDULE, text).apply();
-                Schedule.resetBase();
-            }
+            String[] r = get(SCHEDULE, 2_000_000, p.getString(KEY_SCHEDULE_TAG, null));
+            if (r[0] == null) return false; // на сайте то же самое
+            JSONObject o = new JSONObject(r[0]);
+            if (o.optJSONObject("classes") == null || o.optJSONArray("bells") == null) return false; // не расписание
+            boolean changed = !r[0].equals(p.getString(Schedule.KEY_SCHEDULE, null));
+            p.edit().putString(Schedule.KEY_SCHEDULE, r[0]).putString(KEY_SCHEDULE_TAG, r[1]).apply();
+            if (changed) Schedule.resetBase();
             return changed;
         } catch (Exception ignored) {
             return false; // нет сети: работаем по сохранённому расписанию
@@ -128,11 +134,13 @@ final class Updates {
     /** @return true, если файл замен изменился. Вызывать не в главном потоке. */
     private static boolean fetchChanges(Context app) {
         try {
-            String text = get(CHANGES, 512_000);
-            if (new JSONObject(text).optJSONObject("days") == null) return false; // не файл замен
             SharedPreferences p = Updater.prefs(app);
-            boolean changed = !text.equals(p.getString(Schedule.KEY_CHANGES, null));
-            p.edit().putString(Schedule.KEY_CHANGES, text).putLong(KEY_CH_LAST, System.currentTimeMillis()).apply();
+            String[] r = get(CHANGES, 512_000, p.getString(KEY_CHANGES_TAG, null));
+            if (r[0] != null && new JSONObject(r[0]).optJSONObject("days") == null) return false; // не файл замен
+            boolean changed = r[0] != null && !r[0].equals(p.getString(Schedule.KEY_CHANGES, null));
+            SharedPreferences.Editor ed = p.edit().putLong(KEY_CH_LAST, System.currentTimeMillis());
+            if (r[0] != null) ed.putString(Schedule.KEY_CHANGES, r[0]).putString(KEY_CHANGES_TAG, r[1]);
+            ed.apply();
             if (changed) Schedule.invalidate();
             return changed;
         } catch (Exception ignored) {
@@ -173,9 +181,9 @@ final class Updates {
                 // тег вида v3.1-build-12; у релизов до 5.0 файла version.json нет, тогда спрашиваем API
                 String tag;
                 try {
-                    tag = new JSONObject(get(VERSION, 4096)).getString("tag");
+                    tag = new JSONObject(get(VERSION, 4096, null)[0]).getString("tag");
                 } catch (Exception e) {
-                    tag = new JSONObject(get(API, 512_000)).getString("tag_name");
+                    tag = new JSONObject(get(API, 512_000, null)[0]).getString("tag_name");
                 }
                 java.util.regex.Matcher m = java.util.regex.Pattern.compile("^v([\\d.]+)-build-(\\d+)$").matcher(tag);
                 if (m.find()) {
