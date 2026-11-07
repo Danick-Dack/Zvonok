@@ -61,7 +61,7 @@ document.addEventListener("visibilitychange", () => {
   abTick();
 });
 abAge();
-// скачивания приложения и сколько телефонов за сутки проверили обновление: числа от GitHub,
+// скачивания приложения и сколько раз за сутки приложения проверили обновление: числа от GitHub,
 // сборка сайта обновляет stats.json раз в сутки
 const stat = (id, n, forms) => {
   if (!(n > 0)) return;
@@ -72,6 +72,6 @@ const stat = (id, n, forms) => {
 fetch("stats.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(s => {
   if (!s) return;
   stat("abDl", s.downloads, ["скачивание", "скачивания", "скачиваний"]);
-  stat("abUse", s.day, ["телефон", "телефона", "телефонов"]);
+  stat("abUse", s.day, ["проверка", "проверки", "проверок"]);
 }).catch(() => {});
 abTick();

@@ -26,7 +26,7 @@ final class Updates {
     private static final String KEY_NAME = "update_latest_name";
     private static final String API = "https://api.github.com/repos/Danick-Dack/Zvonok/releases/latest";
     // Номер новой версии: крошечный файл последнего релиза (с 5.0). GitHub считает его скачивания, по ним сайт
-    // показывает, сколько телефонов за сутки проверили обновление. Ничего о телефоне при этом не уходит.
+    // показывает, сколько раз за сутки приложения проверили обновление. Ничего о телефоне при этом не уходит.
     private static final String VERSION = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/version.json";
     static final String SITE = "https://danick-dack.github.io/Zvonok/";
     static final String APK_URL = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk";
@@ -93,7 +93,7 @@ final class Updates {
      * GET по HTTPS: {текст не больше max байт, ETag}. С etag сайт отвечает «не изменилось» (304) без тела,
      * тогда текст null: ничего не качаем и не разбираем. Исключение, если сети нет. Не в главном потоке.
      */
-    private static String[] get(String url, int max, String etag) throws Exception {
+    static String[] get(String url, int max, String etag) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         try {
             c.setConnectTimeout(6000);
@@ -107,7 +107,7 @@ final class Updates {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buf = new byte[8192];
                 int n;
-                while ((n = in.read(buf)) > 0 && out.size() < max) out.write(buf, 0, n);
+                while ((n = in.read(buf)) > 0 && out.size() < max) out.write(buf, 0, Math.min(n, max - out.size()));
                 return new String[]{new String(out.toByteArray(), StandardCharsets.UTF_8), fresh};
             }
         } finally {
