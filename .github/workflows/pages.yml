@@ -10,6 +10,7 @@ on:
       - 'data/**'
       - 'ios/**'
       - 'tools/build_site.py'
+      - 'tools/update_olympiads.py'
       - '.github/workflows/pages.yml'
   schedule:
     - cron: '17 0 * * *'   # раз в сутки (6:17 по Алматы): свежее число скачиваний на странице «О проекте»
@@ -47,6 +48,7 @@ jobs:
           if [ -z "$IOS_SIGN_KEY" ] && [ "$GITHUB_REPOSITORY" = "Danick-Dack/Zvonok" ]; then
             echo "::error::Нет секрета IOS_SIGN_KEY: сайт не опубликован, чтобы не сломать обновления на iPhone"; exit 1; fi
           pip install qrcode pillow
+          python tools/update_olympiads.py
           python tools/build_site.py
       - uses: actions/configure-pages@v5
         with:

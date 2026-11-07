@@ -202,6 +202,7 @@ ICONS = {
     "info": '<circle cx="12" cy="12" r="8.6"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r=".6" fill="currentColor"/>',
     "lock": '<rect x="5" y="10.4" width="14" height="10" rx="2.4"/><path d="M8.2 10.4V8a3.8 3.8 0 0 1 7.6 0v2.4"/>',
     "trash": '<path d="M5 7h14M10 4.4h4M7 7l.8 12.2a1.4 1.4 0 0 0 1.4 1.3h5.6a1.4 1.4 0 0 0 1.4-1.3L17 7"/>',
+    "cup": '<path d="M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4.5a1.5 1.5 0 0 0-1.5 1.5v.5a4 4 0 0 0 4 4M17 6h2.5A1.5 1.5 0 0 1 21 7.5v.5a4 4 0 0 1-4 4M12 14v5M8.5 19h7"/>',
 }
 
 
@@ -572,7 +573,7 @@ def calendar(data, changes, cls):
 
 
 # ---------- страницы ----------
-NAV = [("./#now", "Сейчас"), ("./#week", "Неделя"), ("./#rooms", "Кабинеты"), ("./#more", "Ещё")]
+NAV = [("./#now", "Сейчас"), ("./#week", "Неделя"), ("./#rooms", "Кабинеты"), ("./#more", "Ещё"), ("./#olymp", "Олимпиады")]
 
 
 def header(active=None):
@@ -583,7 +584,7 @@ def header(active=None):
             '<button class="icon-btn" id="schemeBtn" type="button" aria-label="Тема"></button></div></header>' % (MARK, links))
 
 
-FOOTER = ('<footer class="foot"><div class="wrap"><nav aria-label="Ссылки"><a href="./">Расписание</a><a href="about.html">О проекте</a><a href="make.html">Конструктор</a>'
+FOOTER = ('<footer class="foot"><div class="wrap"><nav aria-label="Ссылки"><a href="./">Расписание</a><a href="./#olymp">Олимпиады</a><a href="about.html">О проекте</a><a href="make.html">Конструктор</a>'
           '<a href="iphone.html">iPhone</a><a href="changelog.html">Что нового</a><a href="feedback.html">Написать нам</a></nav>'
           '<p>«Звонок» сделал ученик лицея №165 для своих. Это неофициальный и открытый проект (лицензия MIT).</p></div></footer>')
 
@@ -644,6 +645,12 @@ def main():
     data = json.loads(read("data", "schedule.json"))
     changes = json.loads(read("data", "changes.json"))
     changelog = json.loads(read("data", "changelog.json"))
+    olympiads = json.loads(read("data", "olympiads.json"))
+    today_date = datetime.date.today()
+    olympiads["items"] = [
+        item for item in olympiads.get("items", [])
+        if not item.get("endDate") or (today_date - datetime.date.fromisoformat(item["endDate"])).days <= 3
+    ]
     ios_sample(data)
     classes = sorted(data["classes"], key=lambda c: (int(re.match(r"\d+", c)[0]), c))
     favicon = png_data_uri(icon(64))
@@ -662,9 +669,10 @@ def main():
     data_js = {"/*@DATA@*/null": js_literal(data), "/*@CHANGES@*/null": js_literal(changes), "/*@HUES@*/null": js_literal(subject_hues(data))}
 
     news = next(({"date": r["date"], "title": r["title"]} for r in changelog if {"site", "ios"} & set(r["platforms"])), None)
-    index = page("index.html", ["tokens", "base", "components", "app"], ["core", "embed", "schedule", "rules", "app", "now", "week", "rooms", "more", "snake", "start"],
+    index = page("index.html", ["tokens", "base", "components", "app"], ["core", "embed", "schedule", "rules", "app", "now", "week", "rooms", "more", "olymp", "snake", "start"],
                  dict(data_js, **{"/*@QRS@*/null": js_literal(qrs), "/*@NEWS@*/null": js_literal(news), "/*@LOG@*/[]": js_literal(changelog[:4]),
-                                  "@HEAD_JS@": HEAD_JS + HEAD_PC}), common=common)
+                                  "/*@OLYMPIADS@*/null": js_literal(olympiads), "@HEAD_JS@": HEAD_JS + HEAD_PC}),
+                 connect="'self' https://codeforces.com", common=common)
     page("make.html", ["tokens", "base", "components", "pages", "make"], ["core", "schedule", "rules", "make"], data_js, common=common)
     page("about.html", ["tokens", "base", "components", "pages", "about"], ["core", "schedule", "rules", "pages", "about"], data_js, common=common)
     page("changelog.html", ["tokens", "base", "components", "pages"], ["core", "pages", "changelog"],
@@ -711,6 +719,7 @@ def main():
         with open(os.path.join(OUT, "cal", slug(c) + ".ics"), "w", encoding="utf-8", newline="") as f:
             f.write(calendar(data, changes, c))
     write("changes.json", json.dumps(changes, ensure_ascii=False, indent=1))
+    write("olympiads.json", json.dumps(olympiads, ensure_ascii=False, indent=1))
     # расписание целиком: приложение и сайт узнают из него, что вышло новое расписание
     write("schedule.json", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     write(".nojekyll", "")
@@ -724,7 +733,7 @@ def main():
 
     # service worker: версия меняется вместе с любым файлом, поэтому обновление приходит само
     shell = ["./", "index.html", "about.html", "make.html", "iphone.html", "changelog.html", "feedback.html", "poster.html",
-             "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png", "changes.json"]
+             "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png", "changes.json", "olympiads.json"]
     h = hashlib.sha256()
     for f in shell[1:] + ["schedule.json"]:
         with open(os.path.join(OUT, f), "rb") as fh:

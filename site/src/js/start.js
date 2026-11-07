@@ -10,5 +10,6 @@ renderScheme();
 document.addEventListener("zv:scheme", renderScheme);
 tick();
 loadChanges();
+loadOlympiads();
 homeIcon();
 registerSW();

@@ -9,11 +9,17 @@
 .brand svg{width:27px;height:27px;color:var(--text)}
 .mark-track{stroke:var(--ring-track)}
 .nav-top{display:none}
-.nav-top a{position:relative;text-decoration:none;color:var(--muted);font-weight:550;font-size:15px;padding:8px 12px;border-radius:10px;transition:color .15s,background .15s}
+.nav-top a{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:38px;text-decoration:none;color:var(--muted);font-weight:550;font-size:15px;padding:8px 13px;border-radius:10px;text-align:center;white-space:nowrap;transition:color .15s,background .15s}
 .nav-top a:hover{color:var(--text);background:var(--surface-2)}
 .nav-top a[aria-current="page"]{color:var(--text)}
 .nav-top a[aria-current="page"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-9px;height:2px;border-radius:2px;background:var(--accent)}
-@media (min-width:760px){.nav-top{display:flex;gap:2px;margin-right:auto}.brand{margin-right:18px}}
+@media (min-width:760px){.nav-top{display:flex;align-items:center;gap:4px;margin-right:auto}.brand{margin-right:18px}}
+@media (max-width:759px){
+  body:not(.has-tabbar) .top-in{flex-wrap:wrap;height:auto;min-height:var(--header-h);padding-top:6px;padding-bottom:8px}
+  body:not(.has-tabbar) .nav-top{display:flex;order:3;width:100%;gap:2px;overflow-x:auto;scrollbar-width:none;padding-top:6px;border-top:1px solid var(--line)}
+  body:not(.has-tabbar) .nav-top::-webkit-scrollbar{display:none}
+  body:not(.has-tabbar) .nav-top a{flex:1;padding:6px 8px;font-size:13.5px;min-height:34px}
+}
 
 /* кнопки */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:var(--r-md);

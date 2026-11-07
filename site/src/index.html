@@ -46,6 +46,7 @@
       <a href="#week" data-tab="week">Неделя</a>
       <a href="#rooms" data-tab="rooms">Кабинеты</a>
       <a href="#more" data-tab="more">Ещё</a>
+      <a href="#olymp" data-tab="olymp">Олимпиады</a>
     </nav>
     <a class="btn btn-quiet btn-sm install-btn web-only" href="#install"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Загрузить</a>
     <button class="icon-btn" id="schemeBtn" type="button" aria-label="Тема"></button>
@@ -263,6 +264,41 @@
       </details>
     </div>
   </section>
+
+  <section class="view" id="v-olymp" aria-labelledby="olympH" hidden>
+    <div class="view-head">
+      <div>
+        <h1 id="olympH">Олимпиады</h1>
+        <p id="olympMeta">Актуальные олимпиады и турниры в Алматы и онлайн · 7–11 классы</p>
+      </div>
+    </div>
+    <div class="olymp-controls">
+      <div class="slots olymp-grades" id="olympGrades" role="group" aria-label="Класс"></div>
+      <div class="olymp-bar">
+        <label class="search"><span class="sr-only">Поиск олимпиады</span><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input class="field" id="oq" type="search" placeholder="Название, предмет или организатор" autocomplete="off" enterkeyhint="search"></label>
+        <div class="subj-drop" id="subjDrop">
+          <button class="field subj-btn" id="subjBtn" type="button" aria-expanded="false" aria-controls="subjMenu">
+            <span id="subjBtnText">Все предметы</span>
+            <svg class="icon sm" aria-hidden="true"><use href="#i-down"/></svg>
+          </button>
+          <div class="subj-menu" id="subjMenu" role="group" aria-label="Предметы (можно выбрать несколько)" hidden></div>
+        </div>
+        <div class="seg olymp-fmt" id="olympFormat" role="group" aria-label="Формат проведения">
+          <button type="button" data-fmt="" aria-pressed="true">Все форматы</button>
+          <button type="button" data-fmt="almaty" aria-pressed="false">Оффлайн в Алматы</button>
+          <button type="button" data-fmt="online" aria-pressed="false">Онлайн</button>
+        </div>
+      </div>
+      <div class="olymp-picked" id="olympPicked" hidden></div>
+    </div>
+    <p class="note olymp-count" id="olympCount" aria-live="polite"></p>
+    <div class="olymp-grid" id="olympList"></div>
+    <section class="card olymp-sources" aria-labelledby="olympSrcH">
+      <h2 class="card-title" id="olympSrcH">Официальные сайты и календари олимпиад</h2>
+      <p class="note">Положения, списки участников, задания прошлых лет и регистрация на туры в Алматы</p>
+      <div class="olymp-links" id="olympLinks"></div>
+    </section>
+  </section>
 </main>
 
 <nav class="tabbar" aria-label="Разделы">
@@ -270,6 +306,7 @@
   <a href="#week" data-tab="week"><svg class="icon" aria-hidden="true"><use href="#i-week"/></svg><span>Неделя</span></a>
   <a href="#rooms" data-tab="rooms"><svg class="icon" aria-hidden="true"><use href="#i-door"/></svg><span>Кабинеты</span></a>
   <a href="#more" data-tab="more"><svg class="icon" aria-hidden="true"><use href="#i-more"/></svg><span>Ещё</span></a>
+  <a href="#olymp" data-tab="olymp"><svg class="icon" aria-hidden="true"><use href="#i-cup"/></svg><span>Олимпиады</span></a>
 </nav>
 
 <dialog class="sheet" id="clsSheet" aria-labelledby="clsSheetH">

@@ -253,6 +253,46 @@ async function main() {
     ok(!/Нашёл|Не нашёл|Свободен\b/.test(t), "без текстов только «в мужском роде»");
   });
 
+  run("олимпиады Алматы", () => {
+    ev('location.hash="#olymp";route(false);renderOlymp()');
+    const total = d.querySelectorAll("#olympList .olymp-card").length;
+    ok(!d.getElementById("v-olymp").hidden && total >= 15 && d.querySelectorAll("#olympLinks .olymp-link").length >= 5, "раздел олимпиад открыт, карточки и сайты на месте (" + total + ")");
+    const badges = [...d.querySelectorAll("#olympList .olymp-date-badge")];
+    ok(badges.length === total && badges.every(b => b.textContent.includes("·") && /\d{4}|раунд/.test(b.textContent)), "даты подписаны прямо на плашках карточек");
+    ev('oGrade=7;renderOlymp()');
+    const g7 = d.querySelectorAll("#olympList .olymp-card").length;
+    ok(g7 > 0 && g7 < total && [...d.querySelectorAll("#olympList .olymp-card")].every(c => c.textContent.includes("7")), "фильтр по 7 классу (" + g7 + ")");
+    ev('oGrade=0;oSubjs=[];renderOlymp()');
+    d.getElementById("subjBtn").click();
+    d.querySelectorAll("#subjMenu .subj-opt")[1].click();
+    const ph = d.querySelectorAll("#olympList .olymp-card").length;
+    const stillOpen1 = !d.getElementById("subjMenu").hidden;
+    d.querySelectorAll("#subjMenu .subj-opt")[2].click();
+    const phInf = d.querySelectorAll("#olympList .olymp-card").length;
+    const stillOpen2 = !d.getElementById("subjMenu").hidden;
+    d.querySelector("#subjMenu .subj-done").click();
+    ok(stillOpen1 && stillOpen2 && d.getElementById("subjMenu").hidden && ph > 0 && phInf > ph && d.getElementById("subjBtnText").textContent === "Предметы: 2" && d.querySelectorAll("#olympPicked .olymp-pick-chip").length === 2, "выбор сразу нескольких предметов без закрытия меню: Физика (" + ph + ") + Информатика (" + phInf + ")");
+    ev('oSubjs=[];oFormat="almaty";renderOlymp()');
+    const alm = d.querySelectorAll("#olympList .olymp-card").length;
+    ev('oFormat="online";renderOlymp()');
+    const onl = d.querySelectorAll("#olympList .olymp-card").length;
+    ev('oFormat="";renderOlymp()');
+    ok(alm > 0 && alm < total && onl > 0 && onl < total && !/—|undefined|NaN/.test(d.getElementById("v-olymp").innerText), "фильтр по формату: оффлайн в Алматы (" + alm + ") и онлайн (" + onl + ")");
+    const lifeOk = ev(`(() => {
+      const refNow = new Date(2026, 10, 7);
+      const item2Days = {id: "t1", title: "Недавняя", url: "https://daryn.kz/", grades: [9], subjects: ["Математика"], startDate: "2026-10-01", endDate: "2026-11-05", status: "Идёт сейчас"};
+      const item4Days = {id: "t2", title: "Старая", url: "https://daryn.kz/", grades: [9], subjects: ["Математика"], startDate: "2026-10-01", endDate: "2026-11-02", status: "Идёт сейчас"};
+      const itemLive = {id: "t3", title: "Начавшаяся", url: "https://daryn.kz/", grades: [9], subjects: ["Математика"], startDate: "2026-11-01", endDate: "2026-11-20", status: "По графику", statusKind: "ok"};
+      const st2 = olympState(item2Days, refNow);
+      const st4 = olympState(item4Days, refNow);
+      const stLive = olympState(itemLive, refNow);
+      const cleaned = cleanOlympiads([item2Days, item4Days, itemLive], refNow);
+      return st2.expired && !st2.deleted && st4.deleted && stLive.status === "Идёт сейчас" && stLive.statusKind === "hot" && cleaned.length === 2 && !cleaned.some(x => x.id === "t2");
+    })()`);
+    ok(lifeOk, "обновление со временем: скрытие после даты окончания, полное удаление через 3 дня и автостатус «Идёт сейчас»");
+    ev('location.hash="#now";route(false)');
+  });
+
   await pages();
   out.push("DONE");
   document.getElementById("out").textContent = out.join("\n");
@@ -263,7 +303,7 @@ async function pages() {
     // узкий экран: ничего не вылезает вбок
     let w = await load("_site_under_test.html#week", 390, 800), d = w.document;
     w.eval('try{localStorage.setItem("zv.class",JSON.stringify("7Б"))}catch(e){}');
-    for (const v of ["now", "week", "rooms", "more"]) {
+    for (const v of ["now", "week", "rooms", "more", "olymp"]) {
       w.eval(`location.hash="#${v}";route(false)`);
       ok(d.documentElement.scrollWidth <= 390, "390px, " + v + ": нет горизонтальной прокрутки (" + d.documentElement.scrollWidth + ")");
     }

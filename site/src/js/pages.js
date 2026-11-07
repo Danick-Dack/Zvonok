@@ -9,5 +9,11 @@
   document.addEventListener("zv:scheme", draw);
   addEventListener("storage", e => { if (e.key === "zv.scheme") { applyScheme(); draw(); } if (e.key === "zv.accent") applyAccent(); });
   draw();
+  if (location.protocol === "file:") {
+    $$('a[href^="./#"], a[href="./"]').forEach(a => {
+      const h = a.getAttribute("href");
+      a.setAttribute("href", h === "./" ? "index.html" : "index.html" + h.slice(2));
+    });
+  }
 })();
 registerSW();

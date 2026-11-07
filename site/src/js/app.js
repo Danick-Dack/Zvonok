@@ -43,12 +43,12 @@ function setCustom(on) {
 }
 
 /* ---------- вкладки ---------- */
-const VIEWS = ["now", "week", "rooms", "more"];
+const VIEWS = ["now", "week", "rooms", "more", "olymp"];
 // старые якоря и разделы внутри «Ещё»
-const SECTIONS = {schedule: "week", top: "now", install: "more", calendar: "more", make: "more", share: "more", faq: "more", about: "more", safe: "more"};
+const SECTIONS = {schedule: "week", top: "now", install: "more", calendar: "more", make: "more", share: "more", faq: "more", about: "more", safe: "more", olympiads: "olymp"};
 let view = "now";
-const dirty = {now: true, week: true, rooms: true, more: true};
-const RENDER = {now: () => renderNow(new Date()), week: () => renderWeek(), rooms: () => renderRooms(), more: () => renderMore()};
+const dirty = {now: true, week: true, rooms: true, more: true, olymp: true};
+const RENDER = {now: () => renderNow(new Date()), week: () => renderWeek(), rooms: () => renderRooms(), more: () => renderMore(), olymp: () => renderOlymp()};
 function show(v) {
   view = v;
   VIEWS.forEach(x => { $("v-" + x).hidden = x !== v; });

@@ -153,7 +153,7 @@ function background() {
   setTitle((min < 60 ? min + " мин" : Math.floor(min / 60) + " ч " + min % 60 + " мин") + " · Звонок · " + title());
   tickT = setTimeout(tick, 60000 - Date.now() % 60000 + 15);
 }
-document.addEventListener("visibilitychange", () => { tick(); if (!document.hidden) loadChanges(); });
+document.addEventListener("visibilitychange", () => { tick(); if (!document.hidden) { loadChanges(); loadOlympiads(); } });
 /** Для экранного диктора: только смена урока, а не каждая секунда. */
 function announce() {
   if (pick || !M.title) return;
