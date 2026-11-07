@@ -127,6 +127,11 @@ for i, r in enumerate(log):
         errors.append(f"{where}: нужен title и от 1 до 4 пунктов")
     if "—" in json.dumps(r, ensure_ascii=False):
         errors.append(f"{where}: длинное тире, замени на точку, запятую или двоеточие")
+# версия приложения (5.0-beta и 5.0-dev считаются 5.0) уже описана в «Что нового»: запись с ней есть в журнале
+app_ver = re.search(r'versionName "([\d.]+)', open(os.path.join(ROOT, "app", "build.gradle"), encoding="utf-8").read())
+android_vers = {r.get("version") for r in log if "android" in r.get("platforms", [])}
+if not app_ver or app_ver[1] not in android_vers:
+    errors.append(f"build.gradle versionName {app_ver and app_ver[1]}: в changelog.json нет записи этой версии для android")
 
 sc = os.path.join(ROOT, "site", "changes.json")
 if not os.path.exists(sc) or json.load(open(sc, encoding="utf-8")) != changes:

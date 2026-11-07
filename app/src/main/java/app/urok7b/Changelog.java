@@ -50,7 +50,7 @@ public class Changelog extends Activity {
             JSONObject r = log.optJSONObject(i);
             if (r == null) continue;
             JSONArray pl = r.optJSONArray("platforms");
-            if (filter > 0 && (pl == null || !pl.toString().contains("\"" + KEYS[filter] + "\""))) continue;
+            if (filter > 0 && !has(pl, KEYS[filter])) continue;
             String date = r.optString("date");
             if (!date.equals(last)) {
                 last = date;
@@ -83,5 +83,11 @@ public class Changelog extends Activity {
             shown++;
         }
         if (shown == 0) root.addView(Ui.text(this, "Тут пока пусто.", 15, Ui.MUTED, null), Ui.mw(this, 16));
+    }
+
+    /** Есть ли платформа в списке записи: точное совпадение, а не подстрока. */
+    private static boolean has(JSONArray pl, String key) {
+        for (int i = 0; pl != null && i < pl.length(); i++) if (key.equals(pl.optString(i))) return true;
+        return false;
     }
 }

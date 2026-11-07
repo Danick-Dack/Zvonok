@@ -25,7 +25,13 @@ const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)));
 const edCode = () => "ZVS1:" + b64e(JSON.stringify(edJson()));
 let cDay = Math.min(dow(new Date()), 5);
-function bellOk(b) { const s = toMin(b[0]), e = toMin(b[1]); return (!b[0] && !b[1]) || (s >= 0 && e > s); }
+/** Звонок урока i: пустой или верный, и урок не начинается раньше конца предыдущего заполненного (как в Android). */
+function bellOk(i) {
+  const b = ed.bells[i], s = toMin(b[0]), e = toMin(b[1]);
+  if (!b[0] && !b[1]) return true;
+  const prev = ed.bells.slice(0, i).reverse().find(x => x[0] || x[1]);
+  return s >= 0 && e > s && (!prev || !(toMin(prev[1]) > s));
+}
 function renderEditor() {
   const days = $("cDays"); days.textContent = "";
   for (let d = 0; d < 6; d++) days.append(h("button", {type: "button", "aria-pressed": String(d === cDay), text: DAYS[d], "aria-label": DAYN[d], onclick: () => { cDay = d; renderEditor(); }}));
@@ -39,15 +45,17 @@ function renderEditor() {
     box.append(h("div", {class: "slot"}, h("span", {class: "k"}, String(i + 1), h("small", {text: ed.bells[i][0]})), s, r));
   }
   const bells = $("cBells"); bells.textContent = "";
+  const marks = []; // смена одного звонка может исправить или сломать следующий: проверяем все строки
   ed.bells.forEach((b, i) => {
     const mk = (k, ph, lab) => {
       const x = h("input", {class: "field", inputmode: "decimal", placeholder: ph, "aria-label": (i + 1) + " урок, " + lab, autocomplete: "off"});
       x.value = b[k];
-      x.oninput = () => { b[k] = x.value; mark(); saveEd(); const k0 = box.children[i] && box.children[i].querySelector(".k small"); if (k0) k0.textContent = b[0]; };
+      x.oninput = () => { b[k] = x.value; marks.forEach(m => m()); saveEd(); const k0 = box.children[i] && box.children[i].querySelector(".k small"); if (k0) k0.textContent = b[0]; };
       return x;
     };
     const a = mk(0, "8:00", "начало"), z = mk(1, "8:45", "конец");
-    const mark = () => { const ok = bellOk(b); a.setAttribute("aria-invalid", String(!ok)); z.setAttribute("aria-invalid", String(!ok)); };
+    const mark = () => { const ok = bellOk(i); a.setAttribute("aria-invalid", String(!ok)); z.setAttribute("aria-invalid", String(!ok)); };
+    marks.push(mark);
     mark();
     bells.append(h("span", {text: (i + 1) + " урок"}), a, z);
   });

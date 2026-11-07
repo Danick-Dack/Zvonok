@@ -14,8 +14,12 @@ public class UpdaterTest {
     private static final ZoneId ALMATY = ZoneId.of("Asia/Almaty");
 
     private static Schedule.Status at(int day, int hour, int min) throws Exception {
+        return at(11, day, hour, min);
+    }
+
+    private static Schedule.Status at(int month, int day, int hour, int min) throws Exception {
         Schedule.init(GoldenTest.G.getJSONObject("schedule").toString(), GoldenTest.G.getJSONObject("changes").toString(), "7Б", null);
-        return Schedule.compute(ZonedDateTime.of(2026, 11, day, hour, min, 0, 0, ALMATY));
+        return Schedule.compute(ZonedDateTime.of(2026, month, day, hour, min, 0, 0, ALMATY));
     }
 
     private static long ms(int day, int hour, int min) {
@@ -63,5 +67,35 @@ public class UpdaterTest {
         assertTrue("в выходной не идёт отсчёт урока", !d.live);
         assertEquals(-1, d.progress);
         assertEquals(ms(14, 12, 1), Updater.nextStep(s, d, ms(14, 12, 0), false));
+    }
+
+    /** Вторник 7:30: последний час до уроков, отсчёт до первого звонка 8:00. */
+    @Test
+    public void beforeLessons() throws Exception {
+        Schedule.Status s = at(10, 7, 30);
+        Updater.Display d = Updater.describe(s, ms(10, 7, 30));
+        assertEquals(Schedule.Kind.BEFORE, d.kind);
+        assertTrue("за час до уроков идёт отсчёт", d.live && d.timer);
+        assertEquals(ms(10, 8, 0), d.target);
+    }
+
+    /** Вторник 16:40: уроки кончились, отсчёта и полосы нет. */
+    @Test
+    public void afterLessons() throws Exception {
+        Updater.Display d = Updater.describe(at(10, 16, 40), ms(10, 16, 40));
+        assertEquals(Schedule.Kind.AFTER, d.kind);
+        assertTrue("после уроков нет отсчёта", !d.live && !d.timer);
+        assertEquals("УРОКИ ЗАКОНЧИЛИСЬ", d.label);
+        assertEquals(-1, d.progress);
+    }
+
+    /** 28 декабря: зимние каникулы, крупно сколько дней до уроков (11 января). */
+    @Test
+    public void holidays() throws Exception {
+        long now = ZonedDateTime.of(2026, 12, 28, 10, 0, 0, 0, ALMATY).toInstant().toEpochMilli();
+        Updater.Display d = Updater.describe(at(12, 28, 10, 0), now);
+        assertTrue("каникулы", d.holiday && !d.live);
+        assertEquals("Каникулы", d.title);
+        assertEquals("до уроков 14 дней", "14", d.big);
     }
 }

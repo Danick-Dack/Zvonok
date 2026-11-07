@@ -299,8 +299,12 @@ public class EditorActivity extends Activity {
         }
     }
 
-    /** Первый неверный звонок среди уроков с предметом: {номер урока с 0, 0 — начало или 1 — конец}; null, если всё верно. */
+    /**
+     * Первый неверный звонок среди уроков с предметом: {номер урока с 0, что не так}; null, если всё верно.
+     * Что не так: 0 — начало не разобрать, 1 — конец не позже начала, 2 — урок начинается раньше конца предыдущего.
+     */
     static int[] badBell(String[][] bells, String[][][] cells) {
+        int prevEnd = -1;
         for (int i = 0; i < bells.length; i++) {
             boolean used = false;
             for (String[][] d : cells) if (!d[i][0].trim().isEmpty()) used = true;
@@ -308,6 +312,8 @@ public class EditorActivity extends Activity {
             int s = Schedule.parseTime(bells[i][0]), e = Schedule.parseTime(bells[i][1]);
             if (s < 0) return new int[]{i, 0};
             if (e <= s) return new int[]{i, 1};
+            if (s < prevEnd) return new int[]{i, 2};
+            prevEnd = e;
         }
         return null;
     }
@@ -316,8 +322,9 @@ public class EditorActivity extends Activity {
         int[] bad = badBell(bells, cells);
         if (bad != null) {
             // ошибка прямо у поля (её читает и TalkBack), а не всплывашкой, которая исчезает
-            EditText f = (EditText) ((LinearLayout) bellList.getChildAt(bad[0])).getChildAt(bad[1] == 0 ? 1 : 3);
-            f.setError(bad[1] == 0 ? "Напиши начало урока, например 8:00" : "Конец урока должен быть позже начала, например 8:45");
+            EditText f = (EditText) ((LinearLayout) bellList.getChildAt(bad[0])).getChildAt(bad[1] == 1 ? 3 : 1);
+            f.setError(bad[1] == 0 ? "Напиши начало урока, например 8:00" : bad[1] == 1
+                    ? "Конец урока должен быть позже начала, например 8:45" : "Урок начинается раньше, чем кончился предыдущий");
             f.requestFocus();
             return false;
         }

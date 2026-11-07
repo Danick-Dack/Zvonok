@@ -38,6 +38,9 @@ final class Updates {
 
     interface Done { void done(boolean ok); }
 
+    /** Идёт фоновая проверка: автоматическая при следующем открытии не запустит вторую параллельно. */
+    private static final java.util.concurrent.atomic.AtomicBoolean BUSY = new java.util.concurrent.atomic.AtomicBoolean();
+
     private Updates() {}
 
     /** Номер сборки установленного приложения (versionCode = номер сборки в GitHub Actions). */
@@ -72,7 +75,7 @@ final class Updates {
     /** Пора ли спросить замены (раз в 3 часа, только если пользователь разрешил выход в интернет). */
     static boolean changesDue(Context ctx) {
         SharedPreferences p = Updater.prefs(ctx);
-        return p.getBoolean(KEY_AUTO, false)
+        return p.getBoolean(KEY_AUTO, false) && !BUSY.get()
                 && System.currentTimeMillis() - p.getLong(KEY_CH_LAST, 0) > 3 * 3600_000L;
     }
 
@@ -80,8 +83,10 @@ final class Updates {
     static void checkChanges(Context ctx, Runnable done) {
         Context app = ctx.getApplicationContext();
         Handler main = new Handler(Looper.getMainLooper());
+        BUSY.set(true);
         new Thread(() -> {
             boolean changed = fetchSchedule(app) | fetchChanges(app);
+            BUSY.set(false);
             main.post(() -> {
                 if (changed) Updater.update(app);
                 if (done != null) done.run();
@@ -155,7 +160,7 @@ final class Updates {
 
     static boolean due(Context ctx) {
         SharedPreferences p = Updater.prefs(ctx);
-        return p.getBoolean(KEY_AUTO, false)
+        return p.getBoolean(KEY_AUTO, false) && !BUSY.get()
                 && System.currentTimeMillis() - p.getLong(KEY_LAST, 0) > 24 * 3600_000L;
     }
 
@@ -180,6 +185,7 @@ final class Updates {
     static void check(Context ctx, Done cb) {
         Context app = ctx.getApplicationContext();
         Handler main = new Handler(Looper.getMainLooper());
+        BUSY.set(true);
         new Thread(() -> {
             boolean ok = false;
             try {
@@ -202,6 +208,7 @@ final class Updates {
             }
             // заодно свежее расписание и замены (тот же разрешённый выход в интернет)
             boolean changed = fetchSchedule(app) | fetchChanges(app);
+            BUSY.set(false);
             final boolean r = ok;
             main.post(() -> {
                 if (changed) Updater.update(app);

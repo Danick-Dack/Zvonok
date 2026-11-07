@@ -479,13 +479,13 @@ function lockRect(m) {
   const s = m.s, n = s.next;
   // ряд 1
   const r1 = row(w);
-  if (m.changed && (m.kind === "LESSON" || m.kind === "BREAK")) { symbol(r1, "arrow.triangle.2.circlepath", 11); r1.addSpacer(3); }
+  if (m.changed && (m.kind === "LESSON" || m.kind === "BREAK")) { if (symbol(r1, "arrow.triangle.2.circlepath", 11)) r1.addSpacer(3); } // нет значка: нет и отступа
   if (m.kind === "LESSON") {
-    const right = m.home ? "" : "→ " + m.go;
+    const right = m.home ? "домой" : "→ " + m.go; // «домой» словом, только если нет значка домика
     T(r1, short(m.title), Font.semiboldSystemFont(13), 1);
     if (m.room && short(m.title).length + m.room.length + (right.length || 2) <= 19) { r1.addSpacer(5); T(r1, m.room, Font.mediumSystemFont(13), 0.6); }
     r1.addSpacer();
-    if (m.home) symbol(r1, "house.fill", 12, 0.7); else T(r1, right, Font.semiboldSystemFont(12), 0.7);
+    if (!m.home || !symbol(r1, "house.fill", 12, 0.7)) T(r1, right, Font.semiboldSystemFont(12), 0.7); // без значка домика текстом
   } else if (m.kind === "BREAK" || (m.kind === "BEFORE" && s.soon)) {
     T(r1, "→ " + short(n.subject), Font.semiboldSystemFont(13), 1);
     r1.addSpacer();

@@ -61,5 +61,9 @@ public class RulesTest {
         assertNull(EditorActivity.badBell(bells("8.00", "8.45"), week("Алгебра")));
         // предмет из одних пробелов: урок пустой
         assertNull(EditorActivity.badBell(bells("", ""), week("   ")));
+        // 2 урок начинается раньше, чем кончился 1: ошибка у начала 2 урока
+        assertArrayEquals(new int[]{1, 2}, EditorActivity.badBell(bells("8:00", "9:00", "8:30", "9:15"), week("Алгебра", "Физика")));
+        // между уроками пустой: сравнивается с последним уроком с предметом
+        assertNull(EditorActivity.badBell(bells("8:00", "8:45", "8:10", "8:20", "8:50", "9:35"), week("Алгебра", "", "Физика")));
     }
 }

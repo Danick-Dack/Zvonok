@@ -22,7 +22,7 @@ public final class Theme {
     public boolean progress = true;
     public boolean next = true;
     public boolean dots = true;
-    public boolean subjectColor = false; // кольцо, полоса и кабинет в цвете текущего урока
+    public boolean subjectColor = true; // кольцо, полоса и кабинет в цвете текущего урока; по умолчанию включён, как на сайте и iPhone
     public int textColor = 0;            // свой цвет текста; 0 — сам по фону
 
     public static final String[][] PRESETS = {

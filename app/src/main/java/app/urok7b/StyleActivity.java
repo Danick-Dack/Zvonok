@@ -220,6 +220,7 @@ public class StyleActivity extends Activity {
     private void renderPreview() {
         preview.removeAllViews();
         Updater.Display d = demo();
+        Theme shown = t.forDisplay(d); // как в настоящих виджетах: при «цвете урока» акцент в цвет предмета
 
         // обои-подложка, чтобы было видно прозрачность
         LinearLayout wall = Ui.vertical(this);
@@ -233,7 +234,7 @@ public class StyleActivity extends Activity {
         notif.setBackground(Ui.round(this, t.bg | 0xFF000000, 20, 0));
         notif.setClipToOutline(true);
         notif.setPadding(Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 14), Ui.dp(this, 12));
-        add(notif, Updater.notifBig(this, d, t), ViewGroup.LayoutParams.WRAP_CONTENT);
+        add(notif, Updater.notifBig(this, d, shown), ViewGroup.LayoutParams.WRAP_CONTENT);
         wall.addView(notif);
 
         LinearLayout widgets = Ui.horizontal(this);
@@ -241,19 +242,19 @@ public class StyleActivity extends Activity {
         widgets.setLayoutParams(Ui.mw(this, 14));
         FrameLayout w2 = new FrameLayout(this);
         w2.setLayoutParams(new LinearLayout.LayoutParams(0, Ui.dp(this, 160), 1f));
-        add(w2, LessonWidget.build(this, d, t), ViewGroup.LayoutParams.MATCH_PARENT);
+        add(w2, LessonWidget.build(this, d, shown), ViewGroup.LayoutParams.MATCH_PARENT);
         FrameLayout w1 = new FrameLayout(this);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Ui.dp(this, 76), 1f);
         lp.leftMargin = Ui.dp(this, 12);
         w1.setLayoutParams(lp);
-        add(w1, MiniWidget.build(this, d, t), ViewGroup.LayoutParams.MATCH_PARENT);
+        add(w1, MiniWidget.build(this, d, shown), ViewGroup.LayoutParams.MATCH_PARENT);
         widgets.addView(w2);
         widgets.addView(w1);
         wall.addView(widgets);
         FrameLayout rooms = new FrameLayout(this);
         rooms.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 150)));
         ((LinearLayout.LayoutParams) rooms.getLayoutParams()).topMargin = Ui.dp(this, 12);
-        add(rooms, RoomsWidget.build(this, java.time.ZonedDateTime.now(), t), ViewGroup.LayoutParams.MATCH_PARENT);
+        add(rooms, RoomsWidget.build(this, java.time.ZonedDateTime.now(), shown), ViewGroup.LayoutParams.MATCH_PARENT);
         wall.addView(rooms);
         preview.addView(wall);
 
