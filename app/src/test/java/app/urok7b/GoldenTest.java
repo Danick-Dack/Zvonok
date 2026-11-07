@@ -188,4 +188,17 @@ public class GoldenTest {
         }
         done(hues.length());
     }
+
+    /** Сами цвета оттенков (яркий и текстовый, светлая и тёмная тема) те же, что на сайте и iPhone. */
+    @Test
+    public void palette() throws Exception {
+        JSONObject p = G.getJSONObject("palette");
+        check("число оттенков", p.length(), HUE.length);
+        for (int i = 0; i < HUE.length; i++) {
+            JSONArray c = p.getJSONArray(HUE[i]);
+            for (int k = 0; k < 4; k++)
+                check("оттенок " + HUE[i] + " №" + k, c.getString(k).toUpperCase(), String.format("#%06X", Hues.C[i][k] & 0xFFFFFF));
+        }
+        done(HUE.length * 4);
+    }
 }

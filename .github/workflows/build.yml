@@ -23,7 +23,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a   # v4.4.3; сторонние действия закреплены по коммиту
         with:
           gradle-version: '8.7'
 
@@ -34,8 +34,11 @@ jobs:
       - name: Signing key
         env:
           SIGNING_KEY_B64: ${{ secrets.SIGNING_KEY_B64 }}
+          # релиз «Звонка» без ключа был бы подписан другим ключом и не встал бы поверх уже установленного приложения
+          MUST_SIGN: ${{ github.repository == 'Danick-Dack/Zvonok' && (github.ref == 'refs/heads/main' || contains(steps.ver.outputs.name, '-beta')) }}
         run: |
-          if [ -n "$SIGNING_KEY_B64" ]; then echo "$SIGNING_KEY_B64" | base64 -d > app/zvonok.jks; fi
+          if [ -n "$SIGNING_KEY_B64" ]; then echo "$SIGNING_KEY_B64" | base64 -d > app/zvonok.jks
+          elif [ "$MUST_SIGN" = "true" ]; then echo "::error::Нет секрета SIGNING_KEY_B64: релиз без ключа не обновится у людей"; exit 1; fi
 
       # Android считает день так же, как сайт: эталон снят с site/src/js/rules.js (tools/golden.py)
       - name: Tests
@@ -46,8 +49,7 @@ jobs:
             grep -E "error:|FAILED|AssertionError|не совпало|ждали" tests.log | head -20 | sed 's/^/::error::/'; exit 1; }
 
       - name: Lint
-        continue-on-error: true   # отчёт смотрим глазами; ошибки lint чиним, но сборку из-за предупреждений не роняем
-        run: gradle lintDebug --no-daemon
+        run: gradle lintDebug --no-daemon   # ошибка lint роняет сборку; предупреждения только в отчёте (lint-report)
 
       - name: Build
         env:
@@ -86,7 +88,7 @@ jobs:
         # Релиз только из main (основной) или пробный (-beta) из любой ветки. Сборки -dev в рабочих ветках остаются
         # артефактом: приложение ищет обновление в releases/latest, и незаконченная версия до людей не доберётся.
         if: github.ref == 'refs/heads/main' || contains(steps.ver.outputs.name, '-beta')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2
         with:
           tag_name: v${{ steps.ver.outputs.name }}-build-${{ github.run_number }}
           name: Звонок v${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})
@@ -123,7 +125,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - uses: reactivecircus/android-emulator-runner@v2
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d   # v2
         with:
           api-level: ${{ matrix.api }}
           target: google_apis

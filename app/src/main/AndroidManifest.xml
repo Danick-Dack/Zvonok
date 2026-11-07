@@ -4,7 +4,8 @@
     <!--
         Приватность: интернет нужен только если пользователь разрешил: раз в сутки спросить GitHub о новой версии
         и раз в 3 часа скачать замены в расписании со своего сайта, когда приложение открыто. И когда пользователь сам
-        отправляет письмо в «Написать нам». Данные о пользователе не отправляются.
+        отправляет письмо в «Написать нам» (уходят только его текст, тип и класс, без имени и контактов).
+        Аккаунтов, аналитики и рекламы нет; телефон, номер и место не узнаём.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -32,7 +33,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -67,36 +68,36 @@
             android:launchMode="singleTask"
             android:showWhenLocked="true"
             android:turnScreenOn="false"
-            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:theme="@style/LockTheme" />
 
         <activity
             android:name=".EditorActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".Feedback"
             android:exported="false"
-            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
 
         <!-- Обязательная настройка телефона: разрешения, без которых таймер отстаёт или пропадает -->
         <activity
             android:name=".Setup"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
 
         <activity
             android:name=".Changelog"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
 
         <activity
             android:name=".StyleActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
 
         <service
             android:name=".LessonService"

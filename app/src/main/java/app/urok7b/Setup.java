@@ -38,26 +38,29 @@ public class Setup extends Activity {
         root.addView(card, Ui.mw(this, 18));
         for (Perms.Item it : all) {
             boolean todo = need.contains(it.key);
+            boolean optional = !todo && Boolean.FALSE.equals(it.ok); // по желанию (таймер в строке состояния), но выключен
             LinearLayout r = Ui.horizontal(this);
             r.setPadding(0, Ui.dp(this, 12), 0, Ui.dp(this, 12));
             LinearLayout t = Ui.twoLines(this, it.title, it.why);
             t.setLayoutParams(Ui.weight(1));
             r.addView(t);
-            TextView st = Ui.text(this, !todo ? "✓ Готово" : it.ok == null ? "Открыть" : "Включить", 14,
-                    todo ? Ui.ON_ACCENT : Ui.MUTED, "sans-serif-medium");
+            TextView st = Ui.text(this, !todo && !optional ? "✓ Готово" : it.ok == null ? "Открыть" : "Включить", 14,
+                    todo ? Ui.ON_ACCENT : optional ? Ui.ACCENT : Ui.MUTED, "sans-serif-medium");
             if (todo) st.setBackground(Ui.round(this, Ui.ACCENT, 12, 0));
+            else if (optional) st.setBackground(Ui.round(this, 0, 12, Ui.ACCENT));
             st.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
             lp.leftMargin = Ui.dp(this, 10);
             r.addView(st, lp);
-            r.setContentDescription(it.title + ". " + it.why + ". " + (todo ? "Нужно включить" : "Готово"));
+            r.setContentDescription(it.title + ". " + it.why + ". " + (todo ? "Нужно включить" : optional ? "Выключено, по желанию" : "Готово"));
             r.setOnClickListener(v -> { Ui.tick(v); Perms.markSeen(this, it); it.fix.run(); });
             card.addView(r);
         }
         TextView left = Ui.text(this, "Осталось включить: " + need.size(), 15, Ui.SOFT, "sans-serif-medium");
         left.setPadding(Ui.dp(this, 4), Ui.dp(this, 16), 0, 0);
         root.addView(left);
-        TextView why = Ui.text(this, "Заряд от этого не растёт: пока экран выключен, «Звонок» ничего не делает и телефон не будит. "
+        TextView why = Ui.text(this, "Заряд от этого не растёт: пока экран выключен, «Звонок» ничего не делает и телефон не будит "
+                + "(кроме вибрации перед уроком, если ты её включишь). "
                 + "Разрешения нужны, чтобы система не закрывала его и показывала таймер вовремя.", 13, Ui.MUTED, null);
         why.setLineSpacing(0, 1.15f);
         why.setPadding(Ui.dp(this, 4), Ui.dp(this, 12), Ui.dp(this, 4), 0);

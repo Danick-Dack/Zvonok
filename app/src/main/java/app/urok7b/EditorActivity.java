@@ -306,9 +306,12 @@ public class EditorActivity extends Activity {
             if (!used) continue;
             int s = Schedule.parseTime(bells[i][0]), e = Schedule.parseTime(bells[i][1]);
             if (s < 0 || e <= s) {
-                if (strict) Toast.makeText(this, "Проверь звонки " + (i + 1) + " урока, например 8:00 и 8:45",
-                        Toast.LENGTH_LONG).show();
-                if (strict) return false;
+                if (!strict) continue;
+                // ошибка прямо у поля (её читает и TalkBack), а не всплывашкой, которая исчезает
+                EditText f = (EditText) ((LinearLayout) bellList.getChildAt(i)).getChildAt(s < 0 ? 1 : 3);
+                f.setError(s < 0 ? "Напиши начало урока, например 8:00" : "Конец урока должен быть позже начала, например 8:45");
+                f.requestFocus();
+                return false;
             }
         }
         try {

@@ -29,10 +29,10 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <!-- таймер берёт столько места, сколько нужно цифрам, и не обрезается; кабинет и предмет справа ужимаются -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
@@ -73,8 +73,9 @@
 
             <LinearLayout
                 android:id="@+id/m_right"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:layout_marginStart="6dp"
                 android:gravity="end"
                 android:orientation="vertical">
@@ -84,6 +85,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/room_chip"
+                    android:ellipsize="end"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
                     android:paddingStart="6dp"

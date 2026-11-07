@@ -61,4 +61,12 @@ document.addEventListener("visibilitychange", () => {
   abTick();
 });
 abAge();
+// сколько раз скачали приложение: число от GitHub, сборка сайта обновляет stats.json раз в сутки
+fetch("stats.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(s => {
+  const n = s && s.downloads;
+  if (!(n > 0)) return;
+  $("abDlN").textContent = n.toLocaleString("ru-RU");
+  $("abDlT").textContent = word(n, "скачивание", "скачивания", "скачиваний").slice(String(n).length + 1);
+  $("abDl").hidden = false;
+}).catch(() => {});
 abTick();

@@ -30,9 +30,14 @@ import ed25519
 TEST_SEED = bytes(range(32))
 b64 = lambda b: base64.b64encode(b).decode()
 served = open(os.path.join(ROOT, "site", "ios", "7B.js"), encoding="utf-8").read()
-fresh = re.sub(r'const VERSION = "[^"]*"', 'const VERSION = "new0000001"', served, count=1)
+built = int(re.search(r"^const BUILT = (\d+);", served, re.M)[1])
+def version(name, when):  # та же версия 7Б, но с другим номером и временем сборки
+    code = re.sub(r'const VERSION = "[^"]*"', 'const VERSION = "%s"' % name, served, count=1)
+    return re.sub(r"^const BUILT = \d+;", "const BUILT = %d;" % when, code, count=1, flags=re.M)
+fresh, old = version("new0000001", built + 1), version("old0000001", built - 1)
 fixture = {"pub": b64(ed25519.public_key(TEST_SEED)), "code": fresh, "sig": b64(ed25519.sign(TEST_SEED, fresh.encode("utf-8"))),
-           "sha": {"abc": hashlib.sha512(b"abc").hexdigest(), "code": hashlib.sha512(fresh.encode("utf-8")).hexdigest()}}
+           "sha": {"abc": hashlib.sha512(b"abc").hexdigest(), "code": hashlib.sha512(fresh.encode("utf-8")).hexdigest()},
+           "old": {"code": old, "sig": b64(ed25519.sign(TEST_SEED, old.encode("utf-8")))}}
 versions = json.load(open(os.path.join(ROOT, "site", "ios", "versions.json"), encoding="utf-8"))
 real_key = re.search(r'const UPDATE_KEY = "([^"]*)"', served)[1]
 if real_key:  # сайт собран с ключом: подпись 7Б на сайте должна сходиться с ключом внутри скрипта

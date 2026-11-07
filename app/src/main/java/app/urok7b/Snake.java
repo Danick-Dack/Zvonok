@@ -54,7 +54,9 @@ final class Snake extends View {
         score.setGravity(Gravity.CENTER);
         score.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         Snake game = new Snake(a, score);
-        int side = Math.min(a.getResources().getDisplayMetrics().widthPixels - Ui.dp(a, 88), Ui.dp(a, 360));
+        android.util.DisplayMetrics m = a.getResources().getDisplayMetrics();
+        // экран набок: поле по высоте, чтобы под ним поместились счёт и кнопки
+        int side = Math.min(m.heightPixels > m.widthPixels ? m.widthPixels - Ui.dp(a, 88) : m.heightPixels - Ui.dp(a, 200), Ui.dp(a, 360));
         box.addView(game, new LinearLayout.LayoutParams(side, side));
         box.addView(score, Ui.mw(a, 10));
         LinearLayout pad = Ui.horizontal(a);

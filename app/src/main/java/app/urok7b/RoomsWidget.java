@@ -72,13 +72,16 @@ public class RoomsWidget extends AppWidgetProvider {
             list = "Все кабинеты свободны";
         } else {
             int first = live > 0 ? live : next;
-            head = (live > 0 ? "СВОБОДНЫ СЕЙЧАС · " + live + " УРОК" : "СВОБОДНЫ НА " + next + " УРОКЕ · " + Schedule.hm(bells[next - 1][0]));
-            list = rooms(Schedule.freeRooms(use, first));
+            List<String> free = Schedule.freeRooms(use, first);
+            head = live > 0 ? "СВОБОДНЫ СЕЙЧАС" + count(free) + " · " + live + " УРОК"
+                    : "СВОБОДНЫ НА " + next + " УРОКЕ" + count(free) + " · " + Schedule.hm(bells[next - 1][0]);
+            list = rooms(free);
             int after = 0;
             for (int n : slots) if (after == 0 && n > first) after = n;
             if (after > 0) {
-                head2 = "НА " + after + " УРОКЕ · " + Schedule.hm(bells[after - 1][0]);
-                list2 = rooms(Schedule.freeRooms(use, after));
+                List<String> free2 = Schedule.freeRooms(use, after);
+                head2 = "НА " + after + " УРОКЕ" + count(free2) + " · " + Schedule.hm(bells[after - 1][0]);
+                list2 = rooms(free2);
             }
         }
         rv.setTextViewText(R.id.r_head, head);
@@ -89,6 +92,11 @@ public class RoomsWidget extends AppWidgetProvider {
         rv.setViewVisibility(R.id.r_list2, list2.isEmpty() ? View.GONE : View.VISIBLE);
         rv.setContentDescription(R.id.r_root, head.toLowerCase() + ": " + list + (head2.isEmpty() ? "" : ". " + head2.toLowerCase() + ": " + list2));
         return rv;
+    }
+
+    /** Сколько свободно: длинный список в виджете обрезается, а число видно всегда. */
+    private static String count(List<String> l) {
+        return l.isEmpty() ? "" : ": " + l.size();
     }
 
     private static String rooms(List<String> l) {

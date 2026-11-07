@@ -173,7 +173,7 @@ function renderPromo() {
   box.replaceChildren(kind === "ios"
     ? h("div", null, h("b", {text: "Звонок на экране «Домой»"}), h("p", {text: "Добавь сайт как приложение: откроется сразу на твоём расписании, даже в подвале без сети."}),
       h("a", {class: "btn btn-primary btn-sm", href: "#install", text: "Как добавить"}))
-    : h("div", null, h("b", {text: "Приложение для Android"}), h("p", {text: "Таймер до звонка прямо на экране блокировки. Весит 130 КБ и не жрёт батарею."}),
+    : h("div", null, h("b", {text: "Приложение для Android"}), h("p", {text: "Таймер до звонка прямо на экране блокировки. Весит около 180 КБ и не жрёт батарею."}),
       h("div", {class: "row"}, h("a", {class: "btn btn-primary btn-sm", href: APK, rel: "noopener", text: "Скачать"}),
         h("a", {class: "btn btn-quiet btn-sm", href: appLink(), text: "Уже стоит? Открыть"}), h("a", {class: "btn btn-quiet btn-sm", href: "#install", text: "Как установить"}))),
     close);

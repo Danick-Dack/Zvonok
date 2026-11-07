@@ -31,6 +31,8 @@ import json
 import math
 import os
 import re
+import subprocess
+import urllib.request
 
 import qrcode
 import qrcode.image.svg
@@ -363,6 +365,7 @@ def data_block(data, cls, version):
         'const CLASS = "%s"; // класс скрипта: его новую версию виджет и скачивает' % cls,
         'const THEME = ""; // код темы с сайта, например "ZV1;bg=0B1220;ac=60A5FA". Параметр виджета важнее',
         'const VERSION = "%s";' % version,
+        "const BUILT = 0; // время сборки (сайт подставляет своё): более старую версию поверх этой виджет не поставит",
         'const UPDATE_KEY = "%s"; // открытый ключ подписи новых версий (пусто: сборка была без ключа)' % UPDATE_KEY,
         "const START = null; // своё расписание со страницы iPhone: при первом запуске переходит в настройки",
         "const DATA = " + j(data) + "; // всё расписание: классы, звонки, каникулы, предметы",
@@ -377,18 +380,47 @@ def with_data(js, block):
     return js[:a] + block + js[b:]
 
 
+def build_time():
+    """Время последнего коммита: растёт от версии к версии и одинаково при пересборке того же коммита."""
+    try:
+        return int(subprocess.run(["git", "-C", ROOT, "log", "-1", "--format=%ct"], capture_output=True, text=True, check=True).stdout)
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return int(datetime.datetime.now().timestamp())
+
+
+def downloads():
+    """Сколько раз скачали APK со всех релизов (все версии), по счётчику GitHub. Приложения ничего не отправляют:
+    число знает сам GitHub. None, если он не ответил."""
+    head = {"Accept": "application/vnd.github+json", "User-Agent": "zvonok-site-build"}
+    if os.environ.get("GITHUB_TOKEN"):
+        head["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
+    total, page = 0, 1
+    try:
+        while True:
+            url = "https://api.github.com/repos/Danick-Dack/Zvonok/releases?per_page=100&page=%d" % page
+            with urllib.request.urlopen(urllib.request.Request(url, headers=head), timeout=15) as r:
+                rel = json.load(r)
+            total += sum(a["download_count"] for x in rel for a in x["assets"] if a["name"].endswith(".apk"))
+            if len(rel) < 100:
+                return total
+            page += 1
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 def class_scripts(data, changelog, app_html):
     """site/ios/<класс>.js и site/ios/versions.json: виджет iPhone сам скачивает свежую версию для своего класса.
     Скрипты классов отличаются только классом по умолчанию. versions.json подписывает и сам сайт (index.html):
     его копию приложение iPhone хранит у себя и открывает без интернета."""
     tpl = with_rules(read("ios", "Zvonok.js"))
     os.makedirs(os.path.join(OUT, "ios"), exist_ok=True)
-    versions, sigs = {}, {}
+    versions, sigs, built = {}, {}, build_time()
     for c in data["classes"]:
         js = with_data(tpl, data_block(data, c, "__VERSION__")).replace("// Звонок:", "// Звонок %s:" % c, 1)
         ver = hashlib.sha256(js.encode("utf-8")).hexdigest()[:10]
         versions[slug(c)] = ver
-        final = js.replace("__VERSION__", ver)
+        # время сборки не входит в номер версии: пересборка без изменений не рассылает обновление
+        final = js.replace("__VERSION__", ver).replace("const BUILT = 0;", "const BUILT = %d;" % built, 1)
         write("ios/%s.js" % slug(c), final)
         if SIGN_SEED:  # подпись ровно тех байт, что лежат на сайте: виджет проверит её перед тем, как поставить версию
             sigs[slug(c)] = base64.b64encode(ed25519.sign(SIGN_SEED, final.encode("utf-8"))).decode()
@@ -655,6 +687,10 @@ def main():
     # расписание целиком: приложение и сайт узнают из него, что вышло новое расписание
     write("schedule.json", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     write(".nojekyll", "")
+    # счётчик скачиваний для «О проекте»: отдельный файл, чтобы его смена раз в сутки не обновляла весь сайт у людей
+    n = downloads() if os.environ.get("CI") or os.environ.get("ZV_STATS") else None
+    if n:
+        write("stats.json", json.dumps({"downloads": n, "date": datetime.date.today().isoformat()}))
     # в GitHub Actions другие шрифты: картинку превью не перерисовываем, берём закоммиченную
     if not os.environ.get("CI") or not os.path.exists(os.path.join(OUT, "og.png")):
         og_image().save(os.path.join(OUT, "og.png"), optimize=True)

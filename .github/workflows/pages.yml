@@ -11,6 +11,8 @@ on:
       - 'ios/**'
       - 'tools/build_site.py'
       - '.github/workflows/pages.yml'
+  schedule:
+    - cron: '17 0 * * *'   # раз в сутки (6:17 по Алматы): свежее число скачиваний на странице «О проекте»
   workflow_dispatch:
 
 permissions:
@@ -37,9 +39,13 @@ jobs:
           python-version: '3.12'
       - name: Собрать сайт из расписания
         env:
-          # закрытый ключ подписи новых версий скрипта iPhone (Settings → Secrets → Actions); без него версии без подписи
+          # закрытый ключ подписи новых версий скрипта iPhone (Settings → Secrets → Actions)
           IOS_SIGN_KEY: ${{ secrets.IOS_SIGN_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # только чтение счётчика скачиваний релизов
         run: |
+          # без ключа виджеты iPhone тихо перестали бы обновляться: они ставят только подписанные версии
+          if [ -z "$IOS_SIGN_KEY" ] && [ "$GITHUB_REPOSITORY" = "Danick-Dack/Zvonok" ]; then
+            echo "::error::Нет секрета IOS_SIGN_KEY: сайт не опубликован, чтобы не сломать обновления на iPhone"; exit 1; fi
           pip install qrcode pillow
           python tools/build_site.py
       - uses: actions/configure-pages@v5

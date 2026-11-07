@@ -146,11 +146,16 @@ def read(*p):
         return f.read()
 
 
+def site_table(name):
+    """Таблица из tools/build_site.py, без запуска сборки."""
+    tree = ast.parse(read("tools", "build_site.py"))
+    return next(ast.literal_eval(n.value) for n in tree.body
+                if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == name)
+
+
 def subject_hues(data):
     """Тот же оттенок предмета, что вписывает сборка сайта (SUBJECT_HUE в tools/build_site.py)."""
-    tree = ast.parse(read("tools", "build_site.py"))
-    table = next(ast.literal_eval(n.value) for n in tree.body
-                 if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "SUBJECT_HUE")
+    table = site_table("SUBJECT_HUE")
     return {name: table.get(code, "gray") for code, name in data["subjects"].items()}
 
 
@@ -164,7 +169,8 @@ async def generate():
     try:
         await page.js(code)
         out = {"about": "Создано tools/golden.py из site/src/js/rules.js. Руками не править.",
-               "schedule": data, "changes": CHANGES, "custom": CUSTOM, "cases": []}
+               "schedule": data, "changes": CHANGES, "custom": CUSTOM,
+               "palette": site_table("HUES"), "cases": []}   # palette: сами цвета оттенков, Hues.C в Android сверяется с ними
         for tz, plan, tables in ZONES:
             await page.send("Emulation.setTimezoneOverride", timezoneId=tz)
             cfg = dict(TABLES, tz=tz, plan=plan, custom=CUSTOM, tables=tables)

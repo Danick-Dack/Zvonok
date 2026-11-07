@@ -389,6 +389,8 @@ async function iosScript(w) {
       "виджет iPhone сам ставит подписанную новую версию и присылает уведомление");
     r = await run({versions: {classes: {"7B": "new0000001"}}, code: F.code}, keyed);
     ok(!got(r) && r.notes.length === 0, "версию без подписи не ставит");
+    r = await run({versions: {classes: {"7B": "old0000001"}, sig: {"7B": F.old.sig}}, code: F.old.code}, keyed);
+    ok(!got(r) && r.notes.length === 0, "старую подписанную версию поверх новой не ставит (откат)");
     r = await run({versions: {classes: {"7B": "new0000001"}, sig: {"7B": F.sig}}, code: F.code.replace("Script.complete();", "Script.complete(); /* подмена */")}, keyed);
     ok(!got(r) && r.notes.length === 0, "подменённый файл со старой подписью не ставит");
     r = await run({versions: {classes: {"7B": "new0000001"}}, code: F.code}, plain);

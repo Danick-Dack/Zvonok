@@ -70,6 +70,12 @@ at 111010202026.00
 tab now; shot dark_9_big_font
 adb shell settings put system font_scale 1.0
 
+# экран повёрнут набок: приложение не заперто в портрете, всё помещается и прокручивается
+adb shell settings put system accelerometer_rotation 0
+adb shell settings put system user_rotation 1
+tab now; sleep 1; shot dark_10_landscape
+adb shell settings put system user_rotation 0; sleep 1
+
 # остальные экраны
 for a in Changelog Feedback StyleActivity EditorActivity; do
   adb shell am start -W -n $PKG/.$a >/dev/null; sleep 2; shot "dark_screen_$a"

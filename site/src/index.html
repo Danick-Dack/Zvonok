@@ -158,7 +158,7 @@
         <div id="osAndroid" hidden>
           <p>Таймер до звонка висит прямо в уведомлении на экране блокировки: глянул и знаешь, сколько ещё сидеть. Есть и виджеты на рабочий стол.</p>
           <ul class="facts">
-            <li>Весит около 130 КБ, это меньше одной фотки из чата класса</li>
+            <li>Весит около 180 КБ, это меньше одной фотки из чата класса</li>
             <li>Батарею не жрёт: около 1% в день, телефон доживёт до последнего урока</li>
           </ul>
           <p class="note" style="margin-top:8px">Без интернета, рекламы и регистрации. Нужен Android 8 или новее.</p>
@@ -238,7 +238,7 @@
         <div class="faq">
           <details><summary>Это официальный сайт лицея?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Нет. «Звонок» сделал ученик лицея для своих. Расписание взято из утверждённого расписания четверти. Если где-то ошибка, <a href="feedback.html?about=schedule">напиши нам</a>, исправим.</p></details>
           <details><summary>Что «Звонок» знает обо мне?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Ничего, кроме класса и настроек, и они лежат у тебя на телефоне. Ни аккаунтов, ни рекламы, ни аналитики. В интернет приложение ходит только за новой версией и заменами, если ты это разрешишь. Если пишешь нам через «Написать нам», письмо уходит через сервис отправки Web3Forms.</p></details>
-          <details><summary>Сколько тратит батареи и места?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Около 130 КБ и примерно 1% зарядки в день. Пока экран выключен, приложение спит, а таймер тикает силами самой системы. В каникулы оно отдыхает вместе с тобой.</p></details>
+          <details><summary>Сколько тратит батареи и места?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Около 180 КБ и примерно 1% зарядки в день. Пока экран выключен, приложение спит, а таймер тикает силами самой системы. В каникулы оно отдыхает вместе с тобой.</p></details>
           <details><summary>Почему Android пишет «Неизвестное приложение»?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Так он пишет про всё, что не из Play Маркета. Нажми «Подробнее» → «Всё равно установить». Код «Звонка» открыт.</p></details>
           <details><summary>Уведомление пропало или не обновляется<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Телефон закрыл его ради батареи. В «Звонок на телефоне» → Android → «Настрой телефон» выбери свою марку и сделай шаги.</p></details>
           <details><summary>Будет ли на iPhone уведомление, как на Android?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Нет, Apple этого не разрешает. Зато есть напоминания через Календарь, виджет на экране блокировки и ответ Siri.</p></details>
@@ -281,7 +281,7 @@
   <div class="sheet-head"><h2 id="gameH">Змейка на перемене</h2><button class="icon-btn" type="button" data-close aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
   <div class="sheet-body game">
     <canvas id="gameCv" width="300" height="300" role="img" aria-label="Поле змейки: стрелки на клавиатуре или свайпы"></canvas>
-    <p class="note" id="gameScore"></p>
+    <p class="note" id="gameScore" aria-live="polite"></p>
     <div class="pad" role="group" aria-label="Управление"><span></span><button type="button" data-d="0,-1" aria-label="Вверх">↑</button><span></span><button type="button" data-d="-1,0" aria-label="Влево">←</button><button type="button" data-d="0,1" aria-label="Вниз">↓</button><button type="button" data-d="1,0" aria-label="Вправо">→</button></div>
   </div>
 </dialog>

@@ -178,7 +178,7 @@ final class Perms {
         // 10. Android 16: таймер урока в строке состояния (на Samsung это Now Bar, на Xiaomi Super Island). Не обязательно
         if (Build.VERSION.SDK_INT >= 36 && nm != null && Updater.prefs(a).getBoolean(Updater.KEY_LIVE, true)) {
             out.add(new Item("live", "Таймер в строке состояния",
-                    "Урок и минуты до звонка вверху экрана и на экране блокировки (Samsung: Now Bar, Xiaomi: Super Island)",
+                    "Урок и минуты до звонка вверху экрана и на экране блокировки (Samsung: Now Bar, Xiaomi: Super Island). По желанию",
                     promoted(nm), () -> {
                 if (!open(a, new Intent("android.settings.MANAGE_APP_PROMOTED_NOTIFICATIONS").putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName())))
                     open(a, new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName()));

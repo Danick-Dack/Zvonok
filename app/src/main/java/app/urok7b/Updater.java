@@ -27,7 +27,8 @@ import java.time.ZonedDateTime;
  * Единая точка: пересчитать состояние, обновить уведомление и виджеты, завести следующий будильник.
  *
  * Экономия батареи:
- *  • все будильники «не будящие» (RTC): спящий телефон приложение не будит никогда;
+ *  • все будильники «не будящие» (RTC): спящий телефон приложение не будит. Исключение одно: «Вибрация
+ *    перед уроком», если пользователь сам её включил (один RTC_WAKEUP перед каждым уроком, scheduleBuzz);
  *  • пока экран выключен, поминутных обновлений нет совсем — только на звонках;
  *  • при включении экрана служба сразу обновляет всё одним вызовом;
  *  • таймеры тикают сами (Chronometer), а в экономном режиме их нет вовсе;
@@ -83,7 +84,7 @@ public final class Updater {
         public boolean holiday;          // каникулы или праздник
     }
 
-    private static String lastSig = "";
+    private static String lastSig = "", lastNotifView = "", lastWidgetView = "";
 
     private Updater() {}
 
@@ -114,10 +115,20 @@ public final class Updater {
         // свободные кабинеты меняются на любом звонке, даже когда у своего класса уроки кончились
         long bell = rooms ? nextBell(now) : 0;
         String sig = d.sig + "|" + (rooms ? bell : 0);
+        // Что видно глазом между звонками: полоса шагами по 5% и таймер без секунд (текст раз в минуту).
+        // Уведомление ещё и пишет «осталось N мин» (часы, экран блокировки MIUI). Перерисовываем только то, что поменялось.
+        String widgetView = sig + "|" + (d.progress < 0 ? -1 : d.progress / 5) + "|"
+                + (d.timer && !t.seconds ? Schedule.fmtTimer(d.target - nowMs) : "");
+        String notifView = widgetView + "|" + d.notifTitle;
+        boolean changed = force || !sig.equals(lastSig);
+        lastSig = sig;
 
-        if (force || screenOn || !sig.equals(lastSig)) {
-            lastSig = sig;
+        if (changed || screenOn && !notifView.equals(lastNotifView)) {
+            lastNotifView = notifView;
             notif = updateNotification(ctx, d, t, notif);
+        }
+        if (changed || screenOn && !widgetView.equals(lastWidgetView)) {
+            lastWidgetView = widgetView;
             LessonWidget.updateAll(ctx, d, t);
             MiniWidget.updateAll(ctx, d, t);
             DayWidget.updateAll(ctx, d, t, s);

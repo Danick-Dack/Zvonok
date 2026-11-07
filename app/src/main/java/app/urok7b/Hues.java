@@ -13,7 +13,7 @@ import java.util.Map;
 final class Hues {
 
     // яркий на светлом, текст на светлом, яркий на тёмном, текст на тёмном (контраст текста не ниже 4,5:1)
-    private static final int[][] C = {
+    static final int[][] C = {   // GoldenTest сверяет с HUES из tools/build_site.py
             {0xFFFF3B30, 0xFFC40013, 0xFFFF453A, 0xFFFF6961}, // 0 red
             {0xFFFF9500, 0xFFB83D00, 0xFFFF9F0A, 0xFFFFB340}, // 1 orange
             {0xFFFFCC00, 0xFF8F5A00, 0xFFFFD60A, 0xFFFFD426}, // 2 yellow
