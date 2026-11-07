@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-If39aK0u+ir6IW8sFRCMCH8Lm8W6EwpiGT1MfMeXqwg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-6F+ZpPrEeBB7UnBIz6n9KvEY6FWdTJkCYj131yJMXZw=' 'sha256-orAPPFa3Pe7ZDV+GnycgwMVYaHyVjFDcYjW+PHk7wkg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -86,6 +86,7 @@
     <div class="ab-nums">
       <div class="ab-age"><span class="ab-age-n" id="abAgeN">0</span><span class="ab-age-t" id="abAgeT">дней «Звонку»</span><span class="ab-age-s" id="abAgeS"></span></div>
       <div class="ab-age" id="abDl" hidden><span class="ab-age-n" id="abDlN"></span><span class="ab-age-t" id="abDlT"></span><span class="ab-age-s">приложения Android, все версии</span></div>
+      <div class="ab-age" id="abUse" hidden><span class="ab-age-n" id="abUseN"></span><span class="ab-age-t" id="abUseT"></span><span class="ab-age-s">за сутки проверили обновление</span></div>
     </div>
   </section>
 </main>
@@ -533,13 +534,18 @@ document.addEventListener("visibilitychange", () => {
   abTick();
 });
 abAge();
-// сколько раз скачали приложение: число от GitHub, сборка сайта обновляет stats.json раз в сутки
-fetch("stats.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(s => {
-  const n = s && s.downloads;
+// скачивания приложения и сколько телефонов за сутки проверили обновление: числа от GitHub,
+// сборка сайта обновляет stats.json раз в сутки
+const stat = (id, n, forms) => {
   if (!(n > 0)) return;
-  $("abDlN").textContent = n.toLocaleString("ru-RU");
-  $("abDlT").textContent = word(n, "скачивание", "скачивания", "скачиваний").slice(String(n).length + 1);
-  $("abDl").hidden = false;
+  $(id + "N").textContent = n.toLocaleString("ru-RU");
+  $(id + "T").textContent = word(n, ...forms).slice(String(n).length + 1);
+  $(id).hidden = false;
+};
+fetch("stats.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(s => {
+  if (!s) return;
+  stat("abDl", s.downloads, ["скачивание", "скачивания", "скачиваний"]);
+  stat("abUse", s.day, ["телефон", "телефона", "телефонов"]);
 }).catch(() => {});
 abTick();
 </script>

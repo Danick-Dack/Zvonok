@@ -388,24 +388,51 @@ def build_time():
         return int(datetime.datetime.now().timestamp())
 
 
-def downloads():
-    """Сколько раз скачали APK со всех релизов (все версии), по счётчику GitHub. Приложения ничего не отправляют:
-    число знает сам GitHub. None, если он не ответил."""
+def github_counts():
+    """Счётчики GitHub по всем релизам (все версии): сколько раз скачали APK и сколько раз приложения скачали
+    version.json, проверяя обновление. Приложения сами ничего не считают и не отправляют. None, если GitHub не ответил."""
     head = {"Accept": "application/vnd.github+json", "User-Agent": "zvonok-site-build"}
     if os.environ.get("GITHUB_TOKEN"):
         head["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
-    total, page = 0, 1
+    apk = checks = 0
+    page = 1
     try:
         while True:
             url = "https://api.github.com/repos/Danick-Dack/Zvonok/releases?per_page=100&page=%d" % page
             with urllib.request.urlopen(urllib.request.Request(url, headers=head), timeout=15) as r:
                 rel = json.load(r)
-            total += sum(a["download_count"] for x in rel for a in x["assets"] if a["name"].endswith(".apk"))
+            for a in (a for x in rel for a in x["assets"]):
+                if a["name"].endswith(".apk"):
+                    apk += a["download_count"]
+                elif a["name"] == "version.json":
+                    checks += a["download_count"]
             if len(rel) < 100:
-                return total
+                return apk, checks
             page += 1
     except (OSError, ValueError, KeyError, TypeError):
         return None
+
+
+def stats():
+    """stats.json для «О проекте»: скачивания APK и сколько телефонов за сутки проверили обновление.
+    «За сутки» = прирост счётчика version.json с прошлого замера (прошлый stats.json с сайта), пересчитанный на 24 часа."""
+    counts = github_counts()
+    if not counts:
+        return None
+    try:
+        with urllib.request.urlopen(SITE_URL + "stats.json", timeout=10) as r:
+            old = json.load(r)
+    except (OSError, ValueError):
+        old = {}
+    now = int(datetime.datetime.now().timestamp())
+    out = {"downloads": counts[0], "checks": counts[1], "at": now, "day": old.get("day", 0)}
+    if "checks" in old and "at" in old:
+        span = now - old["at"]
+        if span >= 12 * 3600:
+            out["day"] = max(0, round((counts[1] - old["checks"]) * 86400 / span))
+        else:  # прошлый замер был недавно: следующий считаем от него
+            out["checks"], out["at"] = old["checks"], old["at"]
+    return out
 
 
 def class_scripts(data, changelog, app_html):
@@ -688,9 +715,9 @@ def main():
     write("schedule.json", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     write(".nojekyll", "")
     # счётчик скачиваний для «О проекте»: отдельный файл, чтобы его смена раз в сутки не обновляла весь сайт у людей
-    n = downloads() if os.environ.get("CI") or os.environ.get("ZV_STATS") else None
-    if n:
-        write("stats.json", json.dumps({"downloads": n, "date": datetime.date.today().isoformat()}))
+    s = stats() if os.environ.get("CI") or os.environ.get("ZV_STATS") else None
+    if s:
+        write("stats.json", json.dumps(s))
     # в GitHub Actions другие шрифты: картинку превью не перерисовываем, берём закоммиченную
     if not os.environ.get("CI") or not os.path.exists(os.path.join(OUT, "og.png")):
         og_image().save(os.path.join(OUT, "og.png"), optimize=True)

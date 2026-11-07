@@ -25,6 +25,9 @@ final class Updates {
     private static final String KEY_BUILD = "update_latest_build";
     private static final String KEY_NAME = "update_latest_name";
     private static final String API = "https://api.github.com/repos/Danick-Dack/Zvonok/releases/latest";
+    // Номер новой версии: крошечный файл последнего релиза (с 5.0). GitHub считает его скачивания, по ним сайт
+    // показывает, сколько телефонов за сутки проверили обновление. Ничего о телефоне при этом не уходит.
+    private static final String VERSION = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/version.json";
     static final String SITE = "https://danick-dack.github.io/Zvonok/";
     static final String APK_URL = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk";
     private static final String CHANGES = SITE + "changes.json";
@@ -167,8 +170,13 @@ final class Updates {
         new Thread(() -> {
             boolean ok = false;
             try {
-                // тег вида v3.1-build-12
-                String tag = new JSONObject(get(API, 512_000)).getString("tag_name");
+                // тег вида v3.1-build-12; у релизов до 5.0 файла version.json нет, тогда спрашиваем API
+                String tag;
+                try {
+                    tag = new JSONObject(get(VERSION, 4096)).getString("tag");
+                } catch (Exception e) {
+                    tag = new JSONObject(get(API, 512_000)).getString("tag_name");
+                }
                 java.util.regex.Matcher m = java.util.regex.Pattern.compile("^v([\\d.]+)-build-(\\d+)$").matcher(tag);
                 if (m.find()) {
                     Updater.prefs(app).edit().putString(KEY_NAME, m.group(1))

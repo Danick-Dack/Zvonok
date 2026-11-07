@@ -61,12 +61,17 @@ document.addEventListener("visibilitychange", () => {
   abTick();
 });
 abAge();
-// сколько раз скачали приложение: число от GitHub, сборка сайта обновляет stats.json раз в сутки
-fetch("stats.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(s => {
-  const n = s && s.downloads;
+// скачивания приложения и сколько телефонов за сутки проверили обновление: числа от GitHub,
+// сборка сайта обновляет stats.json раз в сутки
+const stat = (id, n, forms) => {
   if (!(n > 0)) return;
-  $("abDlN").textContent = n.toLocaleString("ru-RU");
-  $("abDlT").textContent = word(n, "скачивание", "скачивания", "скачиваний").slice(String(n).length + 1);
-  $("abDl").hidden = false;
+  $(id + "N").textContent = n.toLocaleString("ru-RU");
+  $(id + "T").textContent = word(n, ...forms).slice(String(n).length + 1);
+  $(id).hidden = false;
+};
+fetch("stats.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(s => {
+  if (!s) return;
+  stat("abDl", s.downloads, ["скачивание", "скачивания", "скачиваний"]);
+  stat("abUse", s.day, ["телефон", "телефона", "телефонов"]);
 }).catch(() => {});
 abTick();
