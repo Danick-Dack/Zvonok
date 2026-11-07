@@ -299,19 +299,27 @@ public class EditorActivity extends Activity {
         }
     }
 
-    private boolean save() {
-        for (int i = 0; i < SLOTS; i++) {
+    /** Первый неверный звонок среди уроков с предметом: {номер урока с 0, 0 — начало или 1 — конец}; null, если всё верно. */
+    static int[] badBell(String[][] bells, String[][][] cells) {
+        for (int i = 0; i < bells.length; i++) {
             boolean used = false;
             for (String[][] d : cells) if (!d[i][0].trim().isEmpty()) used = true;
-            if (!used) continue;
+            if (!used) continue; // звонки пустых уроков ни на что не влияют
             int s = Schedule.parseTime(bells[i][0]), e = Schedule.parseTime(bells[i][1]);
-            if (s < 0 || e <= s) {
-                // ошибка прямо у поля (её читает и TalkBack), а не всплывашкой, которая исчезает
-                EditText f = (EditText) ((LinearLayout) bellList.getChildAt(i)).getChildAt(s < 0 ? 1 : 3);
-                f.setError(s < 0 ? "Напиши начало урока, например 8:00" : "Конец урока должен быть позже начала, например 8:45");
-                f.requestFocus();
-                return false;
-            }
+            if (s < 0) return new int[]{i, 0};
+            if (e <= s) return new int[]{i, 1};
+        }
+        return null;
+    }
+
+    private boolean save() {
+        int[] bad = badBell(bells, cells);
+        if (bad != null) {
+            // ошибка прямо у поля (её читает и TalkBack), а не всплывашкой, которая исчезает
+            EditText f = (EditText) ((LinearLayout) bellList.getChildAt(bad[0])).getChildAt(bad[1] == 0 ? 1 : 3);
+            f.setError(bad[1] == 0 ? "Напиши начало урока, например 8:00" : "Конец урока должен быть позже начала, например 8:45");
+            f.requestFocus();
+            return false;
         }
         try {
             SharedPreferences.Editor ed = Updater.prefs(this).edit();

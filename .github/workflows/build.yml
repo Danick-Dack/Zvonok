@@ -63,7 +63,10 @@ jobs:
           cp site/index.html Zvonok-165.html
           # номер версии для проверки обновлений в приложении; число его скачиваний = сколько телефонов проверяли обновление
           printf '{"tag":"v%s-build-%s"}\n' "${{ steps.ver.outputs.name }}" "${{ github.run_number }}" > version.json
-          echo "APK: $(stat -c %s Zvonok-165.apk) байт" >> "$GITHUB_STEP_SUMMARY"
+          size=$(stat -c %s Zvonok-165.apk)
+          echo "APK: $size байт" >> "$GITHUB_STEP_SUMMARY"
+          # на сайте и в приложении написано «меньше 200 КБ»: если APK вырос, сборка падает, пока тексты не поправят
+          [ "$size" -lt 200000 ] || { echo "::error::APK $size байт, а на сайте написано «меньше 200 КБ»"; exit 1; }
           # описание релиза с контрольной суммой: скачанный APK можно сверить
           cp .github/release-notes.md notes.md
           printf '\n\n**SHA-256** `Zvonok-165.apk`: `%s`\n' "$(sha256sum Zvonok-165.apk | cut -d' ' -f1)" >> notes.md

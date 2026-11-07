@@ -200,14 +200,20 @@ final class Perms {
     static List<Item> missing(Activity a) {
         List<Item> out = new ArrayList<>();
         boolean timer = Updater.notifEnabled(a), buzz = Updater.prefs(a).getBoolean(Updater.KEY_BUZZ, false);
-        for (Item i : list(a)) {
-            if ("live".equals(i.key)) continue;
-            // уведомление с таймером выключено в «Ещё»: его разрешения не требуем (вибрации нужны только уведомления вообще)
-            if (!timer && ("ch_live".equals(i.key) || "ch_lock".equals(i.key) || "notif".equals(i.key) && !buzz)) continue;
-            if (Boolean.FALSE.equals(i.ok) || (i.ok == null && !Updater.prefs(a).getBoolean("perm_seen_" + i.key, false)))
-                out.add(i);
-        }
+        for (Item i : list(a))
+            if (required(i.key, i.ok, timer, buzz, Updater.prefs(a).getBoolean("perm_seen_" + i.key, false))) out.add(i);
         return out;
+    }
+
+    /**
+     * Нужен ли пункт в обязательной настройке. timer: уведомление с таймером включено в «Ещё»; buzz: включена
+     * вибрация перед уроком; seen: непроверяемый пункт (ok == null) уже открывали.
+     */
+    static boolean required(String key, Boolean ok, boolean timer, boolean buzz, boolean seen) {
+        if ("live".equals(key)) return false; // таймер в строке состояния по желанию
+        // уведомление с таймером выключено: его разрешения не требуем (вибрации нужны только уведомления вообще)
+        if (!timer && ("ch_live".equals(key) || "ch_lock".equals(key) || "notif".equals(key) && !buzz)) return false;
+        return Boolean.FALSE.equals(ok) || ok == null && !seen;
     }
 
     static void markSeen(Context c, Item i) {
