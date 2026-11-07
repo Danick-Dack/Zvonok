@@ -18,7 +18,12 @@ public class UpdaterTest {
     }
 
     private static Schedule.Status at(int month, int day, int hour, int min) throws Exception {
-        Schedule.init(GoldenTest.G.getJSONObject("schedule").toString(), GoldenTest.G.getJSONObject("changes").toString(), "7Б", null);
+        return at("7Б", month, day, hour, min);
+    }
+
+    /** Данные эталона (расписание и замены, в том числе кривые) для класса cls на момент 2026-month-day hour:min. */
+    private static Schedule.Status at(String cls, int month, int day, int hour, int min) throws Exception {
+        Schedule.init(GoldenTest.G.getJSONObject("schedule").toString(), GoldenTest.G.getJSONObject("changes").toString(), cls, null);
         return Schedule.compute(ZonedDateTime.of(2026, month, day, hour, min, 0, 0, ALMATY));
     }
 
@@ -97,5 +102,48 @@ public class UpdaterTest {
         assertTrue("каникулы", d.holiday && !d.live);
         assertEquals("Каникулы", d.title);
         assertEquals("до уроков 14 дней", "14", d.big);
+    }
+
+    /** Вторник 6:00: до уроков больше часа, отсчёта ещё нет. */
+    @Test
+    public void earlyMorning() throws Exception {
+        Updater.Display d = Updater.describe(at(10, 6, 0), ms(10, 6, 0));
+        assertEquals(Schedule.Kind.BEFORE, d.kind);
+        assertTrue("рано: без отсчёта", !d.timer);
+    }
+
+    /** Понедельник 15:00: последний, 8 урок, в уведомлении «домой в 15:25». */
+    @Test
+    public void lastLesson() throws Exception {
+        Updater.Display d = Updater.describe(at(9, 15, 0), ms(9, 15, 0));
+        assertEquals(Schedule.Kind.LESSON, d.kind);
+        assertTrue("последний урок: " + d.notifText, d.notifText.contains("домой в 15:25"));
+    }
+
+    /** Четверг 12 ноября, сокращённые уроки по заменам: 1 урок 8:00–8:30, отсчёт до 8:30. */
+    @Test
+    public void shortBells() throws Exception {
+        Updater.Display d = Updater.describe(at(12, 8, 20), ms(12, 8, 20));
+        assertEquals(Schedule.Kind.LESSON, d.kind);
+        assertEquals("звонок по сокращённому расписанию", ms(12, 8, 30), d.target);
+    }
+
+    /** Среда 11 ноября, 8А: по замене 3 урок (всемирная история) в спортзале; кривая замена «"4": "Физика"» отброшена, как на сайте. */
+    @Test
+    public void substitution() throws Exception {
+        Updater.Display at3 = Updater.describe(at("8А", 11, 11, 10, 0), ms(11, 10, 0));
+        assertEquals("Всемирная история", at3.title);
+        assertEquals("спортзал", at3.room);
+        Updater.Display at4 = Updater.describe(at("8А", 11, 11, 11, 0), ms(11, 11, 0));
+        assertEquals("кривая замена не применилась", "Физкультура", at4.title);
+    }
+
+    /** 16 декабря, День Независимости: один выходной среди недели, без счётчика дней каникул. */
+    @Test
+    public void oneDayHoliday() throws Exception {
+        long now = ZonedDateTime.of(2026, 12, 16, 10, 0, 0, 0, ALMATY).toInstant().toEpochMilli();
+        Updater.Display d = Updater.describe(at(12, 16, 10, 0), now);
+        assertTrue("праздник", d.holiday && !d.live);
+        assertEquals("Выходной", d.title);
     }
 }

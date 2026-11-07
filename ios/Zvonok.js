@@ -538,7 +538,7 @@ function lockCircle(m) {
     if (m.timer) { const t = timer(w, m.target, Font.boldRoundedSystemFont(16), 1, null, "c"); t.minimumScaleFactor = 0.55; }
     else centered(w, r => T(r, m.big, Font.boldRoundedSystemFont(17), 1, null, 0.55));
     centered(w, r => {
-      if (m.home) symbol(r, "house.fill", 10, 0.85);
+      if (m.home) { if (!symbol(r, "house.fill", 10, 0.85)) T(r, "домой", Font.semiboldRoundedSystemFont(11), 0.85, null, 0.6); }
       else if (m.go) T(r, (m.kind === "LESSON" ? "→" : "") + room0(m.go), Font.semiboldRoundedSystemFont(11), 0.85, null, 0.6);
     });
   }

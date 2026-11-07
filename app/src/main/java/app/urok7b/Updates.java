@@ -85,8 +85,12 @@ final class Updates {
         Handler main = new Handler(Looper.getMainLooper());
         BUSY.set(true);
         new Thread(() -> {
-            boolean changed = fetchSchedule(app) | fetchChanges(app);
-            BUSY.set(false);
+            boolean changed;
+            try {
+                changed = fetchSchedule(app) | fetchChanges(app);
+            } finally {
+                BUSY.set(false);
+            }
             main.post(() -> {
                 if (changed) Updater.update(app);
                 if (done != null) done.run();
@@ -187,28 +191,31 @@ final class Updates {
         Handler main = new Handler(Looper.getMainLooper());
         BUSY.set(true);
         new Thread(() -> {
-            boolean ok = false;
+            boolean ok = false, changed;
             try {
-                // тег вида v3.1-build-12; у релизов до 5.0 файла version.json нет, тогда спрашиваем API
-                String tag;
                 try {
-                    tag = new JSONObject(get(VERSION, 4096, null)[0]).getString("tag");
-                } catch (Exception e) {
-                    tag = new JSONObject(get(API, 512_000, null)[0]).getString("tag_name");
+                    // тег вида v3.1-build-12; у релизов до 5.0 файла version.json нет, тогда спрашиваем API
+                    String tag;
+                    try {
+                        tag = new JSONObject(get(VERSION, 4096, null)[0]).getString("tag");
+                    } catch (Exception e) {
+                        tag = new JSONObject(get(API, 512_000, null)[0]).getString("tag_name");
+                    }
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("^v([\\d.]+)-build-(\\d+)$").matcher(tag);
+                    if (m.find()) {
+                        Updater.prefs(app).edit().putString(KEY_NAME, m.group(1))
+                                .putLong(KEY_BUILD, Long.parseLong(m.group(2)))
+                                .putLong(KEY_LAST, System.currentTimeMillis()).apply();
+                        ok = true;
+                    }
+                } catch (Exception ignored) {
+                    // нет сети: не страшно, проверим в другой раз
                 }
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("^v([\\d.]+)-build-(\\d+)$").matcher(tag);
-                if (m.find()) {
-                    Updater.prefs(app).edit().putString(KEY_NAME, m.group(1))
-                            .putLong(KEY_BUILD, Long.parseLong(m.group(2)))
-                            .putLong(KEY_LAST, System.currentTimeMillis()).apply();
-                    ok = true;
-                }
-            } catch (Exception ignored) {
-                // нет сети: не страшно, проверим в другой раз
+                // заодно свежее расписание и замены (тот же разрешённый выход в интернет)
+                changed = fetchSchedule(app) | fetchChanges(app);
+            } finally {
+                BUSY.set(false); // что бы ни случилось, следующая проверка не застрянет
             }
-            // заодно свежее расписание и замены (тот же разрешённый выход в интернет)
-            boolean changed = fetchSchedule(app) | fetchChanges(app);
-            BUSY.set(false);
             final boolean r = ok;
             main.post(() -> {
                 if (changed) Updater.update(app);
