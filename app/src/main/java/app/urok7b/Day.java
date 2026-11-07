@@ -18,6 +18,9 @@ import java.util.List;
 
 /** Общее у вкладок «Сейчас» и «Неделя»: лента уроков с переменами, полоска дня и пометка дня. */
 final class Day {
+    /** Метка полоски идущего урока: экран «Сейчас» двигает её на каждом тике, не пересобирая список. */
+    static final String CUR_BAR = "cur_progress";
+
 
     private Day() {}
 
@@ -59,7 +62,7 @@ final class Day {
 
     /**
      * Уроки дня с переменами. live: это сегодня, отмечаем прошедшие, идущий и следующий.
-     * progress: сколько процентов идущего урока прошло (-1, если урока сейчас нет).
+     * progress: сколько процентов идущего урока прошло (-1, если урока сейчас нет). Его полоска помечена CUR_BAR.
      */
     static LinearLayout timeline(Context c, List<Schedule.Lesson> list, boolean live, Schedule.Status s,
                                  int nowMin, int progress, String empty) {
@@ -150,6 +153,7 @@ final class Day {
             ProgressBar pb = new ProgressBar(c, null, android.R.attr.progressBarStyleHorizontal);
             pb.setMax(100);
             pb.setProgress(progress);
+            pb.setTag(CUR_BAR);
             pb.setProgressDrawable(c.getDrawable(R.drawable.progress_mono));
             pb.setProgressTintList(android.content.res.ColorStateList.valueOf(Ui.vivid(x.subject)));
             pb.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Ui.TRACK));

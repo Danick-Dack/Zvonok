@@ -179,6 +179,7 @@ async function main() {
   run("доступность", () => {
     ok(!d.getElementById("lTimer").closest("[aria-live]"), "таймер не зачитывается каждую секунду");
     ok(!!d.getElementById("announce").getAttribute("aria-live"), "смена урока объявляется отдельно");
+    ok(d.getElementById("gameScore").getAttribute("aria-live") === "polite", "счёт змейки зачитывается");
     const unnamed = [...d.querySelectorAll("button, a[href]")].filter(b => !(b.textContent.trim() || b.getAttribute("aria-label") || b.title));
     ok(unnamed.length === 0, "у всех кнопок и ссылок есть имя (" + unnamed.length + ")");
     const fields = [...d.querySelectorAll("input, select, textarea")].filter(i => !(i.getAttribute("aria-label") || i.labels && i.labels.length || i.getAttribute("aria-labelledby")));

@@ -277,7 +277,9 @@ final class NowTab {
         boolean live = s.kind != Schedule.Kind.AFTER && !s.list.isEmpty();
         LocalDate day = live ? today : s.nextDate;
         List<Schedule.Lesson> l = live ? s.list : day == null ? Collections.<Schedule.Lesson>emptyList() : Schedule.lessonsOn(day);
-        String sig = d.sig + "|" + today + "|" + d.progress / 5 + "|" + Ui.version;
+        String sig = d.sig + "|" + today + "|" + Ui.version;
+        android.widget.ProgressBar bar = list.findViewWithTag(Day.CUR_BAR);
+        if (bar != null && d.progress >= 0) bar.setProgress(d.progress);
         if (!changed && sig.equals(lastList)) return;
         lastList = sig;
         dayTitle.setText(live ? "Сегодня" : s.nextDays == 1 ? "Завтра" : day != null ? Schedule.dayName(day.getDayOfWeek()) : "Дальше");

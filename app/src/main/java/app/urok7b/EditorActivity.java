@@ -68,8 +68,8 @@ public class EditorActivity extends Activity {
         boolean on = Updater.prefs(this).getBoolean(Schedule.KEY_USE_CUSTOM, false);
         LinearLayout sw = Ui.switchRow(this, "Использовать своё расписание",
                 "Если выключить, будет расписание твоего класса", on, (b, v) -> {
-                    if (v) save(false);
-                    else Updater.prefs(this).edit().putBoolean(Schedule.KEY_USE_CUSTOM, false).apply();
+                    if (v && !save()) b.setChecked(false); // ошибка уже показана у поля
+                    else if (!v) Updater.prefs(this).edit().putBoolean(Schedule.KEY_USE_CUSTOM, false).apply();
                     applyNow();
                 });
         sw.setLayoutParams(Ui.mw(this, 14));
@@ -107,7 +107,7 @@ public class EditorActivity extends Activity {
 
         root.addView(Ui.caps(this, "ГОТОВО"));
         root.addView(Ui.button(this, "Сохранить и включить", true, v -> {
-            if (save(true)) {
+            if (save()) {
                 applyNow();
                 Toast.makeText(this, "Своё расписание включено", Toast.LENGTH_SHORT).show();
                 finish();
@@ -299,14 +299,13 @@ public class EditorActivity extends Activity {
         }
     }
 
-    private boolean save(boolean strict) {
+    private boolean save() {
         for (int i = 0; i < SLOTS; i++) {
             boolean used = false;
             for (String[][] d : cells) if (!d[i][0].trim().isEmpty()) used = true;
             if (!used) continue;
             int s = Schedule.parseTime(bells[i][0]), e = Schedule.parseTime(bells[i][1]);
             if (s < 0 || e <= s) {
-                if (!strict) continue;
                 // ошибка прямо у поля (её читает и TalkBack), а не всплывашкой, которая исчезает
                 EditText f = (EditText) ((LinearLayout) bellList.getChildAt(i)).getChildAt(s < 0 ? 1 : 3);
                 f.setError(s < 0 ? "Напиши начало урока, например 8:00" : "Конец урока должен быть позже начала, например 8:45");

@@ -262,7 +262,7 @@ public final class Schedule {
         JSONObject subj = root.getJSONObject("subjects");
         for (Iterator<String> it = subj.keys(); it.hasNext(); ) {
             String k = it.next();
-            SUBJECTS.put(k, subj.getString(k));
+            SUBJECTS.put(k, clean(subj.getString(k)));
         }
         Hues.names(SUBJECTS);
         JSONObject cls = root.getJSONObject("classes");
@@ -273,7 +273,7 @@ public final class Schedule {
             for (int i = 0; i < days.length(); i++) {
                 JSONArray day = days.optJSONArray(i);
                 d[i] = new String[day == null ? 0 : day.length()];
-                for (int j = 0; j < d[i].length; j++) d[i][j] = day.isNull(j) ? "" : day.optString(j, "");
+                for (int j = 0; j < d[i].length; j++) d[i][j] = day.isNull(j) ? "" : clean(day.optString(j, ""));
             }
             CLASSES.put(k, d);
             CLASS_ORDER.add(k);

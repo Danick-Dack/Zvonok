@@ -5,8 +5,17 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data = json.load(open(os.path.join(ROOT, "data", "schedule.json"), encoding="utf-8"))
 errors = []
+
+
+def no_repeats(pairs):
+    """Повтор ключа в JSON (два одинаковых предмета или класса) молча затёр бы первый: такое не пропускаем."""
+    keys = [k for k, _ in pairs]
+    errors.extend(f"ключ «{k}» повторяется" for k in sorted({k for k in keys if keys.count(k) > 1}))
+    return dict(pairs)
+
+
+data = json.load(open(os.path.join(ROOT, "data", "schedule.json"), encoding="utf-8"), object_pairs_hook=no_repeats)
 
 
 def mins(t):

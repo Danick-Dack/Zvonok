@@ -141,7 +141,7 @@ final class Perms {
         // 6. батарея
         PowerManager pm = a.getSystemService(PowerManager.class);
         out.add(new Item("battery", "Без ограничений батареи",
-                "Без этого система может закрыть уведомление. Расход не растёт",
+                "Без этого система может закрыть уведомление и сбить время в виджетах",
                 pm != null && pm.isIgnoringBatteryOptimizations(a.getPackageName()), () -> {
             if (!open(a, new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg(a))))
                 open(a, new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
