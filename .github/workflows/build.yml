@@ -3,10 +3,19 @@ name: Build APK
 on:
   push:
     branches: ['**']   # только ветки: перенос тегов не запускает лишних сборок
-    paths-ignore:
+    paths-ignore:   # не попадает в приложение: без этого каждая правка документов выпускала «обновление» Android
       - 'site/**'
       - 'tools/**'
-      - 'README.md'
+      - '**.md'
+      - 'LICENSE'
+      - '*.cmd'
+      - 'data/olympiads.json'
+      - '.github/CODEOWNERS'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/dependabot.yml'
+      - '.github/workflows/pages.yml'
+      - '.github/workflows/checks.yml'
+      - '.github/workflows/codeql.yml'
   workflow_dispatch:
 
 permissions:

@@ -2,7 +2,7 @@
 
 [![Сборка](https://github.com/Danick-Dack/Zvonok/actions/workflows/build.yml/badge.svg)](https://github.com/Danick-Dack/Zvonok/actions/workflows/build.yml)
 [![Проверки](https://github.com/Danick-Dack/Zvonok/actions/workflows/checks.yml/badge.svg)](https://github.com/Danick-Dack/Zvonok/actions/workflows/checks.yml)
-[![Лицензия MIT](https://img.shields.io/badge/лицензия-MIT-blue.svg)](LICENSE)
+[![Все права защищены](https://img.shields.io/badge/лицензия-все%20права%20защищены-lightgrey.svg)](LICENSE)
 
 Сколько до звонка, какой следующий урок и в каком он кабинете. Для всех 19 классов лицея (7А–11Г).
 
@@ -53,9 +53,9 @@
 | `ios/` | скрипт виджетов для Scriptable |
 | `tools/` | сборка сайта, проверка данных, автотесты |
 
-## Открытый проект
+## Лицензия
 
-Лицензия [MIT](LICENSE): код можно смотреть, копировать, менять, выкладывать свои версии и брать в свои проекты,
-если сохранить строку об авторе. Хочешь такой же для своей школы: сделай форк, поменяй `data/` и назови его по-своему.
+Все права защищены ([LICENSE](LICENSE)): код можно смотреть, но копировать, менять, выкладывать свои версии
+и брать его в свои проекты без разрешения автора нельзя. Для другой школы есть конструктор расписания на сайте.
 Как всё устроено и как прислать правку: [CONTRIBUTING.md](CONTRIBUTING.md). Об уязвимостях: [SECURITY.md](SECURITY.md).
 Официальные сборки «Звонка» только на этом сайте и в Releases этого репозитория.

@@ -1,21 +1,27 @@
-MIT License
+Copyright (c) 2026 Danick. Все права защищены.
 
-Copyright (c) 2026 Danick
+Исходный код «Звонка» открыт только для просмотра.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Без письменного разрешения автора нельзя копировать, изменять, распространять
+и публиковать этот код или его части, выкладывать свои версии «Звонка»
+и использовать код в других проектах.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Пользоваться сайтом и приложениями «Звонок» можно бесплатно.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Присылая изменения (Pull Request), участник разрешает автору использовать
+их в «Звонке» на этих же условиях.
+
+---
+
+Copyright (c) 2026 Danick. All rights reserved.
+
+The source code of "Zvonok" is available for viewing only.
+
+Without the author's written permission you may not copy, modify, distribute
+or publish this code or any part of it, release your own versions of "Zvonok",
+or use the code in other projects.
+
+The "Zvonok" website and apps are free to use.
+
+By submitting changes (Pull Requests), contributors allow the author to use
+them in "Zvonok" under these same terms.

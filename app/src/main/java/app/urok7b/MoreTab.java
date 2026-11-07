@@ -161,7 +161,7 @@ final class MoreTab {
         about.addView(Ui.linkRow(a, "Что нового", "Все обновления сайта, Android и iPhone", null, v -> a.startActivity(new Intent(a, Changelog.class))));
         about.addView(Ui.linkRow(a, "Написать нам", "Идея, ошибка или вопрос. Анонимно", null, v -> a.startActivity(new Intent(a, Feedback.class))));
         about.addView(Ui.linkRow(a, "Сайт «Звонка»", "Все классы, установка для iPhone", null, v -> open(Uri.parse(Updates.SITE))));
-        about.addView(Ui.linkRow(a, "Исходный код", "Открытый проект (MIT): можно копировать и менять", null, v -> open(Uri.parse("https://github.com/Danick-Dack/Zvonok"))));
+        about.addView(Ui.linkRow(a, "Исходный код", "Только для просмотра, все права защищены", null, v -> open(Uri.parse("https://github.com/Danick-Dack/Zvonok"))));
         age = note(ageText());
         age.setPadding(0, a.dp(12), 0, a.dp(4));
         about.addView(age);
