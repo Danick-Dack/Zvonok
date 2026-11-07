@@ -59,7 +59,6 @@ jobs:
       - name: Collect files
         run: |
           cp app/build/outputs/apk/release/app-release.apk Zvonok-165.apk
-          cp Zvonok-165.apk Uroki7B.apk   # копия под старым именем: по нему ищет обновление приложение v3.0
           cp site/index.html Zvonok-165.html
           # номер версии для проверки обновлений в приложении; число его скачиваний = сколько телефонов проверяли обновление
           printf '{"tag":"v%s-build-%s"}\n' "${{ steps.ver.outputs.name }}" "${{ github.run_number }}" > version.json
@@ -101,7 +100,6 @@ jobs:
           body_path: notes.md
           files: |
             Zvonok-165.apk
-            Uroki7B.apk
             Zvonok-165.html
             version.json
           # версия с -beta: пробный выпуск. Приложение обновляется только до основных релизов (releases/latest),
