@@ -591,6 +591,12 @@ public final class Updater {
         return best;
     }
 
+    /** Когда на экране что-то поменяется само: следующая минута у текста «N мин», иначе следующий шаг полосы в 5%. */
+    static long nextStep(Schedule.Status s, Display d, long nowMs, boolean perMinute) {
+        if (perMinute || d.progress < 0) return (nowMs / 60_000 + 1) * 60_000;
+        return Math.max(nowMs + 1000, s.startMillis + (d.progress / 5 + 1) * (s.targetMillis - s.startMillis) / 20);
+    }
+
     private static void scheduleNext(Context ctx, Schedule.Status s, Display d, long nowMs,
                                      boolean screenOn, boolean active, long bell, boolean perMinute) {
         AlarmManager am = ctx.getSystemService(AlarmManager.class);
@@ -615,9 +621,7 @@ public final class Updater {
             // Каждую минуту — только когда на экран смотрят. Если экран выключен, а служба жива,
             // она сама обновит всё при включении экрана, и поминутные тики не нужны.
             boolean minuteTicks = screenOn || !LessonService.isRunning();
-            long step = perMinute || d.progress < 0 ? (nowMs / 60_000 + 1) * 60_000
-                    : Math.max(nowMs + 1000, s.startMillis + (d.progress / 5 + 1) * (s.targetMillis - s.startMillis) / 20);
-            if (minuteTicks) when = Math.min(boundary, step);
+            if (minuteTicks) when = Math.min(boundary, nextStep(s, d, nowMs, perMinute));
         }
         when += 500; // чуть после звонка, чтобы точно попасть в новое состояние
 

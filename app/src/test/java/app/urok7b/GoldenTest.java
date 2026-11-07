@@ -26,7 +26,7 @@ import java.util.Objects;
  */
 public class GoldenTest {
 
-    private static final JSONObject G = load();
+    static final JSONObject G = load(); // эталон: им пользуется и UpdaterTest
     private static final String[] HUE = {"red", "orange", "yellow", "green", "mint", "teal", "cyan", "blue", "indigo",
             "purple", "pink", "brown", "gray"};
     private final List<String> errors = new ArrayList<>();
