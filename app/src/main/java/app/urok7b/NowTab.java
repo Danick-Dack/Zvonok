@@ -225,6 +225,9 @@ final class NowTab {
         p.width = p.height = a.dp(side);
         ringBox.setLayoutParams(p);
         for (TextView x : new TextView[]{chrono, big}) x.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 50 * side / 236);
+        // набок высоты мало: сразу показываем карточку с таймером, шапка остаётся выше (прокрутка вверх)
+        if (c.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+            view.post(() -> view.scrollTo(0, hero.getTop() - a.dp(8)));
     }
 
     void pause() {
