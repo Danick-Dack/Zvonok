@@ -3,7 +3,7 @@
 // дальше сохранённая копия. Иконки и прочее: сразу из кэша. Чужие сайты и запросы не трогаем.
 // Версия меняется при каждой сборке с изменениями: новый воркер ставится сам, старый кэш удаляется.
 // localStorage (класс, своё расписание, настройки) воркер не трогает.
-const VERSION = "b6e81f25b9";
+const VERSION = "58388a2ae8";
 const CACHE = "zvonok-" + VERSION;
 const SHELL = ["./", "index.html", "about.html", "make.html", "iphone.html", "changelog.html", "feedback.html", "poster.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png", "changes.json", "olympiads.json"];
 

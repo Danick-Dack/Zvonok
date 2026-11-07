@@ -107,7 +107,7 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 .tag.bad{background:var(--bad-soft);color:var(--bad)}
 
 /* лист снизу (на компьютере окно по центру) */
-.sheet{border:0;padding:0;background:var(--surface);color:var(--text);width:calc(100% - 32px);max-width:440px;max-height:min(86vh,720px);
+.sheet{border:0;padding:0;margin:auto;background:var(--surface);color:var(--text);width:calc(100% - 32px);max-width:440px;max-height:min(86vh,720px);
   border-radius:var(--r-xl);box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:auto;overscroll-behavior:contain}
 .sheet::backdrop{background:var(--scrim)}
 .sheet[open]{animation:sheet-in .26s var(--ease)}
