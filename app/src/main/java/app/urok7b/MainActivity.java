@@ -85,7 +85,15 @@ public class MainActivity extends Activity {
             TextView name = Ui.text(this, TAB_NAMES[i], 12, Ui.MUTED, "sans-serif-medium");
             name.setGravity(Gravity.CENTER);
             t.addView(name);
-            t.setContentDescription(TAB_NAMES[i] + ", вкладка " + (i + 1) + " из 4");
+            // роль «вкладка» для TalkBack: он сам скажет «вкладка» и «выбрано»
+            t.setContentDescription(TAB_NAMES[i] + ", " + (i + 1) + " из 4");
+            t.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+                @Override
+                public void onInitializeAccessibilityNodeInfo(View host, android.view.accessibility.AccessibilityNodeInfo info) {
+                    super.onInitializeAccessibilityNodeInfo(host, info);
+                    info.setClassName("android.app.ActionBar$Tab");
+                }
+            });
             t.setOnClickListener(v -> {
                 Ui.tick(v);
                 if (tab == k) pages[k].smoothScrollTo(0, 0); // повторное нажатие: наверх, как в системных приложениях

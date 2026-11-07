@@ -101,13 +101,13 @@ public class LockActivity extends Activity {
         chrono = new Chronometer(this);
         chrono.setTextColor(Ui.TEXT);
         chrono.setTextSize(54);
-        chrono.setTypeface(Typeface.create("sans-serif-thin", Typeface.NORMAL));
+        chrono.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
         chrono.setFontFeatureSettings("tnum");
         chrono.setIncludeFontPadding(false);
         chrono.setCountDown(true);
         chrono.setGravity(Gravity.CENTER);
         center.addView(chrono);
-        big = Ui.text(this, "", 54, Ui.TEXT, "sans-serif-thin");
+        big = Ui.text(this, "", 54, Ui.TEXT, "sans-serif-light");
         big.setIncludeFontPadding(false);
         big.setGravity(Gravity.CENTER);
         center.addView(big);

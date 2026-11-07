@@ -110,7 +110,7 @@ final class NowTab {
         big = Ui.text(a, "", 50, Ui.TEXT, null);
         for (TextView x : new TextView[]{chrono, big}) {
             x.setTextColor(Ui.TEXT);
-            x.setTypeface(Typeface.create("sans-serif-thin", Typeface.NORMAL));
+            x.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
             x.setFontFeatureSettings("tnum");
             x.setIncludeFontPadding(false);
             x.setGravity(Gravity.CENTER);
