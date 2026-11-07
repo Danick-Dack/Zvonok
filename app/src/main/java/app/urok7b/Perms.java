@@ -199,8 +199,11 @@ final class Perms {
     /** Чего не хватает: выключенные пункты и непроверяемые, которые ещё ни разу не открывали (таймер в строке состояния по желанию). */
     static List<Item> missing(Activity a) {
         List<Item> out = new ArrayList<>();
+        boolean timer = Updater.notifEnabled(a), buzz = Updater.prefs(a).getBoolean(Updater.KEY_BUZZ, false);
         for (Item i : list(a)) {
             if ("live".equals(i.key)) continue;
+            // уведомление с таймером выключено в «Ещё»: его разрешения не требуем (вибрации нужны только уведомления вообще)
+            if (!timer && ("ch_live".equals(i.key) || "ch_lock".equals(i.key) || "notif".equals(i.key) && !buzz)) continue;
             if (Boolean.FALSE.equals(i.ok) || (i.ok == null && !Updater.prefs(a).getBoolean("perm_seen_" + i.key, false)))
                 out.add(i);
         }

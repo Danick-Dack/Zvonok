@@ -278,7 +278,7 @@ final class Ui {
         // как на iPhone и на сайте: сплошная дорожка (зелёная, когда включено) и белый кружок; видно в обеих темах
         GradientDrawable track = new GradientDrawable();
         track.setCornerRadius(dp(c, 15));
-        track.setColor(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}}, new int[]{OK, DARK ? 0xFF3A3A3E : 0xFFD3D3CE}));
+        track.setColor(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}}, new int[]{OK, DARK ? 0xFF6E6E73 : 0xFF86868B})); // выключенная тоже видна: контраст с фоном не ниже 3:1
         track.setSize(dp(c, 50), dp(c, 30));
         GradientDrawable thumb = new GradientDrawable();
         thumb.setShape(GradientDrawable.OVAL);

@@ -116,10 +116,12 @@ public final class Updater {
         long bell = rooms ? nextBell(now) : 0;
         String sig = d.sig + "|" + (rooms ? bell : 0);
         // Что видно глазом между звонками: полоса шагами по 5% и таймер без секунд (текст раз в минуту).
-        // Уведомление ещё и пишет «осталось N мин» (часы, экран блокировки MIUI). Перерисовываем только то, что поменялось.
+        // Уведомление ещё и пишет «осталось N мин» (часы, экран блокировки MIUI), кроме режима Live на Android 16.
+        // Перерисовываем только то, что поменялось.
         String widgetView = sig + "|" + (d.progress < 0 ? -1 : d.progress / 5) + "|"
                 + (d.timer && !t.seconds ? Schedule.fmtTimer(d.target - nowMs) : "");
-        String notifView = widgetView + "|" + d.notifTitle;
+        boolean minuteTitle = notif && !live(ctx, d);
+        String notifView = widgetView + "|" + (minuteTitle ? d.notifTitle : "");
         boolean changed = force || !sig.equals(lastSig);
         lastSig = sig;
 
@@ -135,8 +137,8 @@ public final class Updater {
             RoomsWidget.updateAll(ctx, now, t);
         }
         scheduleBuzz(ctx, now, prefs(ctx).getBoolean(KEY_BUZZ, false));
-        // без секунд таймер — это текст, и его надо обновлять раз в минуту, пока экран включён
-        scheduleNext(ctx, s, d, nowMs, screenOn, notif || widgets, bell);
+        // раз в минуту нужно только тексту (таймер без секунд, «осталось N мин»), иначе хватит шагов полосы
+        scheduleNext(ctx, s, d, nowMs, screenOn, notif || widgets, bell, !t.seconds || minuteTitle);
     }
 
     /** Уведомление включено и (если выбрано «только в учебное время») сейчас учебное время. */
@@ -590,7 +592,7 @@ public final class Updater {
     }
 
     private static void scheduleNext(Context ctx, Schedule.Status s, Display d, long nowMs,
-                                     boolean screenOn, boolean active, long bell) {
+                                     boolean screenOn, boolean active, long bell, boolean perMinute) {
         AlarmManager am = ctx.getSystemService(AlarmManager.class);
         if (am == null) return;
         ZonedDateTime now = ZonedDateTime.now();
@@ -613,7 +615,9 @@ public final class Updater {
             // Каждую минуту — только когда на экран смотрят. Если экран выключен, а служба жива,
             // она сама обновит всё при включении экрана, и поминутные тики не нужны.
             boolean minuteTicks = screenOn || !LessonService.isRunning();
-            if (minuteTicks) when = Math.min(boundary, (nowMs / 60_000 + 1) * 60_000);
+            long step = perMinute || d.progress < 0 ? (nowMs / 60_000 + 1) * 60_000
+                    : Math.max(nowMs + 1000, s.startMillis + (d.progress / 5 + 1) * (s.targetMillis - s.startMillis) / 20);
+            if (minuteTicks) when = Math.min(boundary, step);
         }
         when += 500; // чуть после звонка, чтобы точно попасть в новое состояние
 
