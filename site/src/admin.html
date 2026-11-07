@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="@CSP@">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light dark">
+<title>Замены и расписание · Звонок</title>
+<link rel="icon" href="@FAVICON@">
+<script>@HEAD_JS@</script>
+<style>@CSS@</style>
+</head>
+<body>
+<a class="skip" href="#main">К форме</a>
+@ICONS@
+@HEADER@
+<main id="main" class="wrap page" tabindex="-1">
+  <div class="page-head"><h1>Замены и расписание</h1><p>Для завуча и тех, кто ведёт расписание. Здесь можно отметить замены, сокращённый день или загрузить новое расписание из Excel. Сохранение идёт в GitHub, через пару минут сайт и приложения обновятся сами.</p></div>
+  <div class="seg tabs" role="tablist" aria-label="Что меняем">
+    <button type="button" role="tab" id="tCh" aria-controls="pCh" aria-selected="true">Замены на день</button>
+    <button type="button" role="tab" id="tImp" aria-controls="pImp" aria-selected="false">Расписание из Excel</button>
+  </div>
+
+  <section id="pCh" role="tabpanel" aria-labelledby="tCh">
+    <div class="make-grid">
+      <div class="card">
+        <div class="row"><label class="label" for="aDate" style="margin:0">День</label><input class="field" type="date" id="aDate" style="width:auto"></div>
+        <label class="switch"><span>Уроков нет ни у кого<small>Актированный день, праздник, карантин</small></span><input type="checkbox" id="aOff"></label>
+        <input class="field" id="aOffWhy" placeholder="Почему, например «Актированный день»" maxlength="40" hidden>
+        <label class="label" for="aNote" style="margin-top:12px">Заметка для всех</label>
+        <input class="field" id="aNote" placeholder="Например: сокращённые уроки по 30 минут" maxlength="80">
+        <label class="switch"><span>Свои звонки на этот день<small>Сокращённые уроки или другой порядок</small></span><input type="checkbox" id="aShort"></label>
+        <div id="aBellsBox" hidden>
+          <div class="row"><button class="btn btn-quiet btn-sm" id="aShort30" type="button">Уроки по 30 минут</button><button class="btn btn-quiet btn-sm" id="aShort35" type="button">По 35 минут</button></div>
+          <div class="bells" id="aBells"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><label class="label" for="aCls" style="margin:0">Класс</label><select class="field" id="aCls" style="width:auto"></select></div>
+        <p class="note" id="aClsNote">Обычные уроки этого дня. Отметь, что меняется.</p>
+        <div id="aLessons" class="stack" style="margin-top:10px"></div>
+        <datalist id="aSubj"></datalist>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2 class="card-title">Все дни с заменами</h2>
+      <div id="aDays" class="stack"></div>
+    </div>
+  </section>
+
+  <section id="pImp" role="tabpanel" aria-labelledby="tImp" hidden>
+    <div class="card">
+      <ol class="steps">
+        <li><div><b>Скачай шаблон</b><p>Таблица с колонками: Класс, День, Урок, Предмет, Кабинет. Там уже текущее расписание, его удобно править.</p><div class="row"><button class="btn btn-quiet btn-sm" id="iTpl" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Шаблон с текущим расписанием</button></div></div></li>
+        <li><div><b>Поправь в Excel и сохрани как CSV</b><p>«Файл» → «Сохранить как» → «CSV (разделители — точка с запятой)». День: Пн, Вт, Ср, Чт, Пт или Сб. Кабинет можно через дробь: 42/21.</p></div></li>
+        <li><div><b>Загрузи файл</b><p>Сайт проверит таблицу и покажет, что поменяется.</p><input class="field" type="file" id="iFile" accept=".csv,text/csv" aria-label="CSV-файл с расписанием"></div></li>
+      </ol>
+      <label class="label" for="iTerm" style="margin-top:16px">Четверть</label>
+      <input class="field" id="iTerm" maxlength="40">
+      <label class="label" for="iEnd" style="margin-top:12px">Последний день четверти</label>
+      <input class="field" type="date" id="iEnd" style="width:auto">
+      <p class="err" id="iErr" role="alert" hidden></p>
+      <div id="iSum" class="note" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <div class="card save" id="save">
+    <h2 class="card-title">Сохранить</h2>
+    <p class="note" id="sWhat">Пока ничего не изменено.</p>
+    <details class="faq-lite"><summary>Показать файл</summary><pre id="sJson" class="json"></pre></details>
+    <div class="row" style="margin-top:12px">
+      <button class="btn btn-primary" id="sGit" type="button">Сохранить в GitHub</button>
+      <button class="btn btn-quiet" id="sCopy" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Скопировать</button>
+      <a class="btn btn-line" id="sOpen" href="#" target="_blank" rel="noopener noreferrer">Открыть файл на GitHub</a>
+    </div>
+    <details class="faq-lite" style="margin-top:12px"><summary>Ключ GitHub</summary>
+      <p class="note">Для кнопки «Сохранить в GitHub» нужен ключ доступа к репозиторию (fine-grained token, только репозиторий Zvonok, право Contents: Read and write). Он хранится только в этой вкладке и пропадает, когда её закрыть. Без ключа нажми «Скопировать», потом «Открыть файл на GitHub», вставь и нажми «Commit changes».</p>
+      <input class="field" type="password" id="sToken" autocomplete="off" placeholder="github_pat_…" aria-label="Ключ GitHub">
+    </details>
+    <p class="err" id="sErr" role="alert" hidden></p>
+  </div>
+</main>
+<div class="zv-toast" id="zvToast" role="status" aria-live="polite"></div>
+<script>@JS@</script>
+</body>
+</html>
