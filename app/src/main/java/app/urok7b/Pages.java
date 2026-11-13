@@ -55,6 +55,7 @@ public class Pages extends Activity {
         android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(this);
         hs.setHorizontalScrollBarEnabled(false);
         LinearLayout pills = Ui.horizontal(this);
+        pills.setGravity(android.view.Gravity.TOP); // иначе прокрутка срезает кнопкам верх
         hs.addView(pills);
         for (int g : new int[]{0, 7, 8, 9, 10, 11}) {
             pills.addView(Ui.pill(this, g == 0 ? "Все" : g + " класс", g == grade, v -> { grade = g; olymp(); }));

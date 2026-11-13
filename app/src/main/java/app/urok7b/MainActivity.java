@@ -90,6 +90,8 @@ public class MainActivity extends Activity {
             TextView name = Ui.text(this, TAB_NAMES[i], 11, Ui.MUTED, "sans-serif-medium");
             name.setGravity(Gravity.CENTER);
             name.setMaxLines(1);
+            // шесть вкладок на узком экране с крупным шрифтом: подпись ужимается, а не обрезается
+            name.setAutoSizeTextTypeUniformWithConfiguration(8, 11, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
             t.addView(name);
             // роль «вкладка» для TalkBack: он сам скажет «вкладка» и «выбрано»
             t.setContentDescription(TAB_NAMES[i]);

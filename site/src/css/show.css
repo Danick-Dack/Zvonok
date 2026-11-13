@@ -46,6 +46,8 @@
 .sc-note{width:100%;text-align:left;background:rgba(255,255,255,.1);border-radius:14px;padding:9px 10px;margin-top:auto;transform:translateY(16px);opacity:0;transition:transform .5s var(--ease) .5s,opacity .5s .5s}
 .sc.on .sc-note{transform:none;opacity:1}
 .sc-note b{display:block;font-size:12px}
+/* на цветном фоне мелкий серый текст не читался */
+.sc-lock small,.sc-note small,.sc-widget small{color:#C6C6C2}
 .sc-btn{display:block;text-align:center;padding:9px;border-radius:11px;background:#409CFF;color:#0B0B0C;font-weight:700}
 .sc-btn.ghost{background:#28282C;color:#F3F3F1}
 .sc-tap{position:relative}

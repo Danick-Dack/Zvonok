@@ -38,6 +38,7 @@ final class ExamsTab {
         HorizontalScrollView hs = new HorizontalScrollView(a);
         hs.setHorizontalScrollBarEnabled(false);
         classes = Ui.horizontal(a);
+        classes.setGravity(Gravity.TOP); // по центру кнопки с нижним отступом уезжают вверх, и прокрутка срезает им верх
         hs.addView(classes);
         root.addView(hs, Ui.mw(a, 14));
         list = Ui.vertical(a);
@@ -111,7 +112,11 @@ final class ExamsTab {
                 lp.leftMargin = a.dp(10);
                 card.addView(col, lp);
                 String when = n == 0 ? "сегодня" : n == 1 ? "завтра" : n > 1 ? "через " + Schedule.word((int) n, "день", "дня", "дней") : "";
-                if (!when.isEmpty()) card.addView(Ui.text(a, when, 13, n <= 1 ? Ui.ACCENT : Ui.MUTED, n <= 1 ? "sans-serif-medium" : null));
+                if (!when.isEmpty()) {
+                    TextView w = Ui.text(a, when, 13, n <= 1 ? Ui.ACCENT : Ui.MUTED, n <= 1 ? "sans-serif-medium" : null);
+                    w.setPadding(a.dp(8), 0, 0, 0); // длинный предмет не упирается в «через 9 дней»
+                    card.addView(w);
+                }
                 card.setFocusable(true);
                 card.setContentDescription(Schedule.dateText(d) + (when.isEmpty() ? "" : ", " + when));
                 list.addView(card, Ui.mw(a, 10));
