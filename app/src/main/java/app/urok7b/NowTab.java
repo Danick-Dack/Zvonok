@@ -32,7 +32,7 @@ final class NowTab {
     final ScrollView view;
     private final MainActivity a;
     private final LinearLayout hero, nextCard, dots, list, news;
-    private final TextView date, badge, status, title, big, caption, sideH, sideV, statH, statV, update;
+    private final TextView date, badge, status, title, big, caption, sideH, sideV, statH, statV, update, fest;
     private final TextView nextH, nextS, foot, vac, tz, dayTitle, dayMeta;
     private final Chronometer chrono;
     private final RingView ring;
@@ -50,7 +50,7 @@ final class NowTab {
         root.setPadding(a.dp(18), a.dp(20), a.dp(18), a.dp(28));
         view.addView(root);
 
-        // шапка: «Звонок» (десять нажатий: змейка), дата и класс
+        // шапка: «Звонок» (три нажатия: змейка), дата и класс
         LinearLayout head = Ui.horizontal(a);
         LinearLayout t = Ui.vertical(a);
         t.setLayoutParams(Ui.weight(1));
@@ -75,6 +75,11 @@ final class NowTab {
         update.setBackground(Ui.round(a, Ui.ACCENT, 16, 0));
         update.setOnClickListener(v -> a.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Updates.APK_URL))));
         root.addView(update, Ui.mw(a, 14));
+
+        // праздник: значок, название и пара слов. Нажатие прячет до следующего праздника
+        fest = Ui.text(a, "", 15, Ui.TEXT, "sans-serif-medium");
+        fest.setPadding(a.dp(16), a.dp(12), a.dp(16), a.dp(12));
+        root.addView(fest, Ui.mw(a, 14));
 
         // «что нового» один раз после обновления
         news = Ui.horizontal(a);
@@ -122,6 +127,11 @@ final class NowTab {
         caption.setGravity(Gravity.CENTER);
         center.addView(caption);
         ringBox.addView(center, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // подержать палец на таймере: школьная мудрость (как на сайте)
+        ringBox.setOnLongClickListener(v -> {
+            android.widget.Toast.makeText(a, QUOTES[(int) (Math.random() * QUOTES.length)], android.widget.Toast.LENGTH_LONG).show();
+            return true;
+        });
         hero.addView(ringBox, rp);
         fitRing();
 
@@ -264,10 +274,21 @@ final class NowTab {
         }
         chrono.setVisibility(d.timer ? View.VISIBLE : View.GONE);
         big.setVisibility(d.timer ? View.GONE : View.VISIBLE);
-        caption.setText(caption(s));
-        String subj = d.kind == Schedule.Kind.LESSON ? d.title
+        caption.setText(d.extra ? (d.progress >= 0 ? "ДО КОНЦА" : "ДО НАЧАЛА") : caption(s));
+        String subj = d.extra ? null : d.kind == Schedule.Kind.LESSON ? d.title
                 : d.kind == Schedule.Kind.BREAK || d.kind == Schedule.Kind.BEFORE ? d.nextSubject : null;
-        ring.setColor(subj == null ? Ui.ACCENT : Ui.vivid(subj));
+        // праздничная тема: значок, фраза и цвет праздника у кольца, пока на нём нет урока
+        String[] f = Updater.prefs(a).getBoolean(Plus.KEY_FEST, true) ? Plus.festive(today) : null;
+        String festKey = f == null ? "" : f[2] + today.getYear();
+        boolean festOn = f != null && !festKey.equals(Updater.prefs(a).getString("fest_seen", ""));
+        fest.setVisibility(festOn ? View.VISIBLE : View.GONE);
+        int festColor = f == null ? Ui.ACCENT : 0xFF000000 | Integer.parseInt(f[1], 16);
+        if (festOn) {
+            fest.setText(f[0] + "  " + f[2] + (f[3].isEmpty() ? "" : "\n" + f[3]));
+            fest.setBackground(Ui.round(a, (festColor & 0x00FFFFFF) | 0x33000000, 16, 0));
+            fest.setOnClickListener(v -> { Updater.prefs(a).edit().putString("fest_seen", festKey).apply(); fest.setVisibility(View.GONE); });
+        }
+        ring.setColor(subj == null ? festColor : Ui.vivid(subj));
         ring.setProgress(d.progress >= 0 ? d.progress / 100f : -1);
         hero.setBackground(heroBg(d.timer ? subj : null));
         title.setText(d.title);
@@ -285,6 +306,7 @@ final class NowTab {
         foot.setText(d.foot);
         foot.setVisibility(d.foot.isEmpty() ? View.GONE : View.VISIBLE);
         String v = Schedule.vacationText(Schedule.vacation(t.now));
+        if (!d.note.isEmpty() && !d.note.equals(d.foot)) v = d.note + (v.isEmpty() ? "" : "\n" + v); // СОР и СОЧ, праздник завтра
         vac.setText(v);
         vac.setVisibility(v.isEmpty() ? View.GONE : View.VISIBLE);
         int off = t.now.getOffset().getTotalSeconds();
@@ -304,7 +326,7 @@ final class NowTab {
         TextView note = day == null ? null : Day.noteView(a, day);
         if (note != null) noteBox.addView(note);
         list.removeAllViews();
-        list.addView(Day.timeline(a, l, live, s, t.min, d.kind == Schedule.Kind.LESSON ? d.progress : -1, "Ближайших уроков нет"));
+        list.addView(Day.timeline(a, l, day, live, s, t.min, d.kind == Schedule.Kind.LESSON ? d.progress : -1, "Ближайших уроков нет"));
     }
 
     private String caption(Schedule.Status s) {
@@ -400,12 +422,17 @@ final class NowTab {
         news.addView(close, new LinearLayout.LayoutParams(a.dp(44), a.dp(44)));
     }
 
-    /** Десять нажатий на «Звонок» подряд: змейка, скоротать перемену (как на сайте). */
+    private static final String[] QUOTES = {"Звонок для учителя. Но таймер для тебя.", "До конца урока всегда чуть дольше, чем кажется.",
+            "Кто понял жизнь, тот сидит на последней парте.", "Забыл форму: классика жанра.", "Домашку списывают все. Не все признаются.",
+            "Вторая смена обуви спасает мир.", "«Достаём двойные листочки»: фраза, от которой холодеет спина.", "Сегодня точно спросят. Или нет.",
+            "Столовая: успей за одну перемену.", "Учебник дома, знания тоже."};
+
+    /** Три нажатия на «Звонок» подряд: змейка, скоротать перемену (как на сайте). */
     private void secret() {
         long now = System.currentTimeMillis();
         taps = now - tapT < 1600 ? taps + 1 : 1;
         tapT = now;
-        if (taps < 10) return;
+        if (taps < 3) return;
         taps = 0;
         Snake.show(a);
     }

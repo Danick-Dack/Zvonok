@@ -3,9 +3,9 @@
 // дальше сохранённая копия. Иконки и прочее: сразу из кэша. Чужие сайты и запросы не трогаем.
 // Версия меняется при каждой сборке с изменениями: новый воркер ставится сам, старый кэш удаляется.
 // localStorage (класс, своё расписание, настройки) воркер не трогает.
-const VERSION = "8c349a6a9d";
+const VERSION = "185908e66f";
 const CACHE = "zvonok-" + VERSION;
-const SHELL = ["./", "index.html", "about.html", "make.html", "iphone.html", "changelog.html", "feedback.html", "poster.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png", "changes.json", "olympiads.json"];
+const SHELL = ["./", "index.html", "about.html", "make.html", "iphone.html", "android.html", "changelog.html", "feedback.html", "poster.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png", "changes.json", "olympiads.json"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE)
@@ -60,7 +60,7 @@ self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin) return;
   if (req.mode === "navigate" || /\.html$/.test(url.pathname)) {
-    e.respondWith(networkFirst(req, "index.html"));
+    e.respondWith(networkFirst(req, /\/about$/.test(url.pathname) ? "about.html" : "index.html")); // «О проекте» живёт по адресу /about
   } else if (/\.json$/.test(url.pathname)) {
     e.respondWith(networkFirst(req));
   } else if (/\.ics$/.test(url.pathname)) {

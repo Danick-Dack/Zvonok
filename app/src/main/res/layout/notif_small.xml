@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Свёрнутое уведомление: две строки слева, живой таймер справа -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- свой фон (фото): виден, только если его включили в «Оформлении» -->
+    <ImageView
+        android:id="@+id/n_bg"
+        android:importantForAccessibility="no"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/n_root"
+        android:layout_alignBottom="@+id/n_root"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
+
+<LinearLayout
     android:id="@+id/n_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -59,3 +74,4 @@
         android:textSize="26sp"
         android:visibility="gone" />
 </LinearLayout>
+</RelativeLayout>

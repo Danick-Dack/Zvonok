@@ -162,6 +162,25 @@ final class Updates {
         }
     }
 
+    private static final String KEY_BG = "background_last";
+
+    /**
+     * Проверка на плановом тике, когда экран включён и телефон и так не спит: не чаще раза в 6 часов и только
+     * с разрешения ходить в интернет. Раз в сутки версия (вышла новая: уведомление), замены и свежие новости лицея.
+     */
+    static void background(Context ctx) {
+        SharedPreferences p = Updater.prefs(ctx);
+        long now = System.currentTimeMillis();
+        if (!p.getBoolean(KEY_AUTO, false) || BUSY.get() || Math.abs(now - p.getLong(KEY_BG, 0)) < 6 * 3600_000L) return;
+        p.edit().putLong(KEY_BG, now).apply();
+        Context app = ctx.getApplicationContext();
+        if (due(app)) check(app, ok -> Feed.tellUpdate(app));
+        else checkChanges(app, null);
+        new Thread(() -> {
+            if (Feed.fetch(app, Feed.NEWS)) Feed.tellNews(app);
+        }).start();
+    }
+
     static boolean due(Context ctx) {
         SharedPreferences p = Updater.prefs(ctx);
         return p.getBoolean(KEY_AUTO, false) && !BUSY.get()
@@ -175,8 +194,8 @@ final class Updates {
         p.edit().putBoolean(KEY_ASKED, true).apply();
         new android.app.AlertDialog.Builder(a, Ui.dialogTheme())
                 .setTitle("Проверять обновления?")
-                .setMessage("Когда приложение открыто, оно раз в сутки спросит GitHub, вышла ли новая версия, "
-                        + "и раз в 3 часа скачает с сайта замены в расписании. О тебе ничего не отправляется. Это можно изменить в настройках.")
+                .setMessage("Раз в сутки приложение спросит GitHub, вышла ли новая версия, "
+                        + "и раз в несколько часов скачает с сайта «Звонка» замены в расписании и новости лицея. О тебе ничего не отправляется. Это можно изменить в настройках.")
                 .setPositiveButton("Разрешить", (d, w) -> {
                     p.edit().putBoolean(KEY_AUTO, true).apply();
                     allowed.run();

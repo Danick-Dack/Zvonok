@@ -335,6 +335,126 @@ body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-ins
 .olymp-link small{font-size:13px;color:var(--muted);line-height:1.35}
 
 /* печать недели: чёрным по белому, без меню */
+/* ---------- 6.0: тематические шапки вкладок, СОР/СОЧ, новости, кружки, праздники, свой фон ---------- */
+.tabbar a{position:relative}
+.tabbar a[hidden],.nav-top a[hidden]{display:none}
+a[data-tab].dot::before{content:"";position:absolute;top:6px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 2px var(--bg)}
+.nav-top a.dot::before{top:8px;left:auto;right:4px}
+@media (max-width:380px){.tabbar a{font-size:10.5px;letter-spacing:0}}
+.app-only{display:none!important}
+.standalone .app-only,.embed .app-only{display:flex!important}
+
+/* у каждой вкладки свой характер: рисунок из её значка и своя «бумага» */
+/*@ART@*/
+.th{position:relative;overflow:hidden;isolation:isolate;padding:18px 20px;border-radius:var(--r-xl);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);align-items:center}
+.th::after{content:"";position:absolute;z-index:-1;right:-14px;top:50%;width:132px;height:132px;transform:translateY(-50%) rotate(-12deg);background:var(--th,var(--accent));opacity:.13;
+  -webkit-mask:var(--art) center/contain no-repeat;mask:var(--art) center/contain no-repeat}
+.th>*{position:relative}
+.th-week{--th:#AF52DE;background-image:radial-gradient(circle at 100% 0,rgba(175,82,222,.12),transparent 55%)}
+.th-rooms{--th:#34C759;background-image:repeating-linear-gradient(90deg,transparent 0 46px,var(--grid) 46px 47px)}
+.th-exams{--th:#FF3B30;background-image:linear-gradient(90deg,transparent 30px,var(--margin) 30px 31px,transparent 31px),repeating-linear-gradient(0deg,transparent 0 23px,var(--grid) 23px 24px),repeating-linear-gradient(90deg,transparent 0 23px,var(--grid) 23px 24px);padding-left:44px}
+.th-news{--th:var(--text);border-radius:6px;border-width:3px 0;border-style:double;border-color:var(--text);box-shadow:none;background:transparent}
+.th-news h1{font-family:Georgia,"Times New Roman",serif;font-weight:700;letter-spacing:-.01em}
+.th-news p{font-family:Georgia,"Times New Roman",serif;font-style:italic}
+.th-olymp{--th:#FF9500;background-image:linear-gradient(120deg,rgba(255,204,0,.14),transparent 60%)}
+.th-get{--th:var(--accent);background-image:linear-gradient(120deg,var(--accent-soft),transparent 60%)}
+.th-more{--th:var(--muted)}
+/* праздник: вместо рисунка вкладки его значок, шапка сайта подчёркнута цветом праздника */
+:root[data-fest] .th::after{content:var(--fest-e);background:none;-webkit-mask:none;mask:none;opacity:.34;font-size:92px;line-height:132px;text-align:center;right:-8px}
+:root[data-fest] .top{box-shadow:inset 0 -3px 0 var(--fest)}
+:root[data-fest] .brand span::after{content:var(--fest-e);margin-left:6px;font-size:.8em}
+.fest{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:14px;padding:12px 16px;border-radius:var(--r-lg);text-align:left;color:var(--text);
+  background:linear-gradient(120deg,color-mix(in srgb,var(--fest,var(--accent)) 22%,var(--surface)),var(--surface));border:1px solid color-mix(in srgb,var(--fest,var(--accent)) 40%,var(--line))}
+.fest>span:first-child{font-size:30px;line-height:1}
+.fest b{display:block;font-size:16px}
+.fest small{display:block;color:var(--text-2);font-size:14px;margin-top:1px}
+.rain{position:fixed;inset:0;z-index:90;pointer-events:none;overflow:hidden}
+.rain i{position:absolute;top:-48px;font-style:normal;animation:rain 1.9s linear forwards}
+@keyframes rain{to{transform:translateY(calc(100vh + 96px)) rotate(200deg)}}
+.dial.spin svg{animation:spin 1s var(--ease)}
+@keyframes spin{to{transform:rotate(360deg)}}
+body.flip{transition:transform .8s var(--ease);transform:rotate(180deg)}
+
+/* занятие после уроков на «Сейчас» и в неделе */
+.extra{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--surface-2)}
+.extra .icon{flex:none;color:var(--accent)}
+.extra b{display:block;font-size:15.5px}
+.extra p{color:var(--muted);font-size:13.5px}
+.extras{list-style:none;margin:8px 4px 2px;padding:10px 0 0;border-top:1px dashed var(--line-2);display:grid;gap:6px}
+.extras li{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:14.5px}
+.extras .t{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13.5px}
+.extras small{color:var(--muted)}
+.day-note.exam{background:var(--bad-soft);font-weight:600}
+.tl .exm{color:var(--bad);font-weight:700}
+
+/* СОР и СОЧ */
+.exam-classes button{min-width:54px;min-height:42px}
+.exam-list{display:grid;gap:10px;margin-top:14px;max-width:780px}
+.exam-day{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.exam-day.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.exam-day.past{opacity:.6;box-shadow:none}
+.exam-date{flex:none;width:58px;text-align:center}
+.exam-date b{display:block;font:700 26px/1 var(--font-display);letter-spacing:-.03em}
+.exam-date small{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.exam-day ul{flex:1;min-width:0;list-style:none;display:grid;gap:6px}
+.exam-day li{display:flex;align-items:center;gap:8px;font-size:16px}
+.exam-day li b{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.tag.soch{background:var(--bad);color:#fff}
+.tag.sor{background:var(--warn-soft);color:var(--warn)}
+.exam-when{flex:none;color:var(--muted);font-size:13.5px;text-align:right}
+.exam-none{padding:22px 18px;border-radius:var(--r-lg);background:var(--ok-soft);font-size:16.5px}
+.exam-past{margin-top:6px}
+.exam-past summary{list-style:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;color:var(--muted);cursor:pointer;font-weight:600}
+.exam-past summary::-webkit-details-marker{display:none}
+.exam-past[open] summary .icon{transform:rotate(180deg)}
+.exam-past .exam-day{margin-top:8px}
+.exam-src{max-width:780px;margin-top:16px}
+@media (max-width:420px){.exam-when{display:none}.exam-day.today .exam-when,.exam-day:first-child .exam-when{display:block}}
+
+/* новости: газетная полоса */
+.feed{display:grid;gap:16px;max-width:680px;margin-top:6px}
+.post{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
+.post-pic{position:relative;display:block;background:var(--surface-2)}
+.post-pic img{display:block;width:100%;height:auto}
+.post-more{position:absolute;right:10px;bottom:10px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font-size:13px;font-weight:600}
+.post-in{padding:14px 16px 16px;display:grid;gap:10px}
+.post time{color:var(--muted);font-size:13.5px}
+.post-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;line-height:1.5}
+.post-text.clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:9;line-clamp:9;overflow:hidden}
+.post-text a{color:var(--accent)}
+.feed-empty{color:var(--muted);font-size:16.5px;padding:8px 0}
+
+/* «Ещё»: ссылки-строки и кружки */
+.sect-link{display:flex;align-items:center;gap:14px;min-height:66px;padding:12px 14px;text-decoration:none;color:var(--text)}
+.sect-link:hover{background:var(--surface-2)}
+.sect-link b{flex:1;min-width:0;font:600 16.5px/1.25 var(--font);letter-spacing:-.01em}
+.sect-link small{display:block;margin-top:2px;font-weight:400;font-size:13.5px;color:var(--muted)}
+.sect-link .chev{color:var(--muted)}
+.pick-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.pick-row:last-child{border-bottom:0}
+.pick-row input{flex:none;width:22px;height:22px;accent-color:var(--accent)}
+.pick-row span{flex:1;min-width:0}
+.pick-row b{display:block;font-size:15.5px;font-weight:600}
+.pick-row small{display:block;color:var(--muted);font-size:13.5px;margin-top:1px}
+.pick-row.other{opacity:.62}
+.club-form{display:grid;gap:8px;margin-top:10px}
+.club-days{display:flex;gap:6px;flex-wrap:wrap}
+.club-days button{min-width:44px;min-height:40px;border-radius:12px;background:var(--surface-2);font-weight:600}
+.club-days button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.club-time{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.club-time label{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.club-time .field{width:auto;min-width:104px}
+
+/* «Скачать на телефон» */
+.get-grid{display:grid;gap:16px;align-items:start}
+@media (min-width:960px){.get-grid{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:20px}}
+.embed .get-show,.standalone .get-show{display:none}
+
+/* свой фон под расписанием */
+:root[data-bg] body{background:transparent}
+:root[data-bg] body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(color-mix(in srgb,var(--bg) 72%,transparent),color-mix(in srgb,var(--bg) 72%,transparent)),var(--bgimg) center/cover no-repeat}
+@media (prefers-reduced-motion:reduce){.rain,.dial.spin svg{animation:none}body.flip{transform:none}}
+
 @media print{
   :root{--bg:#fff;--surface:#fff;--surface-2:#f2f2f2;--line:#ccc;--line-2:#999;--text:#000;--text-2:#222;--muted:#555;--accent:#000;--accent-ink:#fff;--shadow:none}
   body{background:#fff}
@@ -358,3 +478,5 @@ body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-ins
 
 /* часы телефона не в казахстанском времени: время уроков может съехать */
 .tz-note{margin-top:12px;font-size:13.5px;line-height:1.45;color:var(--text-2)}
+.embed-only{display:none}
+.embed .embed-only{display:block}

@@ -46,7 +46,7 @@ public class MiniWidget extends AppWidgetProvider {
 
     static RemoteViews build(Context ctx, Updater.Display d, Theme t) {
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_mini);
-        LessonWidget.background(rv, R.id.m_bg, t);
+        Backdrop.widget(ctx, rv, R.id.m_bg, t, 2.2f);
         rv.setTextViewText(R.id.m_label, d.miniLabel);
         Updater.bindTimer(rv, R.id.m_chrono, R.id.m_big, d, t);
         boolean right = t.next && !(d.miniRoom.isEmpty() && d.miniSub.isEmpty());

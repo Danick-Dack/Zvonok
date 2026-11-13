@@ -66,3 +66,5 @@
   .ab-age-s{margin-top:2px;align-self:start}
 }
 @media (prefers-reduced-motion:reduce){.ab-plat{transition:none}}
+
+.ab-tour{padding:26px 20px}

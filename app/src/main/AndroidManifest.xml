@@ -3,7 +3,7 @@
 
     <!--
         Приватность: интернет нужен только если пользователь разрешил: раз в сутки спросить GitHub о новой версии
-        и раз в 3 часа скачать замены в расписании со своего сайта, когда приложение открыто. И когда пользователь сам
+        и раз в несколько часов скачать со своего сайта замены в расписании и новости лицея. И когда пользователь сам
         отправляет письмо в «Написать нам» (уходят только его текст, тип и класс, без имени и контактов).
         Аккаунтов, аналитики и рекламы нет; телефон, номер и место не узнаём.
     -->
@@ -93,6 +93,13 @@
             android:name=".Changelog"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
+
+        <!-- «Олимпиады» и «Кружки и ШОР» из вкладки «Ещё» -->
+        <activity
+            android:name=".Pages"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".StyleActivity"

@@ -136,7 +136,7 @@ final class WeekTab {
         ((LinearLayout.LayoutParams) strip.getLayoutParams()).topMargin = a.dp(12);
         TextView note = Day.noteView(a, date);
         if (note != null) card.addView(note);
-        LinearLayout tl = Day.timeline(a, l, live, t.s, t.min, live && t.d.kind == Schedule.Kind.LESSON ? t.d.progress : -1, "Уроков нет");
+        LinearLayout tl = Day.timeline(a, l, date, live, t.s, t.min, live && t.d.kind == Schedule.Kind.LESSON ? t.d.progress : -1, "Уроков нет");
         card.addView(tl, Ui.mw(a, 10));
     }
 }

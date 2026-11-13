@@ -27,8 +27,14 @@ import android.widget.Toast;
  */
 public class StyleActivity extends Activity {
 
+    private static final int PICK_PHOTO = 7;
     private Theme t;
-    private LinearLayout preview, presets, accents, corners;
+    private LinearLayout preview, presets, accents, corners, photoCard;
+    private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
+    // Настоящие виджеты и уведомление обновляются не на каждое касание, а когда рука остановилась:
+    // раньше каждое движение пересобирало их все, и экран дёргался
+    private final Runnable apply = () -> Updater.update(this);
+    private long drawnAt;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -63,6 +69,11 @@ public class StyleActivity extends Activity {
         op.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar s, int p, boolean user) {
                 opLabel.setText("Непрозрачность " + (p + 30) + "%");
+                // предпросмотр идёт за пальцем, но не чаще десяти раз в секунду
+                if (!user || System.currentTimeMillis() - drawnAt < 100) return;
+                drawnAt = System.currentTimeMillis();
+                t.opacity = p + 30;
+                renderPreview();
             }
             @Override public void onStartTrackingTouch(SeekBar s) {}
             @Override public void onStopTrackingTouch(SeekBar s) {
@@ -77,7 +88,14 @@ public class StyleActivity extends Activity {
         bgCard.addView(cl);
         corners = Ui.horizontal(this);
         bgCard.addView(corners);
+        TextView opNote = Ui.text(this, "Прозрачность видна у виджетов на рабочем столе. Уведомление система всегда рисует непрозрачным.", 12, Ui.MUTED, null);
+        opNote.setPadding(0, Ui.dp(this, 12), 0, 0);
+        bgCard.addView(opNote);
         root.addView(bgCard);
+
+        root.addView(Ui.caps(this, "СВОЙ ФОН: ФОТО"));
+        photoCard = Ui.card(this);
+        root.addView(photoCard);
 
         root.addView(Ui.caps(this, "ЧТО ПОКАЗЫВАТЬ"));
         LinearLayout show = Ui.card(this);
@@ -113,14 +131,73 @@ public class StyleActivity extends Activity {
         }));
 
         refreshPickers();
+        renderPhoto();
         renderPreview();
     }
 
     private void changed() {
         t.save(this);
-        Updater.update(this);
+        ui.removeCallbacks(apply);
+        ui.postDelayed(apply, 350);
         refreshPickers();
         renderPreview();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        ui.removeCallbacks(apply);
+        Updater.update(this); // уходим с экрана: всё применено сразу
+    }
+
+    /** Фото из галереи через системное окно выбора: приложению не нужен доступ ко всем фото. */
+    private void renderPhoto() {
+        photoCard.removeAllViews();
+        boolean has = Backdrop.file(this).exists();
+        photoCard.addView(Ui.linkRow(this, has ? "Выбрать другое фото" : "Выбрать фото", "Останется только на этом телефоне", null, v -> {
+            try {
+                startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), PICK_PHOTO);
+            } catch (Exception e) {
+                Toast.makeText(this, "Не нашлось приложения, чтобы выбрать фото", Toast.LENGTH_SHORT).show();
+            }
+        }));
+        if (!has) return;
+        String[][] where = {{Backdrop.KEY_WIDGET, "В виджетах"}, {Backdrop.KEY_NOTIF, "В уведомлении"}, {Backdrop.KEY_APP, "В приложении"}};
+        for (String[] w : where) {
+            photoCard.addView(Ui.switchRow(this, w[1], null, Updater.prefs(this).getBoolean(w[0], false), (b, on) -> {
+                Updater.prefs(this).edit().putBoolean(w[0], on).apply();
+                Ui.version++; // главный экран пересоберётся с новым фоном
+                changed();
+            }));
+        }
+        photoCard.addView(Ui.linkRow(this, "Убрать фото", null, null, v -> {
+            Backdrop.clear(this);
+            Ui.version++;
+            changed();
+            renderPhoto();
+        }));
+    }
+
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (request != PICK_PHOTO || result != RESULT_OK || data == null || data.getData() == null) return;
+        android.net.Uri uri = data.getData();
+        new Thread(() -> {
+            boolean ok = Backdrop.save(getApplicationContext(), uri);
+            ui.post(() -> {
+                if (isFinishing()) return;
+                if (!ok) {
+                    Toast.makeText(this, "Не получилось открыть эту картинку", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                android.content.SharedPreferences p = Updater.prefs(this);
+                if (!p.contains(Backdrop.KEY_WIDGET)) p.edit().putBoolean(Backdrop.KEY_WIDGET, true).apply(); // первое фото сразу видно в виджетах
+                Ui.version++;
+                changed();
+                renderPhoto();
+            });
+        }).start();
     }
 
     private void refreshPickers() {
@@ -231,7 +308,7 @@ public class StyleActivity extends Activity {
         wall.setPadding(Ui.dp(this, 14), Ui.dp(this, 14), Ui.dp(this, 14), Ui.dp(this, 14));
 
         FrameLayout notif = new FrameLayout(this);
-        notif.setBackground(Ui.round(this, t.bg | 0xFF000000, 20, 0));
+        notif.setBackground(Ui.round(this, t.bg | 0xFF000000, 20, 0)); // уведомление непрозрачное и в жизни
         notif.setClipToOutline(true);
         notif.setPadding(Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 14), Ui.dp(this, 12));
         add(notif, Updater.notifBig(this, d, shown), ViewGroup.LayoutParams.WRAP_CONTENT);

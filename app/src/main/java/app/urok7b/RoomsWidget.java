@@ -43,7 +43,7 @@ public class RoomsWidget extends AppWidgetProvider {
 
     static RemoteViews build(Context ctx, ZonedDateTime now, Theme t) {
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_rooms);
-        LessonWidget.background(rv, R.id.r_bg, t);
+        Backdrop.widget(ctx, rv, R.id.r_bg, t, 2f);
         Intent open = new Intent(ctx, MainActivity.class).putExtra(MainActivity.EXTRA_TAB, "rooms")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         rv.setOnClickPendingIntent(R.id.r_root, PendingIntent.getActivity(ctx, 21, open,

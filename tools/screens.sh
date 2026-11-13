@@ -47,6 +47,8 @@ for scheme in dark light; do
   tab week;  shot ${scheme}_2_week
   tab rooms; shot ${scheme}_3_rooms
   tab more;  shot ${scheme}_4_more
+  tab exams; shot ${scheme}_4a_exams
+  tab news;  shot ${scheme}_4b_news
   at 111010382026.00   # перемена перед 4 уроком
   tab now;   shot ${scheme}_5_now_break
   at 111412002026.00   # суббота
@@ -79,5 +81,8 @@ adb shell settings put system user_rotation 0; sleep 1
 # остальные экраны
 for a in Changelog Feedback StyleActivity EditorActivity; do
   adb shell am start -W -n $PKG/.$a >/dev/null; sleep 2; shot "dark_screen_$a"
+done
+for page in olymp clubs; do
+  adb shell am start -W -n $PKG/.Pages --es page $page >/dev/null; sleep 2; shot "dark_screen_$page"
 done
 ls -la "$OUT"

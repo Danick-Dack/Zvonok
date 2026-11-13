@@ -43,16 +43,20 @@ function setCustom(on) {
 }
 
 /* ---------- вкладки ---------- */
-const VIEWS = ["now", "week", "rooms", "more", "olymp"];
+const VIEWS = ["now", "week", "rooms", "exams", "news", "more", "olymp", "get"];
 // старые якоря и разделы внутри «Ещё»
-const SECTIONS = {schedule: "week", top: "now", install: "more", calendar: "more", make: "more", share: "more", faq: "more", about: "more", safe: "more", olympiads: "olymp"};
+const SECTIONS = {schedule: "week", top: "now", install: "get", calendar: "more", make: "more", share: "more", faq: "more", about: "more", safe: "more", look: "more", extras: "more",
+  olympiads: "olymp", sor: "exams"};
 let view = "now";
-const dirty = {now: true, week: true, rooms: true, more: true, olymp: true};
-const RENDER = {now: () => renderNow(new Date()), week: () => renderWeek(), rooms: () => renderRooms(), more: () => renderMore(), olymp: () => renderOlymp()};
+const dirty = {};
+VIEWS.forEach(v => { dirty[v] = true; });
+const RENDER = {now: () => renderNow(new Date()), week: () => renderWeek(), rooms: () => renderRooms(), more: () => renderMore(), olymp: () => renderOlymp(),
+  exams: () => renderExams(), news: () => renderNews(), get: () => renderOs()};
 function show(v) {
   view = v;
   VIEWS.forEach(x => { $("v-" + x).hidden = x !== v; });
-  $$("a[data-tab]").forEach(a => a.dataset.tab === v ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  const tab = v === "olymp" || (v === "get" && (EMBED || STANDALONE)) ? "more" : v; // олимпиады живут в «Ещё», как и установка в приложении
+  $$("a[data-tab]").forEach(a => a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
   if (dirty[v]) { dirty[v] = false; RENDER[v](); }
   if (v === "now") tick(); // на «Сейчас» таймер идёт по секундам сразу, а не со следующего планового тика
 }
@@ -63,8 +67,8 @@ function route(first) {
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
     if (!first) refresh();
   }
-  const raw = c ? "" : hashText(), v = VIEWS.includes(raw) ? raw : SECTIONS[raw] || "now";
-  show(v);
+  const raw = c ? "" : hashText(), want = VIEWS.includes(raw) ? raw : SECTIONS[raw] || "now";
+  show(want === "exams" && !examTab() ? "now" : want);
   const target = SECTIONS[raw] === "more" && $(raw);
   if (target) { if (target.tagName === "DETAILS") target.open = true; requestAnimationFrame(() => target.scrollIntoView({block: "start"})); }
   else if (!first) window.scrollTo(0, 0);
@@ -73,7 +77,7 @@ addEventListener("hashchange", () => route(false));
 /** Что-то поменялось (класс, замены, день): перерисовать видимое, остальное при открытии. */
 function refresh() {
   VIEWS.forEach(v => { dirty[v] = true; });
-  key = ""; renderHeader(); tick();
+  key = ""; renderHeader(); examTab(); tick();
   if (dirty[view]) { dirty[view] = false; RENDER[view](); }
 }
 
@@ -138,7 +142,7 @@ const mark = l => l && l.changed ? "замена" : l && l.short ? "сокращ
 
 /* ---------- лента дня ---------- */
 /** Уроки дня с переменами. live = это сегодня: отмечаем прошедшие, текущий и следующий. */
-function timeline(list, live, s, empty) {
+function timeline(list, live, s, empty, exams) {
   const ol = h("ol", {class: "tl"});
   if (!list.length) { ol.append(h("li", {class: "empty", text: empty || "Уроков нет. Можно выдохнуть"})); return ol; }
   const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
@@ -150,13 +154,13 @@ function timeline(list, live, s, empty) {
     }
     const cur = live && s.kind === "LESSON" && s.cur.num === l.num;
     const nx = live && (s.kind === "BREAK" || s.kind === "BEFORE") && s.next && s.next.num === l.num;
-    const past = live && !cur && l.end <= nowMin, m = mark(l);
+    const past = live && !cur && l.end <= nowMin, m = mark(l), ex = (exams || []).find(x => x.subject === l.subject);
     ol.append(h("li", {class: "les hue-" + hueOf(l.subject) + (cur ? " cur" : nx ? " next-l" : past ? " past" : ""), "aria-current": cur ? "time" : null},
       h("span", {class: "t"}, h("b", {text: hm(l.start)}), h("small", {text: hm(l.end)})),
       h("span", {class: "rail"}, h("i", {class: "dot"})),
       h("span", {class: "m"}, SHORTS[l.subject] ? h("b", null, h("span", {class: "full", text: l.subject}), h("span", {class: "short", text: SHORTS[l.subject], title: l.subject})) : h("b", {text: l.subject}),
-        cur || nx || m ? h("small", null, cur ? "Идёт, урок " + l.num : nx ? "Следующий, урок " + l.num : "Урок " + l.num,
-          m ? [" · ", h("span", {class: "chg", text: m})] : null) : null),
+        cur || nx || m || ex ? h("small", null, cur ? "Идёт, урок " + l.num : nx ? "Следующий, урок " + l.num : "Урок " + l.num,
+          m ? [" · ", h("span", {class: "chg", text: m})] : null, ex ? [" · ", h("span", {class: "exm", text: ex.type})] : null) : null),
       l.room ? roomChip(l.room, cur) : h("span")));
   });
   return ol;
@@ -172,6 +176,13 @@ function dayNote(date) {
   const text = [clean(ch.note) || (list.some(l => l.changed || l.short) || gone.length ? "В этот день расписание изменено" : ""),
     gone.length ? (gone.length > 1 ? "Отменены уроки " : "Отменён урок ") + gone.join(", ") : ""].filter(Boolean).join(". ");
   return text ? {kind: gone.length ? "bad" : "warn", text} : null;
+}
+/** СОР и СОЧ класса на дату: для ленты дня и пометки над ней. Своему расписанию график лицея не подходит. */
+const dayExams = date => useCustom || pick ? [] : examsOn(cls, date);
+/** Кружки и ШОР дня списком под уроками. */
+function extrasEl(date) {
+  const list = extrasOn(date, EXTRA);
+  return list.length ? h("ul", {class: "extras"}, list.map(x => h("li", null, h("span", {class: "t", text: hm(x.start) + "–" + hm(x.end)}), h("b", {text: x.name}), x.place ? h("small", {text: x.place}) : null))) : null;
 }
 function noteEl(n, id) { return n ? h("p", {class: "day-note " + n.kind, id: id || null, text: n.text}) : null; }
 // «8 уроков · 8:00–15:25»: число не отрывается от слова, а время переносится только целиком (не «8:00–» и «15:25»)
@@ -205,11 +216,12 @@ function loadChanges() {
 }
 // своё расписание меняют в конструкторе в соседней вкладке
 addEventListener("storage", e => {
-  if (!e.key || !/^zv\.(class|custom|useCustom|scheme|accent)$/.test(e.key)) return;
+  if (!e.key || !/^zv\.(class|custom|useCustom|scheme|accent|extras)$/.test(e.key)) return;
   if (e.key === "zv.scheme") { applyScheme(); renderScheme(); return; }
   if (e.key === "zv.accent") { applyAccent(); return; }
   cls = DATA.classes[store.get("class", null)] ? store.get("class", null) : cls;
   custom = store.get("custom", null); useCustom = !!store.get("useCustom", false) && !!custom;
+  EXTRA = extraSet();
   if (useCustom || DATA.classes[store.get("class", null)]) pick = false;
   rebuild(); refresh();
 });

@@ -125,3 +125,67 @@ function vacationText(v) {
   if (v.n === 1 && v.today) return "Сегодня последний учебный день, потом " + v.name.toLowerCase();
   return "До каникул " + word(v.n, "учебный день", "учебных дня", "учебных дней");
 }
+
+/* ---------- СОР и СОЧ: DATA.sor {класс: {предмет: [даты]}}, DATA.soch {класс: {предмет: дата}} ---------- */
+/** Все СОР и СОЧ класса по порядку: [{date, type: "СОР" | "СОЧ", subject}]. В один день сначала СОЧ, внутри по названию предмета. */
+function examList(c) {
+  const out = [], name = k => DATA.subjects[k] || clean(k), r = (DATA.sor || {})[c] || {}, q = (DATA.soch || {})[c] || {};
+  for (const k in r) (Array.isArray(r[k]) ? r[k] : []).forEach(date => out.push({date, type: "СОР", subject: name(k)}));
+  for (const k in q) if (typeof q[k] === "string") out.push({date: q[k], type: "СОЧ", subject: name(k)});
+  const key = x => x.date + (x.type === "СОЧ" ? "0" : "1") + x.subject;
+  return out.sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
+}
+/** СОР и СОЧ класса на дату. */
+function examsOn(c, d) { const t = iso(d); return examList(c).filter(x => x.date === t); }
+/** «СОЧ: алгебра, физика. СОР: химия» */
+function examText(list) {
+  return ["СОЧ", "СОР"].map(t => { const s = list.filter(x => x.type === t).map(x => x.subject.toLowerCase()); return s.length ? t + ": " + s.join(", ") : ""; }).filter(Boolean).join(". ");
+}
+/** Последний день, когда в лицее у кого-то есть СОР или СОЧ; "" если графика нет. После него вкладка «СОР/СОЧ» прячется. */
+function examsEnd() {
+  let last = "";
+  for (const c in DATA.classes) examList(c).forEach(x => { if (x.date > last) last = x.date; });
+  return last;
+}
+
+/* ---------- кружки и ШОР: set = {shor: [id групп из DATA.shor], clubs: [{name, place, times: [[день 0–6, "с", "по"]]}]} ---------- */
+/** Занятия после уроков на дату, по времени. В каникулы и праздники их нет. */
+function extrasOn(d, set) {
+  if (!set || holiday(d)) return [];
+  const w = dow(d), out = [];
+  const add = (name, place, times) => (Array.isArray(times) ? times : []).forEach(t => {
+    const s = toMin(t && t[1]), e = toMin(t && t[2]);
+    if (t && t[0] === w && s >= 0 && e > s && name) out.push({name, place: place || "", start: s, end: e});
+  });
+  (DATA.shor || []).forEach(g => { if ((set.shor || []).includes(g.id)) add("ШОР · " + g.subject, g.place, g.times); });
+  (set.clubs || []).forEach(c => { if (c) add(clean(c.name), clean(c.place), c.times); });
+  return out.sort((a, b) => a.start - b.start);
+}
+/** Ближайшее занятие сегодня: on = уже идёт (target это конец), иначе впереди (target это начало). null: на сегодня всё. */
+function extraNow(now, set) {
+  const m = now.getHours() * 60 + now.getMinutes(), x = extrasOn(now, set).find(e => m < e.end);
+  return x ? Object.assign({on: m >= x.start, target: at(now, m >= x.start ? x.end : x.start)}, x) : null;
+}
+/** «ШОР · Физика: до конца 1 ч 5 мин» или «…: до начала 20 мин». */
+function extraText(x, now) {
+  const left = Math.max(1, Math.ceil((x.target - now) / 60000)), H = Math.floor(left / 60), M = left % 60;
+  return x.name + ": до " + (x.on ? "конца " : "начала ") + ((H ? H + " ч " : "") + (M || !H ? M + " мин" : "")).trim();
+}
+
+/* ---------- праздники ---------- */
+/** Ближайший учебный день (завтра, а в пятницу понедельник) выпал на праздник: «Завтра День Независимости, в школу не идём».
+ *  Про каникулы отдельно говорит vacationText. */
+function offSoon(now, src) {
+  if (!src.real || holiday(now)) return "";
+  const d = new Date(now), w = dow(now);
+  if (w > 4) return "";
+  d.setDate(d.getDate() + (w === 4 ? 3 : 1));
+  const x = holiday(d);
+  return x && !/каникул/i.test(x[2]) ? (w === 4 ? "В понедельник " : "Завтра ") + x[2] + ", в школу не идём" : "";
+}
+/** Праздничная тема на дату из DATA.themes: [с "ММ-ДД", по "ММ-ДД", значок, цвет RRGGBB, название, фраза] или null.
+ *  Каждый год в те же дни; отрезок может переходить через Новый год (12-20 … 01-08). */
+function festive(d) {
+  const t = iso(d).slice(5);
+  return (DATA.themes || []).find(x => Array.isArray(x) && (x[0] <= x[1] ? t >= x[0] && t <= x[1] : t >= x[0] || t <= x[1])) || null;
+}

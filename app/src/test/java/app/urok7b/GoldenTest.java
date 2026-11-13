@@ -177,6 +177,47 @@ public class GoldenTest {
         done(total);
     }
 
+    /** СОР и СОЧ, кружки и ШОР, праздники: Plus.java отвечает так же, как правила сайта. */
+    @Test
+    public void examsExtrasHolidays() throws Exception {
+        use("7Б");
+        JSONObject p = G.getJSONObject("plus"), exams = p.getJSONObject("exams"), fest = p.getJSONObject("fest");
+        java.time.ZoneId zone = java.time.ZoneId.of("Asia/Almaty");
+        int total = 1;
+        check("последний день графика", p.getString("end"), Plus.examsEnd());
+        for (java.util.Iterator<String> it = exams.keys(); it.hasNext(); ) {
+            String cls = it.next();
+            JSONObject byDate = exams.getJSONObject(cls);
+            for (java.util.Iterator<String> d = byDate.keys(); d.hasNext(); total++) {
+                String date = d.next();
+                if (date.equals("all")) check(cls + ": всего работ", byDate.getInt(date), Plus.examList(cls).size());
+                else check(cls + " " + date, byDate.getString(date), Plus.examText(Plus.examsOn(cls, java.time.LocalDate.parse(date))));
+            }
+        }
+        Plus.select(G.getJSONObject("extras").toString());
+        JSONArray extras = p.getJSONArray("extras"), soon = p.getJSONArray("soon");
+        for (int i = 0; i < extras.length(); i++, total += 2) {
+            JSONObject c = extras.getJSONObject(i);
+            java.time.ZonedDateTime now = java.time.Instant.ofEpochMilli(c.getLong("now")).atZone(zone);
+            StringBuilder day = new StringBuilder();
+            for (Plus.Extra x : Plus.extrasOn(now.toLocalDate())) day.append(day.length() > 0 ? "; " : "").append(x.name + " " + x.start + "-" + x.end + " " + x.place);
+            check("занятия " + c.getString("local"), c.getString("day"), day.toString());
+            Plus.Extra x = Plus.extraNow(now);
+            check("таймер занятия " + c.getString("local"), c.getString("text"), x == null ? "" : Plus.extraText(x, c.getLong("now")));
+        }
+        Plus.select(null);
+        for (int i = 0; i < soon.length(); i++, total++) {
+            JSONObject c = soon.getJSONObject(i);
+            check("праздник завтра " + c.getString("local"), c.getString("text"), Plus.offSoon(java.time.Instant.ofEpochMilli(c.getLong("now")).atZone(zone)));
+        }
+        for (java.util.Iterator<String> it = fest.keys(); it.hasNext(); total++) {
+            String date = it.next();
+            String[] f = Plus.festive(java.time.LocalDate.parse(date));
+            check("тема " + date, fest.getString(date), f == null ? "" : f[2]);
+        }
+        done(total);
+    }
+
     @Test
     public void subjectColors() throws Exception {
         use("7Б");

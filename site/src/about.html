@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#0B0B0C" data-c="#0B0B0C" media="(prefers-color-scheme: dark)">
 <title>О проекте · Звонок</title>
 <meta name="description" content="«Звонок»: сколько до звонка, какой урок следующий и в каком кабинете. Расписание лицея №165 на телефоне, в виджетах iPhone и Android и на компьютере.">
-<link rel="canonical" href="@SITE_URL@about.html">
+<link rel="canonical" href="@SITE_URL@about">
 <meta property="og:title" content="Звонок · расписание лицея №165">
 <meta property="og:description" content="Таймер до звонка, урок и кабинет, неделя с заменами и свободные кабинеты.">
 <meta property="og:image" content="@SITE_URL@og.png">
@@ -32,8 +32,8 @@
       <p class="ab-lead">Таймер до конца урока, что дальше и в какой кабинет идти. Расписание на неделю с заменами и свободные кабинеты. На телефоне, в виджетах iPhone и Android и на компьютере. Учишься в другой школе? <a href="make.html">Собери своё расписание</a>.</p>
       <div class="row ab-cta">
         <a class="btn btn-primary" href="./#now" data-app>Открыть расписание</a>
-        <a class="btn btn-line" href="./#olymp" data-app>Олимпиады</a>
-        <a class="btn btn-line" href="./#install" data-app>Поставить на телефон</a>
+        <a class="btn btn-line" href="#tour"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Смотреть обзор</a>
+        <a class="btn btn-line" href="./#get" data-app>Поставить на телефон</a>
       </div>
       <p class="ab-facts">Бесплатно · без рекламы и регистрации · работает без интернета</p>
     </div>
@@ -52,12 +52,20 @@
     </div>
   </section>
 
+  <section class="ab-sec" id="tour" aria-labelledby="abTour">
+    <h2 id="abTour">Как это выглядит</h2>
+    <div class="card ab-tour">@SHOW@</div>
+  </section>
+
   <section class="ab-sec" aria-labelledby="abFeat">
     <h2 id="abFeat">Что умеет</h2>
     <div class="ab-grid">
       <article class="ab-tile"><span class="ab-ic hue-blue"><svg class="icon"><use href="#i-now"/></svg></span><h3>Таймер до звонка</h3><p>Крупно, сколько осталось до конца урока или перемены, и что будет дальше.</p></article>
       <article class="ab-tile"><span class="ab-ic hue-purple"><svg class="icon"><use href="#i-week"/></svg></span><h3>Неделя с заменами</h3><p>Расписание класса на неделю. Замены, отменённые уроки и сокращённые дни видны сразу.</p></article>
       <article class="ab-tile"><span class="ab-ic hue-green"><svg class="icon"><use href="#i-door"/></svg></span><h3>Свободные кабинеты</h3><p>Где сейчас пусто, кто сидит в нужном кабинете и когда он освободится.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-red"><svg class="icon"><use href="#i-exam"/></svg></span><h3>СОР и СОЧ</h3><p>График суммативных работ всех классов по датам. Накануне приходит напоминание, а когда всё сдано, вкладка исчезает сама.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-yellow"><svg class="icon"><use href="#i-news"/></svg></span><h3>Новости лицея</h3><p>Посты канала лицея с фото прямо в приложении, олимпиады в Алматы и онлайн.</p></article>
+      <article class="ab-tile"><span class="ab-ic hue-pink"><svg class="icon"><use href="#i-flag"/></svg></span><h3>Кружки и ШОР</h3><p>Отметь свои занятия: после уроков таймер считает до начала, потом до конца.</p></article>
       <article class="ab-tile"><span class="ab-ic hue-orange"><svg class="icon"><use href="#i-phone"/></svg></span><h3>Виджеты на iPhone</h3><p>Экран блокировки и рабочий стол через Scriptable, в цветах предметов. Новые версии ставятся сами.</p></article>
       <article class="ab-tile"><span class="ab-ic hue-teal"><svg class="icon"><use href="#i-bell"/></svg></span><h3>Приложение для Android</h3><p>Уведомление с таймером, виджеты, плитка в шторке и экран блокировки. Светлая и тёмная тема. Почти не тратит заряд.</p></article>
       <article class="ab-tile"><span class="ab-ic hue-indigo"><svg class="icon"><use href="#i-lock"/></svg></span><h3>Без интернета и слежки</h3><p>Открывается без сети. Класс и настройки хранятся только на твоём телефоне.</p></article>
@@ -67,8 +75,8 @@
   <section class="ab-sec" aria-labelledby="abGet">
     <h2 id="abGet">Где пользоваться</h2>
     <div class="ab-grid ab-three">
-      <a class="card ab-plat" href="@APK_URL@"><h3>Android</h3><p>Скачай приложение: таймер в уведомлении и виджеты на рабочем столе.</p><span class="ab-go">Скачать APK</span></a>
-      <a class="card ab-plat" href="iphone.html"><h3>iPhone</h3><p>Виджеты на экран блокировки и рабочий стол, ответы Siri. Пошаговый гайд с анимацией.</p><span class="ab-go">Как поставить</span></a>
+      <a class="card ab-plat" href="android.html"><h3>Android</h3><p>Приложение меньше 300 КБ: таймер в уведомлении, виджеты, новости и СОР/СОЧ. Пошаговый гайд с анимацией.</p><span class="ab-go">Как поставить</span></a>
+      <a class="card ab-plat" href="iphone.html#guide"><h3>iPhone</h3><p>Приложение и виджеты через бесплатный Scriptable: экран блокировки, рабочий стол, ответы Siri. Есть видеогайд.</p><span class="ab-go">Смотреть гайд</span></a>
       <a class="card ab-plat" href="./#now" data-app><h3>Компьютер и любой телефон</h3><p>Открой расписание в браузере или поставь сайт на главный экран как приложение.</p><span class="ab-go">Открыть расписание</span></a>
     </div>
   </section>
@@ -87,7 +95,7 @@
     <div class="ab-nums">
       <div class="ab-age"><span class="ab-age-n" id="abAgeN">0</span><span class="ab-age-t" id="abAgeT">дней «Звонку»</span><span class="ab-age-s" id="abAgeS"></span></div>
       <div class="ab-age" id="abDl" hidden><span class="ab-age-n" id="abDlN"></span><span class="ab-age-t" id="abDlT"></span><span class="ab-age-s">приложения Android, все версии</span></div>
-      <div class="ab-age" id="abUse" hidden><span class="ab-age-n" id="abUseN"></span><span class="ab-age-t" id="abUseT"></span><span class="ab-age-s">обновления за сутки (Android)</span></div>
+      <div class="ab-age" id="abUse" hidden><span class="ab-age-n" id="abUseN"></span><span class="ab-age-t" id="abUseT"></span><span class="ab-age-s" id="abUseS">пользуются «Звонком» за сутки</span></div>
     </div>
   </section>
 </main>

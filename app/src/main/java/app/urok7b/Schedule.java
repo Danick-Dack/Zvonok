@@ -167,6 +167,7 @@ public final class Schedule {
         boolean useCustom = p.getBoolean(KEY_USE_CUSTOM, false);
         String json = useCustom ? p.getString(KEY_CUSTOM, null) : null;
         String saved = p.getString(KEY_CHANGES, null);
+        Plus.select(p.getString(Plus.KEY_EXTRAS, null));
         String key = cls + "|" + useCustom + "|" + (json == null ? 0 : json.hashCode()) + "|" + (saved == null ? 0 : saved.hashCode());
         if (key.equals(loadedKey)) return;
         if (assetChanges == null) {
@@ -285,6 +286,7 @@ public final class Schedule {
             return ga != gb ? Integer.compare(ga, gb) : a.compareTo(b);
         });
         baseBells = parseBells(root.getJSONArray("bells"));
+        Plus.parse(root); // СОР и СОЧ, ШОР, праздничные темы
     }
 
     private static String readAsset(Context ctx, String name) throws Exception {
@@ -420,7 +422,7 @@ public final class Schedule {
         return Character.isWhitespace(c) || Character.isSpaceChar(c) || c == '\uFEFF';
     }
 
-    private static String subjectName(String code) {
+    static String subjectName(String code) {
         String s = SUBJECTS.get(code);
         return s == null ? code : s;
     }
@@ -439,6 +441,11 @@ public final class Schedule {
     /** Каникулы или праздник по schedule.json (только для расписания класса). */
     public static synchronized String holidayName(LocalDate d) {
         return custom ? null : holiday(d);
+    }
+
+    /** Каникулы или праздник по календарю лицея, даже если включено своё расписание. */
+    static synchronized String holidayAny(LocalDate d) {
+        return holiday(d);
     }
 
     private static String holiday(LocalDate d) {

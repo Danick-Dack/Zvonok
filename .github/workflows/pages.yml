@@ -11,9 +11,10 @@ on:
       - 'ios/**'
       - 'tools/build_site.py'
       - 'tools/update_olympiads.py'
+      - 'tools/update_news.py'
       - '.github/workflows/pages.yml'
   schedule:
-    - cron: '17 0 * * *'   # раз в сутки (6:17 по Алматы): свежее число скачиваний на странице «О проекте»
+    - cron: '17 * * * *'   # раз в час: новости канала лицея; раз в сутки заодно обновляются счётчики на странице «О проекте»
   workflow_dispatch:
 
 permissions:
@@ -50,6 +51,7 @@ jobs:
           pip install qrcode pillow
           python tools/update_olympiads.py
           python tools/build_site.py
+          python tools/update_news.py   # после сборки: новости лежат рядом с сайтом и в репозиторий не коммитятся
       - uses: actions/configure-pages@v5
         with:
           enablement: true

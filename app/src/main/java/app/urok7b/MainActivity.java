@@ -20,18 +20,19 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Главный экран «Звонка»: вкладки «Сейчас», «Неделя», «Кабинеты» и «Ещё», как на сайте.
+ * Главный экран «Звонка»: вкладки «Сейчас», «Неделя», «Кабинеты», «СОР/СОЧ», «Новости» и «Ещё», как на сайте.
+ * «СОР/СОЧ» видна, пока в лицее у кого-то впереди есть СОР или СОЧ.
  * Пока экран открыт, он просыпается раз в минуту (секунды таймера рисует сама система), в фоне не работает.
  */
 public class MainActivity extends Activity {
 
-    static final String EXTRA_TAB = "tab";   // now | week | rooms | more (ярлыки, виджеты)
+    static final String EXTRA_TAB = "tab";   // now | week | rooms | exams | news | more (ярлыки, виджеты, уведомления)
     static final String EXTRA_WEEK = "week"; // старый ярлык «Неделя»
     static final String EXTRA_FIND = "find"; // сразу к поиску кабинета
-    static final int NOW = 0, WEEK = 1, ROOMS = 2, MORE = 3;
-    private static final String[] TAB_KEYS = {"now", "week", "rooms", "more"};
-    private static final String[] TAB_NAMES = {"Сейчас", "Неделя", "Кабинеты", "Ещё"};
-    private static final int[] TAB_ICONS = {R.drawable.ic_now, R.drawable.ic_week, R.drawable.ic_door, R.drawable.ic_more};
+    static final int NOW = 0, WEEK = 1, ROOMS = 2, EXAMS = 3, NEWS = 4, MORE = 5, TABS = 6;
+    private static final String[] TAB_KEYS = {"now", "week", "rooms", "exams", "news", "more"};
+    private static final String[] TAB_NAMES = {"Сейчас", "Неделя", "Кабинеты", "СОР/СОЧ", "Новости", "Ещё"};
+    private static final int[] TAB_ICONS = {R.drawable.ic_now, R.drawable.ic_week, R.drawable.ic_door, R.drawable.ic_exam, R.drawable.ic_news, R.drawable.ic_more};
 
     /** Что происходит сейчас: одно вычисление на тик для всех вкладок. */
     static final class Tick {
@@ -39,12 +40,14 @@ public class MainActivity extends Activity {
         final long ms = now.toInstant().toEpochMilli();
         final int min = now.getHour() * 60 + now.getMinute();
         final Schedule.Status s = Schedule.compute(now);
-        final Updater.Display d = Updater.describe(s, ms);
+        final Updater.Display d = Updater.describe(s, now);
     }
 
     private int builtVersion, tab = NOW;
-    private final ScrollView[] pages = new ScrollView[4];
-    private final LinearLayout[] tabs = new LinearLayout[4];
+    private final ScrollView[] pages = new ScrollView[TABS];
+    private final LinearLayout[] tabs = new LinearLayout[TABS];
+    private ExamsTab examsTab;
+    private NewsTab newsTab;
     private NowTab nowTab;
     private WeekTab weekTab;
     private RoomsTab roomsTab;
@@ -69,24 +72,27 @@ public class MainActivity extends Activity {
         Schedule.load(this);
 
         LinearLayout root = Ui.vertical(this);
-        root.setBackgroundColor(Ui.BG);
+        android.graphics.drawable.Drawable photo = Backdrop.app(this, Ui.BG); // свой фон под расписанием
+        if (photo != null) root.setBackground(photo);
+        else root.setBackgroundColor(Ui.BG);
         host = new FrameLayout(this);
         root.addView(host, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         root.addView(Ui.divider(this));
         LinearLayout bar = Ui.horizontal(this);
-        bar.setBackgroundColor(Ui.BG);
+        if (photo == null) bar.setBackgroundColor(Ui.BG);
         bar.setPadding(0, dp(4), 0, dp(4));
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < TABS; i++) {
             final int k = i;
             LinearLayout t = Ui.vertical(this);
             t.setGravity(Gravity.CENTER);
             t.setMinimumHeight(dp(56));
             t.addView(Ui.icon(this, TAB_ICONS[i], Ui.MUTED, 24));
-            TextView name = Ui.text(this, TAB_NAMES[i], 12, Ui.MUTED, "sans-serif-medium");
+            TextView name = Ui.text(this, TAB_NAMES[i], 11, Ui.MUTED, "sans-serif-medium");
             name.setGravity(Gravity.CENTER);
+            name.setMaxLines(1);
             t.addView(name);
             // роль «вкладка» для TalkBack: он сам скажет «вкладка» и «выбрано»
-            t.setContentDescription(TAB_NAMES[i] + ", " + (i + 1) + " из 4");
+            t.setContentDescription(TAB_NAMES[i]);
             t.setAccessibilityDelegate(new View.AccessibilityDelegate() {
                 @Override
                 public void onInitializeAccessibilityNodeInfo(View host, android.view.accessibility.AccessibilityNodeInfo info) {
@@ -130,7 +136,7 @@ public class MainActivity extends Activity {
         String mode = i.getStringExtra("mode"); // ярлыки из версии 4.0
         if ("true".equals(String.valueOf(i.getExtras() == null ? null : i.getExtras().get(EXTRA_WEEK)))) t = "week";
         if (mode != null) t = "rooms";
-        for (int k = 0; k < 4; k++) if (TAB_KEYS[k].equals(t)) show(k);
+        for (int k = 0; k < TABS; k++) if (TAB_KEYS[k].equals(t) && (k != EXAMS || examsLive())) show(k);
         if ("find".equals(mode) || i.getBooleanExtra(EXTRA_FIND, false)) {
             show(ROOMS);
             roomsTab.focusSearch();
@@ -185,10 +191,12 @@ public class MainActivity extends Activity {
             if (k == NOW) pages[k] = (nowTab = new NowTab(this)).view;
             else if (k == WEEK) pages[k] = (weekTab = new WeekTab(this)).view;
             else if (k == ROOMS) pages[k] = (roomsTab = new RoomsTab(this)).view;
+            else if (k == EXAMS) pages[k] = (examsTab = new ExamsTab(this)).view;
+            else if (k == NEWS) pages[k] = (newsTab = new NewsTab(this)).view;
             else pages[k] = (moreTab = new MoreTab(this)).view;
             host.addView(pages[k]);
         }
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < TABS; i++) {
             if (pages[i] != null) pages[i].setVisibility(i == k ? View.VISIBLE : View.GONE);
             boolean on = i == k;
             tabs[i].setSelected(on);
@@ -196,7 +204,20 @@ public class MainActivity extends Activity {
             ((TextView) tabs[i].getChildAt(1)).setTextColor(on ? Ui.ACCENT : Ui.MUTED);
         }
         lastKey = "";
+        if (k == NEWS) newsTab.show();
         refresh(true);
+    }
+
+    /** Впереди у кого-то в лицее есть СОР или СОЧ: тогда вкладка нужна (у своего расписания графика нет). */
+    private static boolean examsLive() {
+        return !Schedule.isCustom() && Plus.examsEnd().compareTo(java.time.LocalDate.now().toString()) >= 0;
+    }
+
+    /** Точка у «Новостей», пока есть пост, которого во вкладке ещё не видели. */
+    void newsDot() {
+        boolean fresh = Feed.top(this) > Updater.prefs(this).getInt(Feed.KEY_SEEN, 0);
+        ((TextView) tabs[NEWS].getChildAt(1)).setText(TAB_NAMES[NEWS] + (fresh ? " •" : ""));
+        tabs[NEWS].setContentDescription(TAB_NAMES[NEWS] + (fresh ? ", есть новые" : ""));
     }
 
     @Override
@@ -230,6 +251,7 @@ public class MainActivity extends Activity {
         } else if (!setup()) {
             Updates.askOnce(this, () -> Updates.check(this, ok -> rebuild()));
         }
+        newsDot();
         if (Updates.due(this)) Updates.check(this, ok -> rebuild());
         else if (Updates.changesDue(this)) Updates.checkChanges(this, this::rebuild);
         if (moreTab != null) moreTab.build();
@@ -258,6 +280,9 @@ public class MainActivity extends Activity {
     private void refresh(boolean force) {
         Schedule.load(this);
         Tick t = new Tick();
+        boolean exams = examsLive();
+        tabs[EXAMS].setVisibility(exams ? View.VISIBLE : View.GONE);
+        if (tab == EXAMS && !exams) { show(NOW); return; } // последний СОЧ сдан: вкладка ушла сама
         // ключ меняется на звонках, в полночь и раз в 5 % урока (полоска прогресса), а не каждую минуту
         String key = tab + "|" + t.d.sig + "|" + t.now.toLocalDate() + "|" + t.d.progress / 5 + "|" + Schedule.title();
         boolean changed = force || !key.equals(lastKey);
@@ -266,6 +291,7 @@ public class MainActivity extends Activity {
         if (tab == NOW) nowTab.render(t, changed);
         else if (changed && tab == WEEK) weekTab.render(t);
         else if (changed && tab == ROOMS) roomsTab.render(t);
+        else if (changed && tab == EXAMS) examsTab.render(t);
         if (changed && moreTab != null) moreTab.updateAge(); // в полночь счётчик дней сам прибавит день
     }
 

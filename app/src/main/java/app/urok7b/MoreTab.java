@@ -35,10 +35,11 @@ final class MoreTab {
     private static final String[][] FAQ = {
             {"Это официальное приложение лицея?", "Нет. «Звонок» сделал ученик лицея для своих. Расписание взято из утверждённого "
                     + "расписания четверти. Если где-то ошибка, напиши нам, исправим."},
-            {"Что «Звонок» знает обо мне?", "Ничего, кроме класса и настроек, и они лежат у тебя на телефоне. Ни аккаунтов, ни рекламы, "
-                    + "ни аналитики. В интернет приложение ходит только за новой версией и заменами, если ты это разрешишь, "
-                    + "и когда ты сам отправляешь письмо в «Написать нам» (через сервис Web3Forms)."},
-            {"Сколько тратит батареи и места?", "Меньше 200 КБ места, а заряда почти не тратит. Пока экран выключен, приложение спит, "
+            {"Что «Звонок» знает обо мне?", "Ничего. Класс, кружки и настройки лежат у тебя на телефоне, аккаунтов и рекламы нет. "
+                    + "В интернет приложение ходит только за новой версией, заменами и новостями лицея, если ты это разрешишь, "
+                    + "и когда ты сам отправляешь письмо в «Написать нам» (через сервис Web3Forms). Сколько нас, считает GitHub "
+                    + "по числу скачиваний файла с номером версии: ни IP, ни чего-либо о телефоне мы не видим."},
+            {"Сколько тратит батареи и места?", "Меньше 300 КБ места, а заряда почти не тратит. Пока экран выключен, приложение спит, "
                     + "а таймер тикает силами самой системы. В каникулы оно отдыхает вместе с тобой."},
             {"Уведомление пропало или не обновляется", "Телефон закрыл приложение ради батареи. Открой «Проверка телефона» выше "
                     + "и включи всё, что там предлагают."},
@@ -68,11 +69,24 @@ final class MoreTab {
         root.addView(Ui.heading(Ui.text(a, "Ещё", 28, Ui.TEXT, "sans-serif-medium")));
         root.addView(Ui.text(a, Schedule.school() + " · " + Schedule.term(), 14, Ui.MUTED, null));
 
+        // как на сайте: сверху то, за чем сюда приходят чаще всего
+        LinearLayout top = section("Лицей и «Звонок»", R.drawable.ic_news, 2);
+        top.addView(Ui.linkRow(a, "Олимпиады", "Алматы и онлайн, 7–11 классы", null,
+                v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.OLYMP))));
+        top.addView(Ui.linkRow(a, "Что нового", "Все обновления сайта, Android и iPhone", null, v -> a.startActivity(new Intent(a, Changelog.class))));
+        top.addView(Ui.linkRow(a, "Написать нам", "Идея, ошибка или вопрос. Анонимно", null, v -> a.startActivity(new Intent(a, Feedback.class))));
+
         LinearLayout cls = section("Класс и расписание", R.drawable.ic_week, 7);
         cls.addView(Ui.linkRow(a, "Класс", Schedule.isCustom() ? "Сейчас включено своё расписание" : null,
                 Updater.prefs(a).getString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS), v -> Ui.pickClass(a, () -> { build(); a.rebuild(); })));
         cls.addView(Ui.linkRow(a, "Своё расписание", "Любые предметы, кабинеты и звонки", Schedule.isCustom() ? "вкл" : null,
                 v -> a.startActivity(new Intent(a, EditorActivity.class))));
+
+        org.json.JSONObject extras = Plus.set();
+        int picked = (extras.optJSONArray("shor") == null ? 0 : extras.optJSONArray("shor").length())
+                + (extras.optJSONArray("clubs") == null ? 0 : extras.optJSONArray("clubs").length());
+        cls.addView(Ui.linkRow(a, "Кружки и ШОР", "Занятия после уроков с таймером до начала и конца", picked > 0 ? String.valueOf(picked) : null,
+                v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.CLUBS))));
 
         LinearLayout look = section("Оформление", R.drawable.ic_auto, 9);
         look.addView(caption("Тема"));
@@ -100,7 +114,11 @@ final class MoreTab {
         look.addView(colors, Ui.mw(a, 8));
         look.addView(Ui.switchRow(a, "Цвет предметов", "Алгебра синяя, физика фиолетовая, химия бирюзовая", !Ui.PLAIN,
                 (b, on) -> { Updater.prefs(a).edit().putBoolean(Ui.KEY_PLAIN, !on).apply(); a.recreate(); }));
-        look.addView(Ui.linkRow(a, "Виджеты и уведомление", "Цвета, прозрачность, цвет урока", null,
+        look.addView(Ui.switchRow(a, "Праздничные темы", "В праздники и каникулы значок и цвет дня", Updater.prefs(a).getBoolean(Plus.KEY_FEST, true), (b, on) -> {
+            Updater.prefs(a).edit().putBoolean(Plus.KEY_FEST, on).apply();
+            a.rebuild();
+        }));
+        look.addView(Ui.linkRow(a, "Виджеты и уведомление", "Цвета, прозрачность, свой фон, цвет урока", null,
                 v -> a.startActivity(new Intent(a, StyleActivity.class))));
 
         LinearLayout notif = section("Уведомление", R.drawable.ic_bell, 0);
@@ -119,6 +137,8 @@ final class MoreTab {
         notif.addView(flag("Вибрация перед уроком", "Тихо вибрирует за 2 минуты до звонка на урок", Updater.KEY_BUZZ, false));
 
         shareSection();
+
+        notif.addView(flag("Новости лицея", "Уведомление о новом посте в канале. Проверка не чаще раза в 6 часов", Feed.KEY_NOTIFY, true));
 
         LinearLayout cal = section("Календарь", R.drawable.ic_week, 1);
         if (Schedule.isCustom()) {
@@ -158,8 +178,6 @@ final class MoreTab {
                 Updates.KEY_AUTO, false));
 
         LinearLayout about = section("О «Звонке»", R.drawable.ic_info, 12);
-        about.addView(Ui.linkRow(a, "Что нового", "Все обновления сайта, Android и iPhone", null, v -> a.startActivity(new Intent(a, Changelog.class))));
-        about.addView(Ui.linkRow(a, "Написать нам", "Идея, ошибка или вопрос. Анонимно", null, v -> a.startActivity(new Intent(a, Feedback.class))));
         about.addView(Ui.linkRow(a, "Сайт «Звонка»", "Все классы, установка для iPhone", null, v -> open(Uri.parse(Updates.SITE))));
         about.addView(Ui.linkRow(a, "Исходный код", "Только для просмотра, все права защищены", null, v -> open(Uri.parse("https://github.com/Danick-Dack/Zvonok"))));
         age = note(ageText());
@@ -170,7 +188,8 @@ final class MoreTab {
         for (String[] qa : FAQ) faq.addView(question(qa[0], qa[1]));
 
         TextView privacy = Ui.text(a, "Про приватность: в интернет приложение выходит, только если ты разрешил, и только чтобы узнать "
-                + "про новую версию и замены в расписании, или когда ты сам отправляешь нам письмо. Рекламы, аккаунтов и аналитики нет.\n\n"
+                + "про новую версию, замены в расписании и новости лицея (со своего сайта), или когда ты сам отправляешь нам письмо. "
+                + "Рекламы и аккаунтов нет. Сколько нас, считает GitHub по скачиваниям файла с номером версии: о телефоне ничего не передаётся.\n\n"
                 + "Про батарею: пока экран выключен, приложение ничего не делает и телефон не будит. Исключение одно: "
                 + "вибрация перед уроком, если ты её включишь, будит телефон один раз перед каждым уроком.", 13, Ui.MUTED, null);
         privacy.setLineSpacing(0, 1.2f);

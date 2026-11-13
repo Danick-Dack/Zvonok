@@ -48,7 +48,7 @@ public class DayWidget extends AppWidgetProvider {
 
     static RemoteViews build(Context ctx, Updater.Display d, Theme t, Schedule.Status s) {
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_day);
-        LessonWidget.background(rv, R.id.d_bg, t);
+        Backdrop.widget(ctx, rv, R.id.d_bg, t, 2f);
 
         rv.setTextViewText(R.id.d_label, d.label);
         rv.setTextViewText(R.id.d_title, d.title);

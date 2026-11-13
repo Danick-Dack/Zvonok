@@ -95,6 +95,73 @@ async function main() {
     ok(ev('[1,3,18].map(n => vacationText({n, today: false, name: "Зимние каникулы"})).join()') === "До каникул 1 учебный день,До каникул 3 учебных дня,До каникул 18 учебных дней", "склонение дней");
   });
 
+  run("СОР и СОЧ", () => {
+    ev('cls="7Б";useCustom=false;pick=false;rebuild()');
+    const on = t => w.examsOn("7Б", at(t)).map(x => x.type + " " + x.subject).join(), txt = sel => (d.querySelector(sel) || {}).textContent;
+    ok(on("2026-11-13T09:00:00") === "СОР Казахский яз. и лит." && on("2026-12-22T09:00:00") === "СОЧ Английский язык,СОЧ Геометрия,СОЧ Физика" && on("2026-11-14T09:00:00") === "", "7Б: СОР 13 ноября, три СОЧ 22 декабря");
+    ok(w.examText(w.examsOn("7Б", at("2026-12-18T09:00:00"))) === "СОЧ: казахский яз. и лит.. СОР: английский язык, информатика", "текст дня: сначала СОЧ, потом СОР");
+    ok(w.examsEnd() === "2026-12-23" && w.examList("9В").length === 29, "последний день графика 23 декабря");
+    const all = Object.keys(ev("DATA.classes")).flatMap(c => w.examList(c));
+    ok(all.length > 400 && all.every(x => new Date(x.date + "T12:00:00").getDay() % 6 !== 0 && !w.holiday(new Date(x.date + "T12:00:00"))), "ни один СОР или СОЧ не выпал на выходной или праздник (" + all.length + ")");
+    withDate("2026-12-21T07:00:00", 'examTab(),location.hash="#exams",route(false),renderExams()');
+    ok(!d.getElementById("v-exams").hidden && !d.querySelector('.tabbar a[data-tab="exams"]').hidden && txt("#examList .exam-day.today .tag.soch") === "СОЧ", "вкладка СОР/СОЧ: сегодняшний СОЧ отмечен");
+    [...d.querySelectorAll("#examClasses button")].find(b => b.textContent === "10А").click();
+    ok(/^10А/.test(d.getElementById("examsMeta").textContent), "во вкладке можно посмотреть любой класс");
+    withDate("2026-12-21T07:00:00", 'key="",tick()');
+    ok(d.getElementById("todayExam").textContent === "Сегодня СОЧ: алгебра" && txt("#todayList .exm") === "СОЧ", "«Сейчас»: СОЧ в пометке дня и на уроке");
+    withDate("2026-12-20T12:00:00", 'key="",tick()');
+    ok(d.getElementById("todayExam").textContent === "Завтра СОЧ: алгебра", "накануне: «Завтра СОЧ»");
+    withDate("2026-12-24T07:00:00", 'examTab(),route(false)');
+    ok(d.querySelector('.tabbar a[data-tab="exams"]').hidden && d.querySelector('.nav-top a[data-tab="exams"]').hidden && d.getElementById("v-exams").hidden, "после последнего СОЧ вкладка исчезает сама");
+    ev('location.hash="#now";examTab();key="";tick()');
+  });
+
+  run("кружки и ШОР", () => {
+    ev('EXTRA={shor:["fiz7"],clubs:[{name:"Шахматы",place:"каб. 12",times:[[1,"17:00","18:00"]]}]}');
+    const list = w.extrasOn(at("2026-11-17T09:00:00"), ev("EXTRA"));
+    ok(list.map(x => x.name + " " + x.start + "-" + x.end).join() === "ШОР · Физика 870-990,Шахматы 1020-1080", "вторник: ШОР по физике и шахматы по времени");
+    ok(w.extrasOn(at("2026-11-18T09:00:00"), ev("EXTRA")).length === 0 && w.extrasOn(at("2026-12-29T09:00:00"), ev("EXTRA")).length === 0, "в другой день и в каникулы занятий нет");
+    let x = w.extraNow(at("2026-11-17T13:50:00"), ev("EXTRA"));
+    ok(!x.on && w.extraText(x, at("2026-11-17T13:50:00")) === "ШОР · Физика: до начала 40 мин", "до начала ШОР 40 минут");
+    x = w.extraNow(at("2026-11-17T15:25:00"), ev("EXTRA"));
+    ok(x.on && w.extraText(x, at("2026-11-17T15:25:00")) === "ШОР · Физика: до конца 1 ч 5 мин", "идёт: до конца 1 ч 5 мин");
+    ok(w.extraNow(at("2026-11-17T18:00:00"), ev("EXTRA")) === null, "после последнего занятия пусто");
+    withDate("2026-11-17T15:25:00", 'key="",tick()');
+    ok(!d.getElementById("extra").hidden && d.getElementById("extraText").textContent.startsWith("ШОР · Физика: до конца"), "карточка занятия на «Сейчас»");
+    ev('location.hash="#week";route(false);renderWeek()');
+    ok(d.querySelectorAll("#weekGrid .extras li").length >= 2, "кружки видны в неделе");
+    ev('store.set("extras",{shor:["нет","fiz7",5],clubs:[{name:"<b>x</b>",times:[[9,"1","2"],[2,"10:00","9:00"],[3,"10:00","11:00"]]},{times:1}]})');
+    const e = ev("extraSet()");
+    ok(e.shor.join() === "нет,fiz7" && e.clubs.length === 1 && e.clubs[0].times.length === 1, "мусор в сохранённых кружках отбрасывается");
+    ev('store.del("extras");EXTRA=extraSet();location.hash="#now";route(false);key="";tick()');
+  });
+
+  run("праздники", () => {
+    ok(w.offSoon(at("2026-12-15T10:00:00"), ev("src")) === "Завтра День Независимости, в школу не идём", "накануне праздника: завтра в школу не идём");
+    ok(w.offSoon(at("2027-03-12T10:00:00"), ev("src")) === "В понедельник День Конституции, в школу не идём", "в пятницу про праздник в понедельник");
+    ok(w.offSoon(at("2026-12-25T10:00:00"), ev("src")) === "" && w.offSoon(at("2026-11-17T10:00:00"), ev("src")) === "", "про каникулы говорит счётчик, в обычный день пусто");
+    const f = t => (w.festive(at(t)) || [])[4];
+    ok(f("2026-10-31T10:00:00") === "Хэллоуин" && f("2026-12-31T10:00:00") === "Новый год" && f("2027-01-05T10:00:00") === "Новый год" && f("2026-12-16T10:00:00") === "День Независимости" && f("2026-11-17T10:00:00") === undefined, "праздничные темы по датам, Новый год через границу года");
+    withDate("2026-10-31T10:00:00", 'store.del("festSeen"),key="",tick()');
+    ok(d.documentElement.hasAttribute("data-fest") && !d.getElementById("fest").hidden && d.getElementById("festName").textContent === "Хэллоуин", "праздничная тема включается сама");
+    withDate("2026-10-31T10:00:00", 'store.set("fest",false),key="",tick()');
+    ok(!d.documentElement.hasAttribute("data-fest") && d.getElementById("fest").hidden, "и выключается в «Оформлении»");
+    ev('store.del("fest");key="";tick()');
+  });
+
+  run("новости", () => {
+    const items = w.cleanFeed({items: [{id: 7, date: "2026-11-06T09:45:54+00:00", text: "Привет https://example.com/a. <b>x</b>", photo: "news/7.jpg", w: 640, h: 800},
+      {id: 6, date: "2026-11-05T09:00:00+00:00", text: "б", photo: "https://evil.example/x.jpg"}, {id: "5", date: "x"}, null]});
+    ok(items.length === 2 && items[0].photo === "news/7.jpg" && items[1].photo === "", "из news.json берётся только понятное, чужие картинки отбрасываются");
+    ev('FEED=cleanFeed({items:[{id:7,date:"2026-11-06T09:45:54+00:00",text:"Привет https://example.com/a. <b>x</b>"}]});store.del("newsSeen");newsDot()');
+    ok(d.querySelector('.tabbar a[data-tab="news"]').classList.contains("dot"), "новый пост: точка на вкладке");
+    ev('location.hash="#news";route(false)');
+    const post = d.querySelector("#feed .post");
+    ok(!!post && post.querySelector(".post-text a").getAttribute("href") === "https://example.com/a" && !post.querySelector(".post-text b") && post.textContent.includes("<b>x</b>"), "пост: ссылка кликается, HTML из канала остаётся текстом");
+    ok(!d.querySelector('.tabbar a[data-tab="news"]').classList.contains("dot") && ev('store.get("newsSeen",0)') === 7, "после открытия точка пропадает");
+    ev('location.hash="#now";route(false)');
+  });
+
   run("ссылка на класс и вкладки", () => {
     ev('location.hash="#10a"');
     ok(ev("classFromHash()") === "10А", "#10a это 10А");
@@ -109,7 +176,12 @@ async function main() {
     ok(!d.getElementById("v-week").hidden && d.getElementById("v-now").hidden, "#week открывает неделю");
     ok(d.querySelector('.tabbar a[aria-current="page"]').dataset.tab === "week", "в нижней панели отмечена неделя");
     ev('location.hash="#install";route(false)');
-    ok(!d.getElementById("v-more").hidden && !!d.getElementById("install"), "старая ссылка #install ведёт в «Ещё»");
+    ok(!d.getElementById("v-get").hidden && !!d.querySelector("#v-get #install") && !d.querySelector("#v-more #install"), "старая ссылка #install ведёт во вкладку «Скачать на телефон», в «Ещё» её нет");
+    ev('location.hash="#olymp";route(false)');
+    ok(!d.getElementById("v-olymp").hidden && d.querySelector('.tabbar a[aria-current="page"]').dataset.tab === "more" && !!d.querySelector('#v-more a[href="#olymp"]'), "олимпиады открываются из «Ещё»");
+    ok(d.querySelector(".brand").getAttribute("href") === "about", "логотип ведёт на /about");
+    const tabs = [...d.querySelectorAll(".tabbar a")].map(a => a.dataset.tab).join();
+    ok(tabs === "now,week,rooms,exams,news,more", "нижняя панель: «Новости» перед «Ещё» (" + tabs + ")");
     ev('location.hash="#schedule";route(false)');
     ok(!d.getElementById("v-week").hidden, "старая ссылка #schedule ведёт в неделю");
     ev('location.hash="#now";route(false);setClass("7Б")');
@@ -303,7 +375,7 @@ async function pages() {
     // узкий экран: ничего не вылезает вбок
     let w = await load("_site_under_test.html#week", 390, 800), d = w.document;
     w.eval('try{localStorage.setItem("zv.class",JSON.stringify("7Б"))}catch(e){}');
-    for (const v of ["now", "week", "rooms", "more", "olymp"]) {
+    for (const v of ["now", "week", "rooms", "exams", "news", "more", "olymp", "get"]) {
       w.eval(`location.hash="#${v}";route(false)`);
       ok(d.documentElement.scrollWidth <= 390, "390px, " + v + ": нет горизонтальной прокрутки (" + d.documentElement.scrollWidth + ")");
     }
@@ -389,23 +461,25 @@ async function pages() {
 async function iosScript(w) {
   const SCR = (window.SIG_FIXTURE || {}).scripts || {}, src = SCR["7Б"], ver = w.eval("IOS_VERSIONS")["7B"];
   const run = async (opts, code) => {
-    const files = Object.assign({}, opts.files || {}), logs = [], notes = [];
+    const files = Object.assign({}, opts.files || {}), logs = [], notes = [], reminders = [];
     let out = null;
     const fm = {documentsDirectory: () => "/docs", joinPath: (a, b) => a + "/" + b, fileExists: p => p in files, readString: p => files[p],
       writeString: (p, s) => { files[p] = s; }, modificationDate: () => new Date(), isFileStoredIniCloud: p => p.startsWith("/icloud/")};
     class Request { constructor(u) { this.url = u; logs.push(u); }
-      loadJSON() { return /versions\.json$/.test(this.url) ? Promise.resolve(opts.versions) : Promise.reject(new Error("офлайн")); }
+      loadJSON() { return /versions\.json$/.test(this.url) ? Promise.resolve(opts.versions) : /news\.json$/.test(this.url) && opts.news ? Promise.resolve(opts.news) : Promise.reject(new Error("офлайн")); }
+      load() { return Promise.resolve(); }
       loadString() { return /ios\/7B\.js$/.test(this.url) ? Promise.resolve(opts.code) : Promise.reject(new Error("офлайн")); } }
     class Stub { constructor() { return new Proxy(function () {}, {get: (t, k) => k === "then" ? undefined : new Stub(), apply: () => new Stub(), construct: () => new Stub(), set: () => true}); } }
     const env = {config: {runsInApp: true, runsWithSiri: !!opts.siri, runsInWidget: false}, args: {widgetParameter: opts.param || ""}, module: {filename: "/icloud/Звонок.js"},
       Script: {complete() {}, setWidget() {}, setShortcutOutput(v) { out = v; }}, FileManager: {local: () => fm, iCloud: () => fm}, Request,
-      Notification: class { schedule() { notes.push(this.title + " / " + this.body); return Promise.resolve(); } },
+      Notification: class { setTriggerDate(d) { this.when = d; }
+        schedule() { (/^zv-exam-/.test(this.identifier || "") ? reminders : notes).push(this.title + " / " + this.body); return Promise.resolve(); } },
       WebView: class { loadHTML() { return Promise.resolve(); } present() { return Promise.resolve(); } },
       Color: Stub, Font: Stub, Size: Stub, Point: Stub, LinearGradient: Stub, ListWidget: Stub, SFSymbol: Stub, DrawContext: Stub, Image: Stub, Path: Stub, Rect: Stub,
       Device: {isUsingDarkAppearance: () => true, screenSize: () => ({width: 390, height: 844})}};
     const names = Object.keys(env), AF = Object.getPrototypeOf(async function () {}).constructor;
     const ret = await new AF(...names, code || src)(...names.map(n => env[n]));
-    return {files, logs, notes, out, ret};
+    return {files, logs, notes, reminders, out, ret};
   };
   try {
     // код темы в виджете: мусор на входе даёт тему по умолчанию, без исключений
@@ -446,6 +520,13 @@ async function iosScript(w) {
     ok(!got(r) && r.notes.length === 0, "битую или чужую версию не ставит");
     r = await run({versions: {classes: {"7B": ver}}, code: F.code}, keyed);
     ok(!got(r) && !r.logs.some(u => /ios\/7B\.js/.test(u)), "та же версия: ничего не скачивает");
+    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 5, text: "Привет, лицей\nвторая строка"}]}, files: {"/docs/zvonok-update.json": JSON.stringify({news: 3})}});
+    ok(r.notes.join() === "Новости лицея / Привет, лицей" && JSON.parse(r.files["/docs/zvonok-update.json"]).news === 5, "iPhone: уведомление о новом посте канала, один раз");
+    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 5, text: "Привет"}]}});
+    ok(r.notes.length === 0 && JSON.parse(r.files["/docs/zvonok-update.json"]).news === 5, "iPhone: при первом запуске старые новости не присылает");
+    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 9, text: "x"}]}, files: {"/docs/zvonok-update.json": JSON.stringify({news: 3}), "/docs/zvonok-settings.json": JSON.stringify({cls: "7Б", ntf: {news: false}})}});
+    ok(r.notes.length === 0, "iPhone: уведомления о новостях выключаются");
+    ok(r.logs.filter(u => /ping\.json$/.test(u)).length === 1 && JSON.parse(r.files["/docs/zvonok-update.json"]).ping.length === 10, "iPhone: счётчик устройств раз в сутки");
     r = await run({siri: true, versions: {classes: {"7B": ver}}});
     ok(typeof r.out === "string" && r.out.length > 10 && !/undefined|NaN/.test(r.out), "ответ для Siri: «" + r.out + "»");
     // сайт и виджет iPhone считают одно и то же: целая неделя с шагом 7 минут, три класса

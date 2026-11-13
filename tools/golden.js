@@ -54,5 +54,17 @@ function goldenRun(cfg) {
   }
   const hues = {};
   for (const s of Object.values(DATA.subjects).concat(cfg.extraSubjects)) hues[s] = hueOf(s);
-  return {cases, days, cancelled: cancel, rooms, hues};
+  // СОР и СОЧ, кружки и ШОР, праздники: то же считает Plus.java
+  const plus = {end: examsEnd(), exams: {}, extras: [], soon: [], fest: {}};
+  for (const c of cfg.plusClasses) {
+    plus.exams[c] = {all: examList(c).length};
+    for (const t of cfg.examDates) plus.exams[c][t] = examText(examsOn(c, at0(t + "T12:00:00")));
+  }
+  for (const t of cfg.extraTimes) {
+    const now = at0(t), x = extraNow(now, cfg.extras);
+    plus.extras.push({local: t, now: now.getTime(), day: extrasOn(now, cfg.extras).map(e => e.name + " " + e.start + "-" + e.end + " " + e.place).join("; "), text: x ? extraText(x, now) : ""});
+  }
+  for (const t of cfg.soonTimes) plus.soon.push({local: t, now: at0(t).getTime(), text: offSoon(at0(t), {real: true})});
+  for (const t of cfg.festDates) { const f = festive(at0(t + "T12:00:00")); plus.fest[t] = f ? f[4] : ""; }
+  return {cases, days, cancelled: cancel, rooms, hues, plus, extras: cfg.extras};
 }

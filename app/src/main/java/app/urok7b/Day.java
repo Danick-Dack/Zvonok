@@ -64,14 +64,21 @@ final class Day {
      * Уроки дня с переменами. live: это сегодня, отмечаем прошедшие, идущий и следующий.
      * progress: сколько процентов идущего урока прошло (-1, если урока сейчас нет). Его полоска помечена CUR_BAR.
      */
-    static LinearLayout timeline(Context c, List<Schedule.Lesson> list, boolean live, Schedule.Status s,
+    static LinearLayout timeline(Context c, List<Schedule.Lesson> list, LocalDate date, boolean live, Schedule.Status s,
                                  int nowMin, int progress, String empty) {
         LinearLayout box = Ui.vertical(c);
+        // СОР и СОЧ этого дня: строка сверху и пометка у урока. В каникулы и праздники их нет
+        List<Plus.Exam> exams = date == null || Schedule.dayOff(date) != null ? java.util.Collections.<Plus.Exam>emptyList() : Plus.examsOn(Schedule.cls(), date);
+        if (!exams.isEmpty()) {
+            TextView e = Ui.text(c, Plus.examText(exams), 14, Ui.TEXT, "sans-serif-medium");
+            e.setPadding(Ui.dp(c, 14), Ui.dp(c, 10), Ui.dp(c, 14), Ui.dp(c, 10));
+            e.setBackground(Ui.round(c, (Ui.BAD & 0x00FFFFFF) | 0x26000000, 14, 0));
+            box.addView(e, Ui.mw(c, 0));
+        }
         if (list.isEmpty()) {
             TextView e = Ui.text(c, empty, 15, Ui.MUTED, null);
             e.setPadding(Ui.dp(c, 4), Ui.dp(c, 8), 0, Ui.dp(c, 8));
             box.addView(e);
-            return box;
         }
         for (int i = 0; i < list.size(); i++) {
             Schedule.Lesson x = list.get(i);
@@ -83,13 +90,25 @@ final class Day {
             }
             boolean cur = live && s.kind == Schedule.Kind.LESSON && s.current != null && s.current.num == x.num;
             boolean next = live && (s.kind == Schedule.Kind.BREAK || s.kind == Schedule.Kind.BEFORE) && s.next != null && s.next.num == x.num;
-            box.addView(row(c, x, null, cur, next, live && !cur && x.end <= nowMin, cur ? progress : -1,
+            String exam = "";
+            for (Plus.Exam e : exams) if (e.subject.equals(x.subject)) exam = e.type;
+            box.addView(row(c, x, exam, cur, next, live && !cur && x.end <= nowMin, cur ? progress : -1,
                     i == 0, i == list.size() - 1));
+        }
+        // кружки и ШОР этого дня
+        for (Plus.Extra x : date == null ? java.util.Collections.<Plus.Extra>emptyList() : Plus.extrasOn(date)) {
+            LinearLayout r = Ui.horizontal(c);
+            r.setPadding(Ui.dp(c, 4), Ui.dp(c, 10), Ui.dp(c, 4), 0);
+            TextView time = Ui.text(c, Schedule.hm(x.start) + "–" + Schedule.hm(x.end), 13, Ui.MUTED, null);
+            time.setFontFeatureSettings("tnum");
+            r.addView(time, new LinearLayout.LayoutParams(Ui.dp(c, 96), ViewGroup.LayoutParams.WRAP_CONTENT));
+            r.addView(Ui.twoLines(c, x.name, x.place), Ui.weight(1));
+            box.addView(r);
         }
         return box;
     }
 
-    /** Строка ленты: время | точка на линии | урок с кабинетом (или перемена, если x == null). */
+    /** Строка ленты: время | точка на линии | урок с кабинетом (или перемена, если x == null). gap у урока: «СОР», «СОЧ» или "". */
     private static View row(Context c, Schedule.Lesson x, String gap, boolean cur, boolean next, boolean past,
                             int progress, boolean first, boolean last) {
         LinearLayout r = Ui.horizontal(c);
@@ -143,7 +162,7 @@ final class Day {
         LinearLayout mid = Ui.vertical(c);
         mid.setLayoutParams(Ui.weight(1));
         mid.addView(Ui.text(c, x.subject, 16, Ui.TEXT, cur ? "sans-serif-medium" : null));
-        String mark = x.changed ? "замена" : x.shortBell ? "сокращённый" : "";
+        String mark = (x.changed ? "замена" : x.shortBell ? "сокращённый" : "") + (gap.isEmpty() ? "" : (x.changed || x.shortBell ? " · " : "") + gap);
         TextView sub = Ui.text(c, (cur ? "Идёт, урок " + x.num : next ? "Следующий, урок " + x.num
                         : "Урок " + x.num + " · " + (x.end - x.start) + " мин") + (mark.isEmpty() ? "" : " · " + mark), 13,
                 cur || next ? Ui.strong(x.subject) : mark.isEmpty() ? Ui.MUTED : Ui.WARN, cur || next ? "sans-serif-medium" : null);

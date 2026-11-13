@@ -39,7 +39,7 @@ function model(now, s) {
     } else Object.assign(m, {big: "–", cap: "уроков не найдено", sub: useCustom ? "В своём расписании пока пусто." : ""});
   }
   m.kind = s.kind;
-  m.vac = vacationText(vacation(now, src));
+  m.vac = offSoon(now, src) || vacationText(vacation(now, src));
   // когда уроков нет, пусть карточка не будет совсем сухой; фраза своя на каждый день и не прыгает
   if (!m.timer && (s.kind === "AFTER" || s.kind === "OFF") && !m.foot) {
     const q = s.holiday && /каникул/i.test(s.holiday[2]) ? QUIPS.vac : s.kind === "AFTER" ? QUIPS.after : QUIPS.off;
@@ -81,7 +81,10 @@ function renderNow(now) {
   $("todayVac").textContent = m.vac || ""; $("todayVac").hidden = !m.vac;
   const note = date ? dayNote(date) : null;
   $("todayNote").textContent = note ? note.text : ""; $("todayNote").hidden = !note; $("todayNote").className = "day-note" + (note ? " " + note.kind : "");
-  $("todayList").replaceWith(Object.assign(timeline(list, today, s, "Ближайших уроков нет"), {id: "todayList"}));
+  const exams = date ? dayExams(date) : [];
+  $("todayExam").textContent = exams.length ? (today ? "Сегодня " : s.nDays === 1 ? "Завтра " : "") + examText(exams) : ""; $("todayExam").hidden = !exams.length;
+  $("todayList").replaceWith(Object.assign(timeline(list, today, s, "Ближайших уроков нет", exams), {id: "todayList"}));
+  renderExtra(now, s); renderFest(now);
   renderPromo();
 }
 // Таймер в заголовке вкладки виден только в браузере на компьютере. На телефоне заголовка не видно,
@@ -126,7 +129,8 @@ function tick() {
     dirty[view] = false; RENDER[view]();
     if (view !== "now") { dirty.now = false; renderNow(now); }
     if (!first) announce();
-  }
+    examTab();
+  } else if (view === "now" && EXTRA_ON && now.getSeconds() < 2) renderExtra(now, S); // минуты до кружка
   paint(now);
   tickT = setTimeout(tick, nextTick());
 }
@@ -153,7 +157,7 @@ function background() {
   setTitle((min < 60 ? min + " мин" : Math.floor(min / 60) + " ч " + min % 60 + " мин") + " · Звонок · " + title());
   tickT = setTimeout(tick, 60000 - Date.now() % 60000 + 15);
 }
-document.addEventListener("visibilitychange", () => { tick(); if (!document.hidden) { loadChanges(); loadOlympiads(); } });
+document.addEventListener("visibilitychange", () => { tick(); if (!document.hidden) { loadChanges(); loadOlympiads(); loadNews(); } });
 /** Для экранного диктора: только смена урока, а не каждая секунда. */
 function announce() {
   if (pick || !M.title) return;
@@ -162,7 +166,7 @@ function announce() {
 
 /** Открыть приложение Android сразу на этом классе; если его нет, Chrome покажет, как установить. */
 const appLink = () => "intent://" + SITE.replace(/^https?:\/\//, "") + (pick || useCustom ? "" : slugOf(cls))
-  + "#Intent;scheme=https;package=app.urok7b;S.browser_fallback_url=" + encodeURIComponent(SITE + "#install") + ";end";
+  + "#Intent;scheme=https;package=app.urok7b;S.browser_fallback_url=" + encodeURIComponent(SITE + "#get") + ";end";
 /* приглашение поставить на телефон */
 function renderPromo() {
   const box = $("promo");
@@ -172,10 +176,10 @@ function renderPromo() {
   const close = h("button", {class: "icon-btn", type: "button", "aria-label": "Скрыть", onclick: () => { store.set("promoOff", true); box.hidden = true; }}, icon("close", "sm"));
   box.replaceChildren(kind === "ios"
     ? h("div", null, h("b", {text: "Звонок на экране «Домой»"}), h("p", {text: "Добавь сайт как приложение: откроется сразу на твоём расписании, даже в подвале без сети."}),
-      h("a", {class: "btn btn-primary btn-sm", href: "#install", text: "Как добавить"}))
-    : h("div", null, h("b", {text: "Приложение для Android"}), h("p", {text: "Таймер до звонка прямо на экране блокировки. Весит меньше 200 КБ и не жрёт батарею."}),
+      h("a", {class: "btn btn-primary btn-sm", href: "#get", text: "Как добавить"}))
+    : h("div", null, h("b", {text: "Приложение для Android"}), h("p", {text: "Таймер до звонка прямо на экране блокировки. Весит меньше 300 КБ и не жрёт батарею."}),
       h("div", {class: "row"}, h("a", {class: "btn btn-primary btn-sm", href: APK, rel: "noopener", text: "Скачать"}),
-        h("a", {class: "btn btn-quiet btn-sm", href: appLink(), text: "Уже стоит? Открыть"}), h("a", {class: "btn btn-quiet btn-sm", href: "#install", text: "Как установить"}))),
+        h("a", {class: "btn btn-quiet btn-sm", href: appLink(), text: "Уже стоит? Открыть"}), h("a", {class: "btn btn-quiet btn-sm", href: "#get", text: "Как установить"}))),
     close);
 }
 
@@ -203,8 +207,8 @@ $("logBtn").onclick = e => { if (!LOG.length) return; e.preventDefault(); openLo
   const key = NEWS.date + "|" + NEWS.title, seen = store.get("seenLog", null);
   if (seen === key) return;
   if (pick) { store.set("seenLog", key); return; } // новичку незачем
-  $("newsText").textContent = NEWS.title; $("news").hidden = false;
+  $("newsText").textContent = NEWS.title; $("whatsNew").hidden = false;
   store.set("seenLog", key); // один раз: в следующий раз уже не покажем
-  $("newsClose").onclick = () => { store.set("seenLog", key); $("news").hidden = true; };
-  $("newsLink").onclick = e => { store.set("seenLog", key); if (!LOG.length) return; e.preventDefault(); $("news").hidden = true; openLog(); };
+  $("newsClose").onclick = () => { store.set("seenLog", key); $("whatsNew").hidden = true; };
+  $("newsLink").onclick = e => { store.set("seenLog", key); if (!LOG.length) return; e.preventDefault(); $("whatsNew").hidden = true; openLog(); };
 })();

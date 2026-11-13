@@ -146,4 +146,96 @@ public class UpdaterTest {
         assertTrue("праздник", d.holiday && !d.live);
         assertEquals("Выходной", d.title);
     }
+
+    private static ZonedDateTime when(int month, int day, int hour, int min) {
+        return ZonedDateTime.of(2026, month, day, hour, min, 0, 0, ALMATY);
+    }
+
+    private static Updater.Display full(String cls, int month, int day, int hour, int min) throws Exception {
+        return Updater.describe(at(cls, month, day, hour, min), when(month, day, hour, min));
+    }
+
+    /** Вторник 24 ноября, уроки 7Б кончились в 14:30, выбран ШОР по физике (вт 14:30–16:30): таймер до его конца. */
+    @Test
+    public void clubAfterLessons() throws Exception {
+        Plus.select("{\"shor\":[\"fiz7\"],\"clubs\":[{\"name\":\"Шахматы\",\"place\":\"каб. 12\",\"times\":[[1,\"17:00\",\"18:00\"]]}]}");
+        try {
+            Updater.Display d = full("7Б", 11, 24, 15, 0);
+            long now = when(11, 24, 15, 0).toInstant().toEpochMilli(), end = when(11, 24, 16, 30).toInstant().toEpochMilli();
+            assertEquals("по урокам это вечер", Schedule.Kind.AFTER, d.kind);
+            assertTrue("занятие на экране, отсчёт идёт", d.extra && d.live && d.timer);
+            assertEquals("ШОР · Физика", d.title);
+            assertEquals("ИДЁТ", d.label);
+            assertEquals("отсчёт до конца занятия", end, d.target);
+            assertEquals("прошло 30 из 120 минут", 25, d.progress);
+            assertEquals("ШОР · Физика: до конца 1 ч 30 мин", d.notifTitle);
+            assertEquals("каб. 48/49", d.foot);
+            assertEquals("во время занятия тик раз в минуту", (now / 60_000 + 1) * 60_000, Updater.nextStep(at("7Б", 11, 24, 15, 0), d, now, false));
+            // между занятиями: до шахмат полчаса
+            d = full("7Б", 11, 24, 16, 30);
+            assertEquals("Шахматы", d.title);
+            assertEquals("СЕГОДНЯ В 17:00", d.label);
+            assertEquals("Шахматы: до начала 30 мин", d.notifTitle);
+            assertEquals("до начала полосы нет", -1, d.progress);
+            // всё кончилось: снова обычный вечер, уведомление «только в учебное время» может уйти
+            d = full("7Б", 11, 24, 18, 0);
+            assertTrue("занятий больше нет", !d.extra && !d.live && !d.timer);
+            assertEquals("Отдыхай", d.title);
+            // пока идут уроки, кружок экран не занимает
+            d = full("7Б", 11, 24, 10, 0);
+            assertTrue(!d.extra && d.kind == Schedule.Kind.LESSON);
+        } finally {
+            Plus.select(null);
+        }
+    }
+
+    /** Суббота 21 ноября, ШОР по математике в 10:00: с утра обычный выходной, за полтора часа занятие выходит на экран. */
+    @Test
+    public void clubOnDayOff() throws Exception {
+        Plus.select("{\"shor\":[\"mat1\"]}");
+        try {
+            Updater.Display d = full("7Б", 11, 21, 8, 0);
+            assertTrue("за два часа ещё рано", !d.extra && !d.live);
+            assertEquals("проснуться за полтора часа до начала", when(11, 21, 8, 30).toInstant().toEpochMilli(), d.wake);
+            d = full("7Б", 11, 21, 8, 40);
+            assertTrue(d.extra && d.live && d.timer);
+            assertEquals("ШОР · Математика", d.title);
+            assertEquals(when(11, 21, 10, 0).toInstant().toEpochMilli(), d.target);
+            assertEquals(0, d.wake);
+            // каникулы: занятий нет, хотя вторник и группа выбрана
+            Plus.select("{\"shor\":[\"mat1\",\"fiz7\"]}");
+            d = Updater.describe(at("7Б", 12, 29, 15, 0), when(12, 29, 15, 0));
+            assertTrue("в каникулы кружков нет", !d.extra && d.holiday);
+        } finally {
+            Plus.select(null);
+        }
+    }
+
+    /** СОР и СОЧ: вечером накануне строка в уведомлении, на самом уроке пометка в ярлыке. */
+    @Test
+    public void examsInNotification() throws Exception {
+        Updater.Display d = full("7Б", 12, 17, 16, 0); // четверг после уроков, в пятницу СОЧ и два СОР
+        assertEquals("Завтра СОЧ: казахский яз. и лит.. СОР: английский язык, информатика", d.note);
+        assertEquals("вечером это нижняя строка", d.note, d.foot);
+        assertEquals("и текст уведомления", d.note, d.notifText);
+        d = full("7Б", 12, 21, 11, 0); // понедельник, 4 урок алгебра, сегодня по ней СОЧ
+        assertEquals("Алгебра", d.title);
+        assertTrue("пометка на уроке: " + d.label, d.label.endsWith(" · СОЧ"));
+        assertEquals("Сегодня СОЧ: алгебра", d.note);
+        assertTrue("остаток урока остаётся в заголовке", d.notifTitle.contains("осталось"));
+        d = full("7Б", 12, 21, 9, 0); // 2 урок казахский: СОЧ не по нему
+        assertTrue("у другого урока пометки нет: " + d.label, !d.label.contains("СОЧ"));
+        d = full("7Б", 11, 10, 16, 0); // обычный вечер
+        assertEquals("", d.note);
+        String sig = full("7Б", 12, 17, 16, 0).sig;
+        assertTrue("подпись меняется вместе со строкой про завтра", sig.endsWith("|" + full("7Б", 12, 17, 16, 0).note) && !sig.equals(full("7Б", 11, 10, 16, 0).sig));
+    }
+
+    /** Накануне праздника среди недели: «завтра в школу не идём»; про каникулы эта строка молчит. */
+    @Test
+    public void holidayTomorrow() throws Exception {
+        assertEquals("Завтра День Независимости, в школу не идём", full("7Б", 12, 15, 16, 0).note);
+        assertEquals("в пятницу перед каникулами строки нет", "", full("11Г", 12, 25, 16, 30).note);
+        assertEquals("в сам праздник напоминаем про завтрашние работы", "Завтра СОЧ: русский язык. СОР: алгебра", full("7Б", 12, 16, 10, 0).note);
+    }
 }

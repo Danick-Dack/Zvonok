@@ -68,6 +68,61 @@ if not re.fullmatch(DATE, data.get("term_end", "")):
 elif data["term_end"] < data.get("updated", ""):
     errors.append("term_end раньше даты обновления: забыли поменять четверть")
 
+# СОР и СОЧ: {класс: {предмет: [даты]}} и {класс: {предмет: дата}}. Только учебные дни этой четверти
+import datetime
+
+
+def exam_date(where, d):
+    if not isinstance(d, str) or not re.fullmatch(DATE, d):
+        errors.append(f"{where}: дата должна быть ГГГГ-ММ-ДД, а не {d!r}")
+        return
+    try:
+        day = datetime.date.fromisoformat(d)
+    except ValueError:
+        errors.append(f"{where}: такой даты нет: {d}")
+        return
+    if day.weekday() > 4:
+        errors.append(f"{where}: {d} это выходной")
+    if any(h[0] <= d <= h[1] for h in data.get("holidays", []) if len(h) == 3):
+        errors.append(f"{where}: {d} это каникулы или праздник")
+    if d > data.get("term_end", "9999"):
+        errors.append(f"{where}: {d} позже конца четверти")
+
+
+for kind in ("sor", "soch"):
+    for cls, subj in data.get(kind, {}).items():
+        if cls not in classes:
+            errors.append(f"{kind}: нет класса {cls}")
+        for code, dates in subj.items():
+            where = f"{kind}, {cls}, {code}"
+            if code not in data["subjects"]:
+                errors.append(f"{where}: нет такого предмета")
+            if kind == "sor" and (not isinstance(dates, list) or not dates or len(set(dates)) != len(dates)):
+                errors.append(f"{where}: нужен непустой список дат без повторов")
+                continue
+            for d in dates if kind == "sor" else [dates]:
+                exam_date(where, d)
+# ШОР: группы с расписанием, ученик отмечает свои
+ids = [g.get("id") for g in data.get("shor", [])]
+if len(set(ids)) != len(ids):
+    errors.append("shor: id групп повторяются")
+for g in data.get("shor", []):
+    where = f"shor, {g.get('id')}"
+    if not all(isinstance(g.get(k), str) and g[k].strip() and len(g[k]) <= 40 for k in ("id", "subject", "coach", "place")):
+        errors.append(f"{where}: id, subject, coach и place должны быть строками не длиннее 40 знаков")
+    if not g.get("grades") or any(x not in (7, 8, 9, 10, 11) for x in g["grades"]):
+        errors.append(f"{where}: grades из 7–11")
+    for t in g.get("times") or [None]:
+        ok = isinstance(t, list) and len(t) == 3 and t[0] in range(7) and mins(str(t[1])) is not None and mins(str(t[2])) is not None
+        if not ok or mins(t[2]) <= mins(t[1]):
+            errors.append(f"{where}: время {t}: нужно [день 0–6, \"чч:мм\", \"чч:мм\"], конец позже начала")
+# праздничные темы: [с ММ-ДД, по ММ-ДД, значок, цвет, название, фраза]
+for t in data.get("themes", []):
+    ok = (isinstance(t, list) and len(t) == 6 and all(isinstance(x, str) for x in t) and all(re.fullmatch(r"(0[1-9]|1[0-2])-([0-2]\d|3[01])", x) for x in t[:2])
+          and re.fullmatch(r"[0-9A-Fa-f]{6}", t[3]) and t[2] and 0 < len(t[4]) <= 40 and len(t[5]) <= 80 and "—" not in t[4] + t[5])
+    if not ok:
+        errors.append(f"themes: странная тема {t}")
+
 # замены: data/changes.json
 changes = json.load(open(os.path.join(ROOT, "data", "changes.json"), encoding="utf-8"))
 if not isinstance(changes.get("days"), dict):

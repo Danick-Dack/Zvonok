@@ -82,7 +82,13 @@ public final class Updater {
         public String miniSub = "";
         public String sig = "";          // меняется только при смене урока / перемены / дня
         public boolean holiday;          // каникулы или праздник
+        public boolean extra;            // на экране кружок или ШОР, а не урок
+        public String note = "";         // «Завтра СОЧ: алгебра» или «Завтра День Независимости, в школу не идём»
+        public long wake;                // когда кружок выйдет на экран (0: не нужно)
     }
+
+    /** За сколько до кружка в выходной он занимает экран; после уроков сразу. */
+    static final long EXTRA_LEAD = 90 * 60_000L;
 
     private static String lastSig = "", lastNotifView = "", lastWidgetView = "";
 
@@ -103,7 +109,7 @@ public final class Updater {
         long nowMs = now.toInstant().toEpochMilli();
         Schedule.Status s = Schedule.compute(now);
         // каникулы, праздники, отменённые дни и выходные приложение знает само (расписание + замены с сайта)
-        Display d = describe(s, nowMs);
+        Display d = describe(s, now);
         boolean screenOn = isScreenOn(ctx);
         Theme t = Theme.load(ctx).forDisplay(d);
 
@@ -137,6 +143,7 @@ public final class Updater {
             RoomsWidget.updateAll(ctx, now, t);
         }
         scheduleBuzz(ctx, now, prefs(ctx).getBoolean(KEY_BUZZ, false));
+        if (screenOn) Updates.background(ctx); // новости и новая версия: редко и только пока телефоном пользуются
         // раз в минуту нужно только тексту (таймер без секунд, «осталось N мин»), иначе хватит шагов полосы
         scheduleNext(ctx, s, d, nowMs, screenOn, notif || widgets, bell, !t.seconds || minuteTitle);
     }
@@ -153,6 +160,55 @@ public final class Updater {
     }
 
     // ---------- тексты ----------
+
+    /**
+     * То же плюс всё, что зависит от выбора ученика и календаря: кружок или ШОР после уроков (отсчёт до начала,
+     * потом до конца), СОР и СОЧ сегодня и завтра, завтрашний праздник.
+     */
+    public static Display describe(Schedule.Status s, ZonedDateTime now) {
+        long ms = now.toInstant().toEpochMilli();
+        Display d = describe(s, ms);
+        boolean lessons = s.kind == Schedule.Kind.LESSON || s.kind == Schedule.Kind.BREAK || s.kind == Schedule.Kind.BEFORE;
+        Plus.Extra x = lessons ? null : Plus.extraNow(now);
+        if (x != null && !x.on && s.kind != Schedule.Kind.AFTER && x.target - ms > EXTRA_LEAD) {
+            d.wake = x.target - EXTRA_LEAD;
+            x = null;
+        }
+        if (x != null) {
+            String from = Schedule.hm(x.start), to = Schedule.hm(x.end);
+            long begin = Schedule.at(now.toLocalDate(), x.start, now.getZone());
+            d.extra = d.live = d.timer = true;
+            d.holiday = false;
+            d.target = x.target;
+            d.progress = x.on ? (int) Math.max(0, Math.min(100, (ms - begin) * 100 / Math.max(1, x.target - begin))) : -1;
+            d.dotTotal = 0;
+            d.label = x.on ? "ИДЁТ" : "СЕГОДНЯ В " + from;
+            d.title = x.name;
+            d.room = "";
+            d.sideHead = x.on ? "КОНЕЦ" : "НАЧАЛО";
+            d.sideValue = d.sideShort = x.on ? to : from;
+            d.statHead = x.on ? "НАЧАЛО" : "КОНЕЦ";
+            d.statValue = x.on ? from : to;
+            if (!x.place.isEmpty()) d.foot = x.place;
+            d.notifTitle = Plus.extraText(x, ms);
+            d.notifText = from + "–" + to + (x.place.isEmpty() ? "" : " · " + x.place);
+            d.compactTitle = x.name;
+            d.compactText = (x.on ? "до " + to : "начало в " + from) + (x.place.isEmpty() ? "" : " · " + x.place);
+            d.miniLabel = x.on ? "ИДЁТ" : "В " + from;
+            d.miniRoom = "";
+            d.miniSub = x.name;
+            d.sig = "extra|" + x.name + "|" + x.on + "|" + x.target + "|" + Schedule.title();
+        }
+        d.note = Plus.note(now, lessons);
+        // СОР или СОЧ по предмету, который сейчас на экране
+        Schedule.Lesson shown = s.kind == Schedule.Kind.LESSON ? s.current : lessons ? s.next : null;
+        for (Plus.Exam e : shown == null ? java.util.Collections.<Plus.Exam>emptyList() : Plus.examsOn(Schedule.cls(), now.toLocalDate())) {
+            if (e.subject.equals(shown.subject)) { d.label += " · " + e.type; break; }
+        }
+        if (!lessons && !d.extra && !d.note.isEmpty()) d.foot = d.notifText = d.compactText = d.note; // вечером: что завтра
+        d.sig += "|" + d.note;
+        return d;
+    }
 
     public static Display describe(Schedule.Status s, long now) {
         Display d = new Display();
@@ -376,7 +432,7 @@ public final class Updater {
     public static Notification buildNow(Context ctx) {
         Schedule.load(ctx);
         ZonedDateTime now = ZonedDateTime.now();
-        Display d = describe(Schedule.compute(now), now.toInstant().toEpochMilli());
+        Display d = describe(Schedule.compute(now), now);
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm != null) ensureChannel(nm);
         return build(ctx, d, Theme.load(ctx).forDisplay(d));
@@ -404,7 +460,7 @@ public final class Updater {
     /** Свёрнутый вид уведомления (используется и для предпросмотра). */
     static RemoteViews notifSmall(Context ctx, Display d, Theme t) {
         RemoteViews small = new RemoteViews(ctx.getPackageName(), R.layout.notif_small);
-        small.setInt(R.id.n_root, "setBackgroundColor", t.bg);
+        Backdrop.notif(ctx, small, R.id.n_bg, R.id.n_root, t, false);
         small.setTextViewText(R.id.n_title, d.compactTitle);
         small.setTextViewText(R.id.n_text, d.compactText);
         small.setViewVisibility(R.id.n_text, d.compactText.isEmpty() ? View.GONE : View.VISIBLE);
@@ -417,7 +473,7 @@ public final class Updater {
     /** Развёрнутый вид уведомления (используется и для предпросмотра). */
     static RemoteViews notifBig(Context ctx, Display d, Theme t) {
         RemoteViews big = new RemoteViews(ctx.getPackageName(), R.layout.notif_big);
-        big.setInt(R.id.n_root, "setBackgroundColor", t.bg);
+        Backdrop.notif(ctx, big, R.id.n_bg, R.id.n_root, t, true);
         big.setTextViewText(R.id.n_label, d.label);
         big.setTextViewText(R.id.n_title, d.title);
         bindRoom(big, R.id.n_room, d.room);
@@ -593,7 +649,7 @@ public final class Updater {
 
     /** Когда на экране что-то поменяется само: следующая минута у текста «N мин», иначе следующий шаг полосы в 5%. */
     static long nextStep(Schedule.Status s, Display d, long nowMs, boolean perMinute) {
-        if (perMinute || d.progress < 0) return (nowMs / 60_000 + 1) * 60_000;
+        if (perMinute || d.progress < 0 || d.extra) return (nowMs / 60_000 + 1) * 60_000;
         return Math.max(nowMs + 1000, s.startMillis + (d.progress / 5 + 1) * (s.targetMillis - s.startMillis) / 20);
     }
 
@@ -608,7 +664,7 @@ public final class Updater {
         // ближайшая «граница»: звонок, начало часа перед уроками или полночь
         long boundary;
         if (d.live) {
-            boundary = s.targetMillis;
+            boundary = d.extra ? d.target : s.targetMillis;
         } else if (s.windowStartMillis > nowMs) {
             boundary = Math.min(s.windowStartMillis, nextMidnight);
         } else {
@@ -616,6 +672,7 @@ public final class Updater {
         }
 
         if (bell > 0) boundary = Math.min(boundary, bell);
+        if (d.wake > nowMs) boundary = Math.min(boundary, d.wake);
         long when = boundary;
         if (d.live && active) {
             // Каждую минуту — только когда на экран смотрят. Если экран выключен, а служба жива,

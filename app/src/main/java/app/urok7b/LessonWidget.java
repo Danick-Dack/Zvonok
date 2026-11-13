@@ -55,7 +55,7 @@ public class LessonWidget extends AppWidgetProvider {
 
     static RemoteViews build(Context ctx, Updater.Display d, Theme t, int heightDp) {
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget);
-        background(rv, R.id.w_bg, t);
+        Backdrop.widget(ctx, rv, R.id.w_bg, t, 1f);
         boolean tight = fit(ctx, rv, heightDp);
 
         rv.setTextViewText(R.id.w_label, d.label);
@@ -111,10 +111,4 @@ public class LessonWidget extends AppWidgetProvider {
         return h <= 0 || h < 150;
     }
 
-    /** Фон виджета: скруглённая форма, перекрашенная в цвет темы, с прозрачностью. */
-    static void background(RemoteViews rv, int id, Theme t) {
-        rv.setImageViewResource(id, t.shapeRes());
-        rv.setInt(id, "setColorFilter", t.bg | 0xFF000000);
-        rv.setInt(id, "setImageAlpha", Math.round(t.opacity * 2.55f));
-    }
 }

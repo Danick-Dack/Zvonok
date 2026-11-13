@@ -60,7 +60,7 @@ self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin) return;
   if (req.mode === "navigate" || /\.html$/.test(url.pathname)) {
-    e.respondWith(networkFirst(req, "index.html"));
+    e.respondWith(networkFirst(req, /\/about$/.test(url.pathname) ? "about.html" : "index.html")); // «О проекте» живёт по адресу /about
   } else if (/\.json$/.test(url.pathname)) {
     e.respondWith(networkFirst(req));
   } else if (/\.ics$/.test(url.pathname)) {

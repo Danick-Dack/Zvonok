@@ -11,5 +11,8 @@ document.addEventListener("zv:scheme", renderScheme);
 tick();
 loadChanges();
 loadOlympiads();
+loadNews();
+examTab();
+pingOnce();
 homeIcon();
 registerSW();

@@ -18,11 +18,12 @@ function renderWeek() {
     chips.append(h("button", {type: "button", role: "tab", id: "dtab" + d, "aria-selected": String(d === selDay), "aria-controls": "dcard" + d, tabindex: d === selDay ? "0" : "-1",
       class: isToday ? "today" : "", onclick: () => pickDay(d, true)}, DAYS[d], h("small", {text: date.getDate()})));
     const list = useCustom || dayOff(date) ? WEEK[d] : dayLessons(cls, date), note = noteEl(dayNote(date));
+    const exams = dayOff(date) ? [] : dayExams(date);
     box.append(h("section", {class: "day-card" + (isToday ? " today" : ""), id: "dcard" + d, role: "tabpanel", "aria-labelledby": "dtab" + d},
       h("div", {class: "day-head"}, h("h2", null, DAYN[d], isToday ? h("span", {class: "tag hot", text: "сегодня"}) : null), h("span", {text: dm(date) + " · " + dayRange(list)})),
       strip(list, isToday && !dayOff(date), S),
-      note,
-      timeline(list, isToday && !dayOff(date), S || compute(now, src), "Уроков нет")));
+      note, exams.length ? h("p", {class: "day-note exam", text: examText(exams)}) : null,
+      timeline(list, isToday && !dayOff(date), S || compute(now, src), "Уроков нет", exams), extrasEl(date)));
   });
   requestAnimationFrame(() => scrollToDay(selDay, false));
 }

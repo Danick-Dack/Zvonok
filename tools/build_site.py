@@ -164,9 +164,19 @@ def min_css(css):
     return "".join(out).strip()
 
 
+# рисунок в шапке вкладки: её значок из спрайта, крупно и бледно (маска, цвет задаёт CSS)
+TAB_ART = {"week": "now", "rooms": "door", "exams": "exam", "news": "news", "more": "more", "olymp": "cup", "get": "phone"}
+
+
+def art_css():
+    svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='#000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>%s</svg>"
+    enc = lambda name: (svg % ICONS[name].replace('"', "'").replace("currentColor", "#000")).replace("#", "%23").replace("<", "%3C").replace(">", "%3E")
+    return "\n".join('.th-%s{--art:url("data:image/svg+xml,%s")}' % (tab, enc(name)) for tab, name in TAB_ART.items())
+
+
 def bundle_css(names):
     css = "\n".join(read("site", "src", "css", n + ".css") for n in names)
-    return min_css(css.replace("/*@ACCENTS@*/", accent_css()))
+    return min_css(css.replace("/*@ACCENTS@*/", accent_css()).replace("/*@ART@*/", art_css()))
 
 
 def bundle_js(names):
@@ -202,6 +212,12 @@ ICONS = {
     "info": '<circle cx="12" cy="12" r="8.6"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r=".6" fill="currentColor"/>',
     "lock": '<rect x="5" y="10.4" width="14" height="10" rx="2.4"/><path d="M8.2 10.4V8a3.8 3.8 0 0 1 7.6 0v2.4"/>',
     "trash": '<path d="M5 7h14M10 4.4h4M7 7l.8 12.2a1.4 1.4 0 0 0 1.4 1.3h5.6a1.4 1.4 0 0 0 1.4-1.3L17 7"/>',
+    "exam": '<rect x="5" y="3.6" width="14" height="17.2" rx="2.6"/><path d="M8.6 8.4h6.8M8.6 12h3.4M9.2 16.2l1.7 1.7 3.8-4"/>',
+    "news": '<path d="M4 5.4h13v12.8a1.6 1.6 0 0 0 3.2 0V9.2H17"/><path d="M4 5.4v12.8a1.8 1.8 0 0 0 1.8 1.8h12.8M7.4 9h6.2M7.4 12.4h6.2M7.4 15.8h3.6"/>',
+    "star": '<path d="M12 3.6l2.5 5.3 5.7.7-4.2 4 1.1 5.7L12 16.5l-5.1 2.8 1.1-5.7-4.2-4 5.7-.7z"/>',
+    "mail": '<rect x="3.6" y="5.4" width="16.8" height="13.2" rx="2.6"/><path d="M4.4 7.4l7.6 5.6 7.6-5.6"/>',
+    "play": '<circle cx="12" cy="12" r="8.6"/><path d="M10.2 8.6v6.8l5.4-3.4z" fill="currentColor"/>',
+    "flag": '<path d="M5.6 20.6V4.2M5.6 5h10.2l-1.9 3.4 1.9 3.4H5.6"/>',
     "cup": '<path d="M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4.5a1.5 1.5 0 0 0-1.5 1.5v.5a4 4 0 0 0 4 4M17 6h2.5A1.5 1.5 0 0 1 21 7.5v.5a4 4 0 0 1-4 4M12 14v5M8.5 19h7"/>',
 }
 
@@ -390,12 +406,13 @@ def build_time():
 
 
 def github_counts():
-    """Счётчики GitHub по всем релизам (все версии): сколько раз скачали APK и сколько раз приложения скачали
-    version.json, проверяя обновление. Приложения сами ничего не считают и не отправляют. None, если GitHub не ответил."""
+    """Счётчики GitHub по всем релизам (все версии): сколько раз скачали APK, сколько раз приложения Android скачали
+    version.json, проверяя обновление, и сколько раз сайт и приложение iPhone скачали пустой ping.json (раз в сутки
+    с устройства). Считает сам GitHub: мы не видим ни IP, ни устройств. None, если GitHub не ответил."""
     head = {"Accept": "application/vnd.github+json", "User-Agent": "zvonok-site-build"}
     if os.environ.get("GITHUB_TOKEN"):
         head["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
-    apk = checks = 0
+    apk = checks = pings = 0
     page = 1
     try:
         while True:
@@ -407,8 +424,10 @@ def github_counts():
                     apk += a["download_count"]
                 elif a["name"] == "version.json":
                     checks += a["download_count"]
+                elif a["name"] == "ping.json":
+                    pings += a["download_count"]
             if len(rel) < 100:
-                return apk, checks
+                return apk, checks, pings
             page += 1
     except (OSError, ValueError, KeyError, TypeError):
         return None
@@ -426,13 +445,16 @@ def stats():
     except (OSError, ValueError):
         old = {}
     now = int(datetime.datetime.now().timestamp())
-    out = {"downloads": counts[0], "checks": counts[1], "at": now, "day": old.get("day", 0)}
+    # day: телефоны Android за сутки, web: сайт и приложение iPhone за сутки
+    out = {"downloads": counts[0], "checks": counts[1], "pings": counts[2], "at": now, "day": old.get("day", 0), "web": old.get("web", 0)}
     if "checks" in old and "at" in old:
         span = now - old["at"]
         if span >= 12 * 3600:
             out["day"] = max(0, round((counts[1] - old["checks"]) * 86400 / span))
+            if "pings" in old:
+                out["web"] = max(0, round((counts[2] - old["pings"]) * 86400 / span))
         else:  # прошлый замер был недавно: следующий считаем от него
-            out["checks"], out["at"] = old["checks"], old["at"]
+            out["checks"], out["pings"], out["at"] = old["checks"], old.get("pings", counts[2]), old["at"]
     return out
 
 
@@ -573,19 +595,19 @@ def calendar(data, changes, cls):
 
 
 # ---------- страницы ----------
-NAV = [("./#now", "Сейчас"), ("./#week", "Неделя"), ("./#rooms", "Кабинеты"), ("./#more", "Ещё"), ("./#olymp", "Олимпиады")]
+NAV = [("./#now", "Сейчас"), ("./#week", "Неделя"), ("./#rooms", "Кабинеты"), ("./#news", "Новости"), ("./#more", "Ещё"), ("./#get", "Скачать на телефон")]
 
 
 def header(active=None):
     """Шапка отдельных страниц: тот же знак и меню, что на главной."""
     links = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == active else "", t) for h, t in NAV)
-    return ('<header class="top"><div class="wrap top-in"><a class="brand" href="about.html" aria-label="Звонок, о проекте">%s<span>Звонок</span></a>'
+    return ('<header class="top"><div class="wrap top-in"><a class="brand" href="about" aria-label="Звонок, о проекте">%s<span>Звонок</span></a>'
             '<nav class="nav-top" aria-label="Разделы">%s</nav>'
             '<button class="icon-btn" id="schemeBtn" type="button" aria-label="Тема"></button></div></header>' % (MARK, links))
 
 
-FOOTER = ('<footer class="foot"><div class="wrap"><nav aria-label="Ссылки"><a href="./">Расписание</a><a href="./#olymp">Олимпиады</a><a href="about.html">О проекте</a><a href="make.html">Конструктор</a>'
-          '<a href="iphone.html">iPhone</a><a href="changelog.html">Что нового</a><a href="feedback.html">Написать нам</a></nav>'
+FOOTER = ('<footer class="foot"><div class="wrap"><nav aria-label="Ссылки"><a href="./">Расписание</a><a href="./#news">Новости</a><a href="./#olymp">Олимпиады</a><a href="about">О проекте</a><a href="make.html">Конструктор</a>'
+          '<a href="iphone.html">iPhone</a><a href="android.html">Android</a><a href="changelog.html">Что нового</a><a href="feedback.html">Написать нам</a></nav>'
           '<p>«Звонок» сделал ученик лицея №165 для своих. Это неофициальный проект, все права защищены.</p></div></footer>')
 
 # На компьютере в браузере главная сначала показывает сайт о проекте (about.html). Расписание: кнопка там
@@ -595,7 +617,7 @@ FOOTER = ('<footer class="foot"><div class="wrap"><nav aria-label="Ссылки"
 HEAD_PC = ('(function(){try{var L=location,S=sessionStorage;if(/^http/.test(L.protocol)&&!L.hash&&!new URLSearchParams(L.search).has("app")'
            '&&!(navigator.standalone||matchMedia("(display-mode: standalone)").matches)'
            '&&matchMedia("(hover: hover) and (pointer: fine) and (min-width: 1024px)").matches'
-           '&&localStorage.getItem("zv.pcApp")!=="true"&&!S.getItem("zv.toAbout")){S.setItem("zv.toAbout","1");L.replace("about.html")}}catch(e){}})();')
+           '&&localStorage.getItem("zv.pcApp")!=="true"&&!S.getItem("zv.toAbout")){S.setItem("zv.toAbout","1");L.replace("about")}}catch(e){}})();')
 
 # тема и цвет до первой отрисовки, чтобы страница не мигала светлой.
 # Обе вставки в <head> в своих функциях: их переменные не должны пересекаться с let/const скрипта страницы.
@@ -638,6 +660,10 @@ def page(name, css, js, extra=None, connect="'self'", common=None):
     return t
 
 
+# счётчик устройств: пустой ping.json из релиза GitHub (github.com отвечает переадресацией на хранилище файлов)
+PING_HOSTS = "https://github.com https://objects.githubusercontent.com https://release-assets.githubusercontent.com"
+
+
 def main():
     global SIGN_SEED, UPDATE_KEY
     SIGN_SEED = sign_key()
@@ -669,12 +695,20 @@ def main():
     data_js = {"/*@DATA@*/null": js_literal(data), "/*@CHANGES@*/null": js_literal(changes), "/*@HUES@*/null": js_literal(subject_hues(data))}
 
     news = next(({"date": r["date"], "title": r["title"]} for r in changelog if {"site", "ios"} & set(r["platforms"])), None)
-    index = page("index.html", ["tokens", "base", "components", "app"], ["core", "embed", "schedule", "rules", "app", "now", "week", "rooms", "more", "olymp", "snake", "start"],
+    show = read("site", "src", "show.html")
+    get_cta = ('<a class="btn btn-primary btn-sm" href="android.html"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Гайд для Android</a>'
+               '<a class="btn btn-quiet btn-sm" href="iphone.html#guide"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Видеогайд для iPhone</a>')
+    common["@SHOW@"] = show.replace("@SHOW_CTA@", get_cta)
+    index = page("index.html", ["tokens", "base", "components", "app", "show"], ["core", "embed", "schedule", "rules", "app", "now", "week", "rooms", "more", "plus", "olymp", "snake", "show", "start"],
                  dict(data_js, **{"/*@QRS@*/null": js_literal(qrs), "/*@NEWS@*/null": js_literal(news), "/*@LOG@*/[]": js_literal(changelog[:4]),
                                   "/*@OLYMPIADS@*/null": js_literal(olympiads), "@HEAD_JS@": HEAD_JS + HEAD_PC}),
-                 connect="'self' https://codeforces.com", common=common)
+                 connect="'self' https://codeforces.com " + PING_HOSTS, common=common)
     page("make.html", ["tokens", "base", "components", "pages", "make"], ["core", "schedule", "rules", "make"], data_js, common=common)
-    page("about.html", ["tokens", "base", "components", "pages", "about"], ["core", "schedule", "rules", "pages", "about"], data_js, common=common)
+    about_cta = ('<a class="btn btn-primary" href="./#get" data-app><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Поставить на телефон</a>'
+                 '<a class="btn btn-quiet" href="./#now" data-app>Открыть расписание</a>')
+    page("about.html", ["tokens", "base", "components", "pages", "about", "show"], ["core", "schedule", "rules", "pages", "about", "show"], data_js,
+         connect="'self' " + PING_HOSTS, common=dict(common, **{"@SHOW@": show.replace("@SHOW_CTA@", about_cta)}))
+    page("android.html", ["tokens", "base", "components", "pages", "show"], ["core", "pages", "show"], common=common)
     page("changelog.html", ["tokens", "base", "components", "pages"], ["core", "pages", "changelog"],
          {"/*@CHANGELOG@*/[]": js_literal(changelog)}, common=common)
     page("feedback.html", ["tokens", "base", "components", "pages"], ["core", "pages", "feedback"],
@@ -732,7 +766,7 @@ def main():
         og_image().save(os.path.join(OUT, "og.png"), optimize=True)
 
     # service worker: версия меняется вместе с любым файлом, поэтому обновление приходит само
-    shell = ["./", "index.html", "about.html", "make.html", "iphone.html", "changelog.html", "feedback.html", "poster.html",
+    shell = ["./", "index.html", "about.html", "make.html", "iphone.html", "android.html", "changelog.html", "feedback.html", "poster.html",
              "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png", "changes.json", "olympiads.json"]
     h = hashlib.sha256()
     for f in shell[1:] + ["schedule.json"]:

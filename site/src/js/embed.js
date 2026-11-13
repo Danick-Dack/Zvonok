@@ -2,7 +2,7 @@
    Scriptable забирает события через zvNext(completion): что выбрать для виджетов, какую ссылку открыть в Safari,
    чем поделиться и что скопировать. Сам он только сохраняет настройки и открывает ссылки, кода страницы не трогает. */
 const EMBED = /[?&]app=scriptable(&|$)/.test(location.search);
-const SYNCED = ["class", "custom", "useCustom"];
+const SYNCED = ["class", "custom", "useCustom", "extras", "ntf"];
 const bridgeQ = [];
 let bridgeWait = null;
 /** Отдать событие приложению; false, если страница открыта не в нём. */
@@ -13,7 +13,7 @@ function bridge(msg) {
   return true;
 }
 /** Настройки, которые нужны виджетам: класс и своё расписание. */
-const zvState = () => ({cls: store.get("class", null), custom: store.get("custom", null), useCustom: !!store.get("useCustom", false)});
+const zvState = () => ({cls: store.get("class", null), custom: store.get("custom", null), useCustom: !!store.get("useCustom", false), extras: store.get("extras", null), ntf: store.get("ntf", null)});
 if (EMBED) {
   document.documentElement.classList.add("embed");
   window.zvNext = done => { if (bridgeQ.length) done(bridgeQ.shift()); else bridgeWait = done; };
@@ -23,6 +23,7 @@ if (EMBED) {
     if (store.get("class", null) || !s || typeof s !== "object") return false;
     if (typeof s.cls === "string" && DATA.classes[s.cls]) store.set("class", s.cls);
     if (s.custom && typeof s.custom === "object") { store.set("custom", s.custom); store.set("useCustom", !!s.useCustom); }
+    if (s.extras && typeof s.extras === "object") { store.set("extras", s.extras); EXTRA = extraSet(); }
     // как после выбора класса в шапке, но без перезагрузки: она пошла бы в сеть за живой страницей
     custom = store.get("custom", null);
     useCustom = !!store.get("useCustom", false) && !!custom;

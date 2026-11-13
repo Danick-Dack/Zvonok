@@ -66,8 +66,9 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && DATA.classes[c] && c !== abCls) { abCls = c; sel.value = c; }
   abTick();
 });
-// скачивания приложения и сколько раз за сутки приложения проверили обновление: числа от GitHub,
-// сборка сайта обновляет stats.json раз в сутки
+// Скачивания приложения и сколько устройств пользуется «Звонком» за сутки. Числа считает GitHub: раз в сутки приложение
+// Android скачивает из релиза version.json, а сайт и приложение iPhone пустой ping.json. Сборка сайта берёт прирост
+// счётчиков в stats.json. Ни IP, ни сведений об устройствах у нас нет.
 const stat = (id, n, forms) => {
   if (!(n > 0)) return;
   $(id + "N").textContent = n.toLocaleString("ru-RU");
@@ -77,6 +78,15 @@ const stat = (id, n, forms) => {
 fetch("stats.json", {cache: "no-cache"}).then(r => r.ok ? r.json() : null).then(s => {
   if (!s) return;
   stat("abDl", s.downloads, ["скачивание", "скачивания", "скачиваний"]);
-  stat("abUse", s.day, ["проверка", "проверки", "проверок"]);
+  const web = s.web > 0 ? s.web : 0, all = (s.day > 0 ? s.day : 0) + web;
+  stat("abUse", all, ["устройство", "устройства", "устройств"]);
+  if (all) $("abUseS").textContent = "пользуются за сутки: Android " + (all - web) + ", сайт и iPhone " + web;
 }).catch(() => {});
+// свой заход тоже считается: раз в сутки с этого браузера
+(() => {
+  const today = iso(new Date());
+  if (!ONLINE_SITE || !navigator.onLine || store.get("ping", "") === today) return;
+  store.set("ping", today);
+  fetch("https://github.com/Danick-Dack/Zvonok/releases/latest/download/ping.json", {mode: "no-cors", cache: "no-store", credentials: "omit", referrerPolicy: "no-referrer"}).catch(() => {});
+})();
 abTick();

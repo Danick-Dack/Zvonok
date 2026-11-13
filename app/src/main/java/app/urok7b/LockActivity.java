@@ -177,7 +177,7 @@ public class LockActivity extends Activity {
         ZonedDateTime now = ZonedDateTime.now();
         long nowMs = System.currentTimeMillis();
         Schedule.Status s = Schedule.compute(now);
-        Updater.Display d = Updater.describe(s, nowMs);
+        Updater.Display d = Updater.describe(s, now);
         String subj = s.kind == Schedule.Kind.LESSON ? d.title : d.nextSubject;
 
         label.setText((d.live ? "●  " : "") + d.label);
@@ -194,7 +194,7 @@ public class LockActivity extends Activity {
         }
         chrono.setVisibility(d.timer ? View.VISIBLE : View.GONE);
         big.setVisibility(d.timer ? View.GONE : View.VISIBLE);
-        caption.setText(d.timer ? (s.kind == Schedule.Kind.LESSON ? "ДО ЗВОНКА" : "ДО УРОКА") : d.sideHead);
+        caption.setText(d.extra ? (d.progress >= 0 ? "ДО КОНЦА" : "ДО НАЧАЛА") : d.timer ? (s.kind == Schedule.Kind.LESSON ? "ДО ЗВОНКА" : "ДО УРОКА") : d.sideHead);
         ring.setColor(subj == null || subj.isEmpty() ? Ui.ACCENT : Hues.vivid(subj, Ui.DARK));
         ring.setProgress(d.progress >= 0 ? d.progress / 100f : -1);
 
@@ -215,6 +215,7 @@ public class LockActivity extends Activity {
         nextR.setBackground(Ui.round(this, Hues.soft(d.nextSubject, Ui.DARK), 12, 0));
 
         String v = Schedule.vacationText(Schedule.vacation(now));
+        if (!d.note.isEmpty() && !d.note.equals(d.foot)) v = d.note + (v.isEmpty() ? "" : "\n" + v); // СОР и СОЧ, праздник завтра
         String f = d.foot + (v.isEmpty() ? "" : (d.foot.isEmpty() ? "" : "\n") + v);
         foot.setText(f);
         foot.setVisibility(f.isEmpty() ? View.GONE : View.VISIBLE);
