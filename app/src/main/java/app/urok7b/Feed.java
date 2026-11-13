@@ -49,7 +49,7 @@ final class Feed {
             File f = new File(c.getFilesDir(), name);
             String text = f.exists() ? new String(java.nio.file.Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8)
                     : OLYMP.equals(name) ? Ui.asset(c, name) : "{}";
-            if (text.startsWith("﻿")) text = text.substring(1);
+            if (text.startsWith("\uFEFF")) text = text.substring(1);
             JSONArray a = new JSONObject(text).optJSONArray("items");
             return a == null ? new JSONArray() : a;
         } catch (Exception e) {
