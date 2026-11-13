@@ -18,7 +18,7 @@
 .sc-row b{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sc-row span{color:#8F8F8A;font-variant-numeric:tabular-nums}
 .sc-chip{display:inline-block;padding:2px 7px;border-radius:999px;font-size:9px;font-weight:700;background:#28282C;color:#C6C6C2}
-.sc-chip.red{background:#FF453A;color:#fff}.sc-chip.yel{background:rgba(255,214,10,.2);color:#FFD426}.sc-chip.grn{background:rgba(48,209,88,.18);color:#30DB5B}.sc-chip.blu{background:#409CFF;color:#0B0B0C}
+.sc-chip.red{background:#D70015;color:#fff}.sc-chip.yel{background:rgba(255,214,10,.2);color:#FFD426}.sc-chip.grn{background:rgba(48,209,88,.18);color:#30DB5B}.sc-chip.blu{background:#409CFF;color:#0B0B0C}
 .sc-ring{position:relative;width:156px;height:156px;margin:6px auto 2px}
 .sc-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .sc-ring circle{fill:none;stroke-width:9;stroke:#28282C}
