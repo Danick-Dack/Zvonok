@@ -6,6 +6,10 @@
 .show-screen{position:relative;height:100%;border-radius:26px;overflow:hidden;background:#151517;color:#F3F3F1;font:500 11px/1.35 var(--font)}
 .sc{position:absolute;inset:0;padding:30px 13px 13px;display:flex;flex-direction:column;gap:8px;opacity:0;transform:translateY(10px) scale(.985);transition:opacity .45s var(--ease),transform .45s var(--ease);pointer-events:none}
 .sc.on{opacity:1;transform:none}
+/* содержимое сцены выезжает по очереди */
+.sc>*{opacity:0;transform:translateY(8px);transition:opacity .4s var(--ease),transform .4s var(--ease)}
+.sc.on>*{opacity:1;transform:none;transition-delay:var(--d,0s)}
+.sc>:nth-child(2){--d:.05s}.sc>:nth-child(3){--d:.1s}.sc>:nth-child(4){--d:.15s}.sc>:nth-child(5){--d:.2s}.sc>:nth-child(6){--d:.25s}.sc>:nth-child(n+7){--d:.3s}
 .sc h4{font:700 15px/1.2 var(--font-display);letter-spacing:-.02em;margin:0}
 .sc small{color:#8F8F8A;font-size:9.5px}
 .sc-card{background:#1E1E21;border-radius:14px;padding:9px 10px}
@@ -15,17 +19,26 @@
 .sc-row span{color:#8F8F8A;font-variant-numeric:tabular-nums}
 .sc-chip{display:inline-block;padding:2px 7px;border-radius:999px;font-size:9px;font-weight:700;background:#28282C;color:#C6C6C2}
 .sc-chip.red{background:#FF453A;color:#fff}.sc-chip.yel{background:rgba(255,214,10,.2);color:#FFD426}.sc-chip.grn{background:rgba(48,209,88,.18);color:#30DB5B}.sc-chip.blu{background:#409CFF;color:#0B0B0C}
-.sc-ring{position:relative;width:128px;height:128px;margin:6px auto 2px}
+.sc-ring{position:relative;width:156px;height:156px;margin:6px auto 2px}
 .sc-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .sc-ring circle{fill:none;stroke-width:9;stroke:#28282C}
 .sc-ring .arc{stroke:#409CFF;stroke-linecap:round;stroke-dasharray:339.3;stroke-dashoffset:339.3;transition:stroke-dashoffset 2.6s var(--ease) .3s}
 .sc.on .sc-ring .arc{stroke-dashoffset:118}
 .sc-ring div{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
-.sc-ring b{font:700 27px/1 var(--font-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.sc-ring b{font:700 32px/1 var(--font-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .sc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .sc-grid span{padding:7px 0;border-radius:9px;background:#1E1E21;text-align:center;font-weight:600}
 .sc-grid .free{background:rgba(48,209,88,.18);color:#30DB5B}
 .sc-pic{height:74px;border-radius:10px;background:linear-gradient(135deg,#AF52DE,#409CFF 60%,#30DB5B)}
+.sc-pic.b{background:linear-gradient(135deg,#FF9F0A,#FF453A 60%,#AF52DE)}
+.sc-pills{display:flex;gap:4px}
+.sc-pills span{padding:3px 8px;border-radius:8px;background:#1E1E21;font-weight:600;font-size:10px}
+.sc-pills .cur{background:#409CFF;color:#0B0B0C}
+/* панель вкладок обзора: подсвечена вкладка идущей сцены, на экране блокировки её нет */
+.sc-tabs{position:absolute;inset:auto 0 0;height:34px;display:flex;justify-content:space-around;align-items:center;padding:0 14px;background:#101012;border-top:1px solid #232326;transition:opacity .3s}
+.sc-tabs i{width:16px;height:16px;border-radius:5px;background:#2E2E32;transition:background .3s}
+.show-screen:has(.sc:nth-child(1).on) .sc-tabs i:nth-child(1),.show-screen:has(.sc:nth-child(2).on) .sc-tabs i:nth-child(2),.show-screen:has(.sc:nth-child(3).on) .sc-tabs i:nth-child(3),.show-screen:has(.sc:nth-child(4).on) .sc-tabs i:nth-child(4),.show-screen:has(.sc:nth-child(5).on) .sc-tabs i:nth-child(5){background:#409CFF}
+.show-screen:has(.sc-lock.on) .sc-tabs{opacity:0}
 .sc-line{height:6px;border-radius:3px;background:#28282C}
 .sc-line.s{width:62%}
 .sc-lock{align-items:center;text-align:center;background:linear-gradient(160deg,#1c2a4a,#0B0B0C 70%)}
@@ -66,4 +79,4 @@
 .show-steps b{display:block;font-size:16px}
 .show-steps span{display:block;color:var(--muted);font-size:14.5px;margin-top:1px}
 @media (min-width:720px){.show.wide{grid-template-columns:auto minmax(0,1fr);justify-items:start;align-items:center;gap:36px}.show.wide .show-cap{text-align:left}.show.wide .show-dots,.show.wide .show-cta{justify-content:flex-start}}
-@media (prefers-reduced-motion:reduce){.sc,.sc-note,.sc-widget,.sc-ring .arc,.sc-sw,.sc-sw::after{transition:none}.sc.on .sc-tap::after{animation:none;opacity:0}}
+@media (prefers-reduced-motion:reduce){.sc,.sc>*,.sc-tabs,.sc-tabs i,.sc-note,.sc-widget,.sc-ring .arc,.sc-sw,.sc-sw::after{transition:none}.sc.on .sc-tap::after{animation:none;opacity:0}}
