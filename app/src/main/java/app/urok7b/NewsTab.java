@@ -70,10 +70,10 @@ final class NewsTab {
         }
     }
 
-    /** Вкладку открыли: показать сохранённое и, если разрешено, подтянуть свежее (не чаще раза в 10 минут). */
+    /** Вкладку открыли: показать сохранённое и подтянуть свежее (не чаще раза в 10 минут). */
     void show() {
         render();
-        if (Updater.prefs(a).getBoolean(Updates.KEY_AUTO, false) && System.currentTimeMillis() - fetchedAt > 600_000) load();
+        if (System.currentTimeMillis() - fetchedAt > 600_000) load();
     }
 
     private void load() {
@@ -91,9 +91,7 @@ final class NewsTab {
         JSONArray items = Feed.items(a, Feed.NEWS);
         list.removeAllViews();
         if (items.length() == 0) {
-            boolean allowed = Updater.prefs(a).getBoolean(Updates.KEY_AUTO, false);
-            list.addView(Ui.text(a, loading ? "Загружаю новости…" : allowed ? "Новости подтянутся, когда появится интернет."
-                    : "Новости лежат на сайте «Звонка». Приложение ходит в интернет только с твоего разрешения.", 15, Ui.MUTED, null), Ui.mw(a, 10));
+            list.addView(Ui.text(a, loading ? "Загружаю новости…" : "Новости подтянутся, когда появится интернет", 15, Ui.MUTED, null), Ui.mw(a, 10));
             if (!loading) list.addView(Ui.button(a, "Загрузить новости", true, v -> { load(); render(); }), Ui.mw(a, 12));
             return;
         }

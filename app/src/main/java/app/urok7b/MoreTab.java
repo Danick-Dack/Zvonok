@@ -15,37 +15,29 @@ import android.widget.Toast;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-/** Вкладка «Ещё»: класс, игры, оформление, уведомление, поделиться, календарь, проверка телефона, о проекте. */
+/**
+ * Вкладка «Ещё» из трёх коротких разделов: «Главное» (класс, лицей, игры, поделиться), «Настройки» (оформление,
+ * уведомление и звук) и «О „Звонке“» (что нового, написать нам, версия и разрешения). Вопросы и ответы, плакат и
+ * исходный код живут на сайте: в приложении только то, чем пользуются каждый день.
+ */
 final class MoreTab {
 
     /** «Звонку» столько дней: первая версия вышла 1 ноября 2026 (как на сайте). */
     static final LocalDate BORN = LocalDate.of(2026, 11, 1);
+    private static final String[] PANES = {"Главное", "Настройки", "О «Звонке»"};
+    /** Открытый раздел. Общий на процесс: смена темы пересоздаёт экран, а раздел остаётся тем же. */
+    private static int pane;
     private TextView age;
 
     private static String ageText() {
         long n = Math.max(1, ChronoUnit.DAYS.between(BORN, LocalDate.now()));
-        return "«Звонку» " + Schedule.word((int) n, "день", "дня", "дней") + ". Первая версия вышла 1 ноября 2026.";
+        return "«Звонку» " + Schedule.word((int) n, "день", "дня", "дней") + ". Первая версия вышла 1 ноября 2026. За помощь спасибо Кириллу и Руслану";
     }
 
     /** Счётчик дней «Звонка»: экран вызывает при каждой смене ключа, в том числе в полночь. */
     void updateAge() {
         if (age != null) age.setText(ageText());
     }
-    private static final String[][] FAQ = {
-            {"Это официальное приложение лицея?", "Нет. «Звонок» сделал ученик лицея для своих. Расписание взято из утверждённого "
-                    + "расписания четверти. Если где-то ошибка, напиши нам, исправим."},
-            {"Что «Звонок» знает обо мне?", "Ничего. Класс, кружки и настройки лежат у тебя на телефоне, аккаунтов и рекламы нет. "
-                    + "В интернет приложение ходит только за новой версией, заменами и новостями лицея, если ты это разрешишь, "
-                    + "и когда ты сам отправляешь письмо в «Написать нам» (через сервис Web3Forms). Сколько нас, считает GitHub "
-                    + "по числу скачиваний файла с номером версии: ни IP, ни чего-либо о телефоне мы не видим."},
-            {"Сколько тратит батареи и места?", "Меньше 300 КБ места, а заряда почти не тратит. Пока экран выключен, приложение спит, "
-                    + "а таймер тикает силами самой системы. В каникулы оно отдыхает вместе с тобой."},
-            {"Уведомление пропало или не обновляется", "Телефон закрыл приложение ради батареи. Открой «Проверка телефона» выше "
-                    + "и включи всё, что там предлагают."},
-            {"Как обновить приложение?", "Приложение само скажет, что вышла новая версия: скачай и установи поверх. "
-                    + "Расписание и замены обновляются сами, если разрешить проверку обновлений."},
-            {"Работает без интернета?", "Да. Расписание внутри, а замены подтянутся, когда появится сеть."},
-    };
 
     final ScrollView view;
     private final MainActivity a;
@@ -63,37 +55,57 @@ final class MoreTab {
 
     /** Пересобрать (после возврата из настроек телефона, смены класса и т. п.), не теряя прокрутку. */
     void build() {
-        int y = view.getScrollY();
+        build(view.getScrollY());
+    }
+
+    private void build(int y) {
         root.removeAllViews();
+        age = null;
         root.addView(Ui.heading(Ui.text(a, "Ещё", 28, Ui.TEXT, "sans-serif-medium")));
         root.addView(Ui.text(a, Schedule.school() + " · " + Schedule.term(), 14, Ui.MUTED, null));
+        root.addView(Ui.segments(a, PANES, pane, k -> { pane = k; build(0); }), Ui.mw(a, 16));
+        if (pane == 0) main();
+        else if (pane == 1) settings();
+        else about();
+        view.post(() -> view.scrollTo(0, y));
+    }
 
-        // как на сайте: сверху то, за чем сюда приходят чаще всего
-        LinearLayout top = section("Лицей и «Звонок»", R.drawable.ic_news, 2);
-        top.addView(Ui.linkRow(a, "Олимпиады", "Алматы и онлайн, 7–11 классы", null,
-                v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.OLYMP))));
-        top.addView(Ui.linkRow(a, "Что нового", "Все обновления сайта, Android и iPhone", null, v -> a.startActivity(new Intent(a, Changelog.class))));
-        top.addView(Ui.linkRow(a, "Написать нам", "Идея, ошибка или вопрос. Анонимно", null, v -> a.startActivity(new Intent(a, Feedback.class))));
-        top.addView(Ui.linkRow(a, "Гимн лицея", "Текст, чтобы не подглядывать у соседа", null,
-                v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.ANTHEM))));
-
-        LinearLayout games = section("Игры на перемену", R.drawable.ic_game, 3);
-        games.addView(Ui.linkRow(a, "Слова", "Угадай слово из 5 букв. Слово дня у всего лицея одно", null, v -> Words.show(a)));
-        games.addView(Ui.linkRow(a, "Змейка", "Работает без интернета, рекорд остаётся на телефоне", null, v -> Snake.show(a)));
-
-        LinearLayout cls = section("Класс и расписание", R.drawable.ic_week, 7);
+    /** «Главное»: то, за чем сюда приходят чаще всего. */
+    private void main() {
+        LinearLayout cls = group("Класс и расписание");
         cls.addView(Ui.linkRow(a, "Класс", Schedule.isCustom() ? "Сейчас включено своё расписание" : null,
                 Updater.prefs(a).getString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS), v -> Ui.pickClass(a, () -> { build(); a.rebuild(); })));
         cls.addView(Ui.linkRow(a, "Своё расписание", "Любые предметы, кабинеты и звонки", Schedule.isCustom() ? "вкл" : null,
                 v -> a.startActivity(new Intent(a, EditorActivity.class))));
-
         org.json.JSONObject extras = Plus.set();
         int picked = (extras.optJSONArray("shor") == null ? 0 : extras.optJSONArray("shor").length())
                 + (extras.optJSONArray("clubs") == null ? 0 : extras.optJSONArray("clubs").length());
-        cls.addView(Ui.linkRow(a, "Кружки и ШОР", "Занятия после уроков с таймером до начала и конца", picked > 0 ? String.valueOf(picked) : null,
+        cls.addView(Ui.linkRow(a, "Кружки и ШОР", "Таймер до начала и конца занятий после уроков", picked > 0 ? String.valueOf(picked) : null,
                 v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.CLUBS))));
+        if (!Schedule.isCustom()) {
+            String slug = Schedule.title().replace("А", "A").replace("Б", "B").replace("В", "V").replace("Г", "G");
+            cls.addView(Ui.linkRow(a, "Уроки в календаре", "Каникулы и замены учтены, календарь обновляется сам", null,
+                    v -> open(Uri.parse("https://calendar.google.com/calendar/render?cid=" + Uri.encode("webcal://danick-dack.github.io/Zvonok/cal/" + slug + ".ics")))));
+        }
 
-        LinearLayout look = section("Оформление", R.drawable.ic_auto, 9);
+        LinearLayout lyc = group("Лицей");
+        lyc.addView(Ui.linkRow(a, "Олимпиады", "Алматы и онлайн, 7–11 классы", null,
+                v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.OLYMP))));
+        lyc.addView(Ui.linkRow(a, "Гимн лицея", "Текст, чтобы не подглядывать у соседа", null,
+                v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.ANTHEM))));
+
+        LinearLayout games = group("На перемене");
+        games.addView(Ui.linkRow(a, "Слова", "Слово из 5 букв, одно на весь лицей в день", null, v -> Words.show(a)));
+        games.addView(Ui.linkRow(a, "Змейка", "Без интернета, рекорд остаётся на телефоне", null, v -> Snake.show(a)));
+
+        String c = Schedule.isCustom() ? "" : Schedule.title();
+        LinearLayout share = group("Одноклассникам");
+        share.addView(Ui.linkRow(a, "Поделиться", c.isEmpty() ? "QR-код и ссылка на сайт «Звонка»" : "QR-код и ссылка сразу на расписание " + c, null, v -> share(c)));
+    }
+
+    /** «Настройки»: как выглядит приложение и что оно присылает. */
+    private void settings() {
+        LinearLayout look = group("Оформление");
         look.addView(caption("Тема"));
         String[] keys = {"auto", "light", "dark"};
         int cur = 0;
@@ -101,7 +113,7 @@ final class MoreTab {
         look.addView(Ui.segments(a, new String[]{"Как в системе", "Светлая", "Тёмная"}, cur,
                 k -> { Updater.prefs(a).edit().putString(Ui.KEY_SCHEME, keys[k]).apply(); a.recreate(); }), Ui.mw(a, 8));
         look.addView(caption("Главный цвет"));
-        Ui.Flow colors = new Ui.Flow(a, 10);
+        Ui.Flow colors = new Ui.Flow(a, 12);
         for (String[] acc : Ui.ACCENTS) {
             boolean on = acc[0].equals(Ui.accentKey(a));
             View dot = new View(a);
@@ -118,7 +130,7 @@ final class MoreTab {
         }
         look.addView(colors, Ui.mw(a, 8));
         look.addView(caption("Иконка приложения"));
-        Ui.Flow icons = new Ui.Flow(a, 10);
+        Ui.Flow icons = new Ui.Flow(a, 8);
         for (android.content.pm.ActivityInfo i : Fun.icons(a)) {
             boolean on = Fun.iconOn(a, i);
             android.widget.ImageView v = new android.widget.ImageView(a);
@@ -136,10 +148,8 @@ final class MoreTab {
             icons.addView(v, new android.view.ViewGroup.LayoutParams(a.dp(56), a.dp(56)));
         }
         look.addView(icons, Ui.mw(a, 8));
-        look.addView(Ui.switchRow(a, "Звуки", "На уроках и переменах тикают часы, на звонке звенит звонок", Fun.soundOn(a),
-                (b, on) -> Updater.prefs(a).edit().putBoolean(Fun.KEY_SOUND, on).apply()));
         look.addView(Ui.switchRow(a, "Цвет предметов", "Алгебра синяя, физика фиолетовая, химия бирюзовая", !Ui.PLAIN,
-                (b, on) -> { Updater.prefs(a).edit().putBoolean(Ui.KEY_PLAIN, !on).apply(); a.recreate(); }));
+                (b, on) -> { Updater.prefs(a).edit().putBoolean(Ui.KEY_PLAIN, !on).apply(); a.recreate(); }), Ui.mw(a, 8));
         look.addView(Ui.switchRow(a, "Праздничные темы", "В праздники и каникулы значок и цвет дня", Updater.prefs(a).getBoolean(Plus.KEY_FEST, true), (b, on) -> {
             Updater.prefs(a).edit().putBoolean(Plus.KEY_FEST, on).apply();
             a.rebuild();
@@ -147,11 +157,10 @@ final class MoreTab {
         look.addView(Ui.linkRow(a, "Виджеты и уведомление", "Цвета, прозрачность, свой фон, цвет урока", null,
                 v -> a.startActivity(new Intent(a, StyleActivity.class))));
 
-        LinearLayout notif = section("Уведомление", R.drawable.ic_bell, 0);
-        notif.addView(flag("Уведомление на экране блокировки", "С таймером, не смахивается", Updater.KEY_NOTIF, true));
+        LinearLayout notif = group("Уведомление и звук");
+        notif.addView(flag("Таймер на экране блокировки", "Уведомление с уроком и кабинетом, не смахивается", Updater.KEY_NOTIF, true));
         if (Build.VERSION.SDK_INT >= 36) {
-            notif.addView(flag("Таймер в строке состояния", "Android 16: урок и минуты до звонка видны вверху экрана и на экране блокировки",
-                    Updater.KEY_LIVE, true));
+            notif.addView(flag("Таймер в строке состояния", "Урок и минуты до звонка видны вверху экрана", Updater.KEY_LIVE, true));
         }
         notif.addView(flag("Только в учебное время", "После уроков и в выходные уведомления нет", Updater.KEY_SCHOOL_ONLY, false));
         notif.addView(Ui.switchRow(a, "Экономный таймер", "Без секунд: «24 мин» вместо 24:16", !Theme.load(a).seconds, (b, on) -> {
@@ -160,116 +169,85 @@ final class MoreTab {
             t.save(a);
             Updater.update(a);
         }));
-        notif.addView(flag("Вибрация перед звонком", "Вибрирует за 3 минуты до звонка на урок и на перемену", Updater.KEY_BUZZ, false));
+        notif.addView(flag("Вибрация перед звонком", "За 3 минуты до звонка на урок и на перемену", Updater.KEY_BUZZ, false));
+        notif.addView(flag("Новости лицея", "Уведомление о новом посте в канале", Feed.KEY_NOTIFY, true));
+        notif.addView(Ui.switchRow(a, "Звуки", "На уроках и переменах тикают часы, на звонке звенит звонок", Fun.soundOn(a),
+                (b, on) -> Updater.prefs(a).edit().putBoolean(Fun.KEY_SOUND, on).apply()));
+    }
 
-        shareSection();
+    /** «О „Звонке“»: связь с нами и состояние самого приложения. */
+    private void about() {
+        LinearLayout top = group(null);
+        top.addView(Ui.linkRow(a, "Что нового", "Все обновления сайта, Android и iPhone", null, v -> a.startActivity(new Intent(a, Changelog.class))));
+        top.addView(Ui.linkRow(a, "Написать нам", "Идея, ошибка или вопрос. Анонимно", null, v -> a.startActivity(new Intent(a, Feedback.class))));
+        top.addView(Ui.linkRow(a, "Сайт «Звонка»", "Вопросы и ответы, плакат для класса, iPhone", null, v -> web(Updates.SITE)));
 
-        notif.addView(flag("Новости лицея", "Уведомление о новом посте в канале. Проверка не чаще раза в 6 часов", Feed.KEY_NOTIFY, true));
-
-        LinearLayout cal = section("Календарь", R.drawable.ic_week, 1);
-        if (Schedule.isCustom()) {
-            cal.addView(note("Своё расписание можно добавить в календарь на сайте: «Конструктор» → «Скачать для календаря»."));
-        } else {
-            String slug = Schedule.title().replace("А", "A").replace("Б", "B").replace("В", "V").replace("Г", "G");
-            cal.addView(Ui.linkRow(a, "Уроки " + Schedule.title() + " в календаре", "Каникулы и замены учтены, календарь обновляется сам", null,
-                    v -> open(Uri.parse("https://calendar.google.com/calendar/render?cid=" + Uri.encode("webcal://danick-dack.github.io/Zvonok/cal/" + slug + ".ics")))));
-        }
-
-        LinearLayout checks = section("Проверка телефона", R.drawable.ic_phone, 8);
-        for (Perms.Item i : Perms.list(a))
-            checks.addView(check(i.title, i.why, i.ok, () -> { Perms.markSeen(a, i); i.fix.run(); }));
+        LinearLayout app = group("Приложение");
+        app.addView(Ui.linkRow(a, "Версия " + Updates.currentName(a), "Сборка " + Updates.currentBuild(a) + ". Новые версии обязательные, приложение находит их само", null, v -> {
+            Toast.makeText(a, "Проверяю…", Toast.LENGTH_SHORT).show();
+            Updates.check(a, ok -> {
+                if (Updates.available(a)) a.startActivity(new Intent(a, Setup.class));
+                else Toast.makeText(a, ok ? "У тебя последняя версия" : "Нет связи, попробуй позже", Toast.LENGTH_SHORT).show();
+            });
+        }));
+        app.addView(Ui.linkRow(a, "Разрешения", "Обязательные: без них таймер отстаёт или пропадает", null,
+                v -> a.startActivity(new Intent(a, Setup.class).putExtra(Setup.EXTRA_REVIEW, true))));
         if (Build.VERSION.SDK_INT >= 31) {
-            checks.addView(Ui.linkRow(a, "Ссылки «Звонка» в приложении", "Ссылки и QR-коды классов откроются здесь, а не в браузере",
+            app.addView(Ui.linkRow(a, "Ссылки «Звонка» в приложении", "QR-коды классов откроются здесь, а не в браузере",
                     null, v -> open(new Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, Uri.parse("package:" + a.getPackageName())))));
         }
 
-        LinearLayout upd = section("Обновления", R.drawable.ic_download, 5);
-        boolean avail = Updates.available(a);
-        upd.addView(Ui.linkRow(a, avail ? "Доступна версия " + Updates.latestText(a) : "Проверить обновления",
-                "Установлена " + Updates.currentName(a) + " (сборка " + Updates.currentBuild(a) + ")", avail ? "Скачать" : null, v -> {
-                    if (Updates.available(a)) {
-                        if (open(Uri.parse(Updates.APK_URL)))
-                            Toast.makeText(a, "Когда файл скачается, открой его и нажми «Обновить»", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    Toast.makeText(a, "Проверяю…", Toast.LENGTH_SHORT).show();
-                    Updates.check(a, ok -> {
-                        Toast.makeText(a, !ok ? "Нет связи с GitHub, попробуй позже"
-                                : Updates.available(a) ? "Есть обновление!" : "У тебя последняя версия", Toast.LENGTH_SHORT).show();
-                        build();
-                        a.rebuild();
-                    });
-                }));
-        upd.addView(flag("Проверять автоматически", "Новая версия раз в сутки, замены в расписании раз в 3 часа, когда приложение открыто. Нужен интернет",
-                Updates.KEY_AUTO, false));
-
-        LinearLayout about = section("О «Звонке»", R.drawable.ic_info, 12);
-        about.addView(Ui.linkRow(a, "Сайт «Звонка»", "Все классы, установка для iPhone", null, v -> web(Updates.SITE)));
-        about.addView(Ui.linkRow(a, "Исходный код", "Только для просмотра, все права защищены", null, v -> open(Uri.parse("https://github.com/Danick-Dack/Zvonok"))));
         age = note(ageText());
-        age.setPadding(0, a.dp(12), 0, a.dp(4));
-        about.addView(age);
-        about.addView(note("За помощь спасибо Кириллу и Руслану."));
-
-        LinearLayout faq = section("Вопросы", R.drawable.ic_help, 4);
-        for (String[] qa : FAQ) faq.addView(question(qa[0], qa[1]));
-
-        TextView privacy = Ui.text(a, "Про приватность: в интернет приложение выходит, только если ты разрешил, и только чтобы узнать "
-                + "про новую версию, замены в расписании и новости лицея (со своего сайта), или когда ты сам отправляешь нам письмо. "
-                + "Рекламы и аккаунтов нет. Сколько нас, считает GitHub по скачиваниям файла с номером версии: о телефоне ничего не передаётся.\n\n"
-                + "Про батарею: пока экран выключен, приложение ничего не делает и телефон не будит. Исключение одно: "
-                + "вибрация перед звонком, если ты её включишь, будит телефон один раз перед каждым звонком.", 13, Ui.MUTED, null);
-        privacy.setLineSpacing(0, 1.2f);
-        privacy.setPadding(a.dp(4), a.dp(22), a.dp(4), 0);
+        age.setPadding(a.dp(4), a.dp(20), a.dp(4), 0);
+        root.addView(age);
+        TextView privacy = note("Аккаунтов и рекламы нет. В интернет приложение ходит только на сайт «Звонка» и GitHub: за новой версией, "
+                + "заменами и новостями лицея. Пока экран выключен, оно ничего не делает и телефон не будит");
+        privacy.setTextSize(13);
+        privacy.setPadding(a.dp(4), a.dp(8), a.dp(4), 0);
         root.addView(privacy);
-        view.post(() -> view.scrollTo(0, y));
     }
 
-    /** Поделиться с классом: QR-код и ссылка сразу на класс, плакат. APK приложение не раздаёт: ставить только с официального сайта. */
-    private void shareSection() {
-        LinearLayout share = section("Поделиться с классом", R.drawable.ic_share, 3);
-        String cls = Schedule.isCustom() ? "" : Schedule.title();
+    /** Поделиться с классом: QR-код и ссылка сразу на класс. APK приложение не раздаёт: ставить только с официального сайта. */
+    private void share(String cls) {
         String url = Updates.SITE + (cls.isEmpty() ? "" : "#" + slug(cls));
+        LinearLayout box = Ui.vertical(a);
+        box.setPadding(a.dp(24), a.dp(16), a.dp(24), 0);
         Qr qr = Qr.of(a, cls);
         if (qr != null) {
             qr.setContentDescription("QR-код: " + url);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(a.dp(176), a.dp(176));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(a.dp(200), a.dp(200));
             lp.gravity = Gravity.CENTER_HORIZONTAL;
-            lp.topMargin = a.dp(8);
-            share.addView(qr, lp);
+            box.addView(qr, lp);
         }
-        TextView n = note(cls.isEmpty() ? "Ссылка на сайт. Наведи камеру телефона на QR-код."
-                : "Ссылка и QR-код сразу откроют расписание " + cls + ".");
+        TextView n = note(cls.isEmpty() ? "Наведи камеру телефона на QR-код: откроется сайт «Звонка»"
+                : "Наведи камеру телефона на QR-код: сразу откроется расписание " + cls);
         n.setGravity(Gravity.CENTER);
-        n.setPadding(0, a.dp(10), 0, a.dp(6));
-        share.addView(n);
+        n.setPadding(0, a.dp(12), 0, 0);
+        box.addView(n);
         String msg = "«Звонок»: расписание всех классов лицея №165. Сколько до звонка, какой урок дальше и в каком кабинете. "
                 + "Работает без интернета.\n" + (cls.isEmpty() ? "" : "Сразу на " + cls + ": ") + url;
-        share.addView(Ui.linkRow(a, "Отправить ссылку", cls.isEmpty() ? "На сайт «Звонка»" : "Сразу на расписание " + cls, null,
-                v -> open(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, msg), "Поделиться"))));
-        share.addView(Ui.linkRow(a, "Плакат для класса", "Лист A4 с QR-кодом, откроется на сайте", null,
-                v -> web(Updates.SITE + "poster.html" + (cls.isEmpty() ? "" : "#" + slug(cls)))));
+        new android.app.AlertDialog.Builder(a, Ui.dialogTheme())
+                .setTitle(cls.isEmpty() ? "Поделиться «Звонком»" : "Расписание " + cls)
+                .setView(box)
+                .setPositiveButton("Отправить ссылку", (d, w) -> open(Intent.createChooser(
+                        new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, msg), "Поделиться")))
+                .setNegativeButton("Закрыть", null)
+                .show();
     }
 
     static String slug(String cls) {
         return cls.replace("А", "a").replace("Б", "b").replace("В", "v").replace("Г", "g").toLowerCase(java.util.Locale.ROOT);
     }
 
-    /** Раздел, как на сайте: цветной значок, заголовок и карточка. hue: номер оттенка в Hues (7 синий, 9 фиолетовый...). */
-    private LinearLayout section(String title, int icon, int hue) {
-        LinearLayout head = Ui.horizontal(a);
-        head.setPadding(a.dp(2), a.dp(26), 0, a.dp(10));
-        android.widget.FrameLayout ic = new android.widget.FrameLayout(a);
-        ic.setBackground(Ui.round(a, Hues.color(hue, Ui.DARK), 9, 0));
-        android.widget.ImageView img = Ui.icon(a, icon, 0xFFFFFFFF, 18);
-        ic.addView(img, new android.widget.FrameLayout.LayoutParams(a.dp(18), a.dp(18), Gravity.CENTER));
-        head.addView(ic, new LinearLayout.LayoutParams(a.dp(30), a.dp(30)));
-        TextView t = Ui.heading(Ui.text(a, title, 17, Ui.TEXT, "sans-serif-medium"));
-        t.setPadding(a.dp(12), 0, 0, 0);
-        head.addView(t);
-        root.addView(head);
+    /** Раздел: спокойная подпись и карточка под ней. Цветных значков у разделов нет: цвет остаётся урокам и таймеру. */
+    private LinearLayout group(String title) {
         LinearLayout card = Ui.card(a);
-        root.addView(card);
+        if (title != null) {
+            root.addView(Ui.heading(Ui.label(a, title)));
+            root.addView(card);
+        } else {
+            root.addView(card, Ui.mw(a, 24));
+        }
         return card;
     }
 
@@ -290,43 +268,6 @@ final class MoreTab {
             Updater.prefs(a).edit().putBoolean(key, on).apply();
             Updater.update(a);
         });
-    }
-
-    /** Вопрос раскрывается нажатием, как на сайте. */
-    private View question(String q, String answer) {
-        LinearLayout box = Ui.vertical(a);
-        TextView h = Ui.text(a, q + "  ›", 15, Ui.TEXT, "sans-serif-medium");
-        h.setPadding(0, a.dp(12), 0, a.dp(12));
-        TextView ans = note(answer);
-        ans.setPadding(0, 0, 0, a.dp(12));
-        ans.setVisibility(View.GONE);
-        h.setContentDescription(q + ". Свёрнуто");
-        h.setOnClickListener(v -> {
-            boolean open = ans.getVisibility() != View.VISIBLE;
-            ans.setVisibility(open ? View.VISIBLE : View.GONE);
-            h.setText(q + (open ? "  ⌄" : "  ›"));
-            h.setContentDescription(q + (open ? ". Развёрнуто" : ". Свёрнуто"));
-        });
-        box.addView(h);
-        box.addView(ans);
-        return box;
-    }
-
-    /** ok: true готово, false нужно включить, null проверить нельзя. */
-    private View check(String title, String sub, Boolean ok, Runnable fix) {
-        LinearLayout r = Ui.horizontal(a);
-        r.setPadding(0, a.dp(12), 0, a.dp(12));
-        LinearLayout t = Ui.twoLines(a, title, sub);
-        t.setLayoutParams(Ui.weight(1));
-        r.addView(t);
-        TextView st = Ui.text(a, ok == null ? "Открыть" : ok ? "✓ Готово" : "Включить", 13,
-                ok == null ? Ui.TEXT : ok ? Ui.MUTED : Ui.ON_ACCENT, "sans-serif-medium");
-        if (ok == null) st.setBackground(Ui.round(a, 0, 12, Ui.LINE));
-        else if (!ok) st.setBackground(Ui.round(a, Ui.ACCENT, 12, 0));
-        st.setPadding(a.dp(12), a.dp(8), a.dp(12), a.dp(8));
-        r.addView(st);
-        r.setOnClickListener(v -> fix.run());
-        return r;
     }
 
     private boolean open(Uri u) {

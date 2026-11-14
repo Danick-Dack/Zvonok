@@ -12,25 +12,23 @@ public class RulesTest {
 
     @Test
     public void requiredPermissions() {
-        // обычный пункт: выключен — обязателен, включён — нет
-        assertTrue(Perms.required("alarm", false, true, false, false));
-        assertFalse(Perms.required("alarm", true, true, false, false));
-        // батарея обязательна, даже если уведомление выключено
-        assertTrue(Perms.required("battery", false, false, false, false));
+        // все разрешения обязательные: выключенный пункт нужно включить, включённый не трогаем
+        assertTrue(Perms.required(false, false));
+        assertFalse(Perms.required(true, false));
+        // открывали пункт раньше или нет, выключенный всё равно обязателен
+        assertTrue(Perms.required(false, true));
         // непроверяемый пункт (автозапуск): обязателен, пока его ни разу не открывали
-        assertTrue(Perms.required("autostart", null, true, false, false));
-        assertFalse(Perms.required("autostart", null, true, false, true));
-        // таймер в строке состояния Android 16 по желанию
-        assertFalse(Perms.required("live", false, true, false, false));
-        // уведомление с таймером выключено в «Ещё»: его каналы и сами уведомления не требуем...
-        assertFalse(Perms.required("ch_live", false, false, false, false));
-        assertFalse(Perms.required("ch_lock", false, false, false, false));
-        assertFalse(Perms.required("notif", false, false, false, false));
-        // ...но вибрации перед уроком уведомления нужны
-        assertTrue(Perms.required("notif", false, false, true, false));
-        assertTrue(Perms.required("ch_buzz", false, false, true, false));
-        // уведомление с таймером включено: канал и экран блокировки обязательны
-        assertTrue(Perms.required("ch_live", false, true, false, false));
+        assertTrue(Perms.required(null, false));
+        assertFalse(Perms.required(null, true));
+    }
+
+    @Test
+    public void releaseTag() {
+        assertArrayEquals(new String[]{"6.3", "91"}, Updates.parseTag("v6.3-build-91"));
+        // пробные версии и чужие строки обновлением не считаются
+        assertNull(Updates.parseTag("v6.3-beta-build-91"));
+        assertNull(Updates.parseTag("6.3"));
+        assertNull(Updates.parseTag(null));
     }
 
     private static String[][][] week(String... subjects) {

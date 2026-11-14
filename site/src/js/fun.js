@@ -40,7 +40,7 @@ function wordsDraw(anim) {
       role: "img", "aria-label": g ? g + ": " + sc.map((x, i) => g[i] + " " + MARKS[x]).join(", ") : txt || "пусто"},
       Array.from({length: 5}, (_, i) => h("span", {class: "w-cell" + (g ? " s" + sc[i] : txt[i] ? " on" : ""), style: "--i:" + i, text: txt[i] || ""})));
   }));
-  $("wordsMsg").textContent = won ? "Угадал с " + wd.rows.length + "-й попытки! Всего угадано слов: " + store.get("wordsWon", 0)
+  $("wordsMsg").textContent = won ? "Угадал с " + wd.rows.length + "-й попытки. Всего угадано слов: " + store.get("wordsWon", 0)
     : over ? "Не вышло. Это было слово «" + wd.word + "»" : "Попытка " + (wd.rows.length + 1) + " из 6. Зелёная буква на месте, жёлтая есть в слове";
   $("wordsMore").hidden = !over;
   const key = (k, text, label) => h("button", {type: "button", class: "s" + ((best[k] || 0) - 1) + (text ? " wide" : ""), "data-k": k, "aria-label": label || k, text: text || k});

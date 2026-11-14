@@ -45,7 +45,7 @@ function setCustom(on) {
 /* ---------- вкладки ---------- */
 const VIEWS = ["now", "week", "rooms", "exams", "news", "more", "olymp", "get"];
 // старые якоря и разделы внутри «Ещё»
-const SECTIONS = {schedule: "week", top: "now", install: "get", calendar: "more", make: "more", share: "more", faq: "more", about: "more", safe: "more", look: "more", extras: "more", games: "more", anthem: "more",
+const SECTIONS = {schedule: "week", top: "now", install: "get", calendar: "more", make: "more", share: "more", faq: "more", about: "more", safe: "more", look: "more", sounds: "more", extras: "more", games: "more", anthem: "more",
   olympiads: "olymp", sor: "exams"};
 let view = "now";
 const dirty = {};
@@ -71,7 +71,7 @@ function route(first) {
   const raw = c ? "" : hashText(), want = VIEWS.includes(raw) ? raw : SECTIONS[raw] || "now";
   show(want === "exams" && !examTab() ? "now" : want);
   const target = SECTIONS[raw] === "more" && $(raw);
-  if (target) { if (target.tagName === "DETAILS") target.open = true; requestAnimationFrame(() => target.scrollIntoView({block: "start"})); }
+  if (target) { if (target.dataset.pane) morePane(target.dataset.pane); if (target.tagName === "DETAILS") target.open = true; requestAnimationFrame(() => target.scrollIntoView({block: "start"})); }
   else if (!first) window.scrollTo(0, 0);
 }
 addEventListener("hashchange", () => route(false));

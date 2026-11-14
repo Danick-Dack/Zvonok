@@ -53,7 +53,7 @@ public class MainActivity extends Activity {
     private RoomsTab roomsTab;
     private MoreTab moreTab;
     private FrameLayout host;
-    private boolean askedClass, linkHandled;
+    private boolean askedClass, linkHandled, resumed;
     private String lastKey = "";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -206,11 +206,10 @@ public class MainActivity extends Activity {
             ((android.widget.ImageView) tabs[i].getChildAt(0)).setColorFilter(on ? Ui.ACCENT : Ui.MUTED);
             ((TextView) tabs[i].getChildAt(1)).setTextColor(on ? Ui.ACCENT : Ui.MUTED);
         }
-        // новая вкладка въезжает со своей стороны, её значок подпрыгивает (как на сайте)
+        // новая вкладка въезжает со своей стороны, как на сайте
         pages[k].setAlpha(0);
         pages[k].setTranslationX(dp(18) * Integer.signum(k - from));
         pages[k].animate().alpha(1).translationX(0).setDuration(220).start();
-        if (k != from) Fun.pop(tabs[k].getChildAt(0), 300, 1, 1f, 1.22f, 1f);
         lastKey = "";
         if (k == NEWS) newsTab.show();
         refresh(true);
@@ -244,6 +243,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        resumed = true;
         Ui.palette(this);
         if (Ui.version != builtVersion) {
             recreate();
@@ -256,12 +256,12 @@ public class MainActivity extends Activity {
             Updater.prefs(this).edit().putString(Schedule.KEY_CLASS, Schedule.DEFAULT_CLASS).apply();
             NowTab.markNewsSeen(this); // новичку «что нового» незачем
             Ui.pickClass(this, () -> { rebuild(); setup(); });
-        } else if (!setup()) {
-            Updates.askOnce(this, () -> Updates.check(this, ok -> rebuild()));
+        } else {
+            setup();
         }
         newsDot();
-        if (Updates.due(this)) Updates.check(this, ok -> rebuild());
-        else if (Updates.changesDue(this)) Updates.checkChanges(this, this::rebuild);
+        // вход в приложение: вышла ли версия новее. Если да, дальше не пускаем, пока её не поставят
+        if (Updates.due(this)) Updates.check(this, ok -> { if (!isFinishing() && !isDestroyed()) { setup(); rebuild(); } });
         if (moreTab != null) moreTab.build();
         Notes.load(getApplicationContext(), this::rebuild);
         rebuild();
@@ -270,6 +270,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        resumed = false;
         handler.removeCallbacks(tick);
         if (nowTab != null) nowTab.pause();
         Fun.quiet();
@@ -312,9 +313,9 @@ public class MainActivity extends Activity {
         host.announceForAccessibility(NowTab.spoken(t));
     }
 
-    /** Обязательная настройка телефона, пока чего-то не хватает. true: экран настройки открыт. */
+    /** Обязательные шаги: новая версия и настройка телефона, пока чего-то не хватает. true: экран Setup открыт. */
     private boolean setup() {
-        if (Perms.missing(this).isEmpty()) return false;
+        if (!resumed || !Updates.available(this) && Perms.missing(this).isEmpty()) return false;
         startActivity(new Intent(this, Setup.class));
         return true;
     }

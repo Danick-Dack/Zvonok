@@ -20,8 +20,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Все разрешения, которые нужны «Звонку», в одном месте: для «Проверки телефона» в настройках
- * и для подсказки при запуске. У каждого пункта понятное «зачем» и переход прямо к нужному переключателю.
+ * Все разрешения, которые нужны «Звонку», в одном месте. Они обязательные: пока хоть одно выключено,
+ * приложение показывает экран настройки (Setup). У каждого пункта понятное «зачем» и переход прямо к нужному переключателю.
  */
 final class Perms {
 
@@ -161,10 +161,10 @@ final class Perms {
             }));
         }
 
-        // 10. Android 16: таймер урока в строке состояния (на Samsung это Now Bar, на Xiaomi Super Island). Не обязательно
+        // 10. Android 16: таймер урока в строке состояния (на Samsung это Now Bar, на Xiaomi Super Island)
         if (Build.VERSION.SDK_INT >= 36 && nm != null && Updater.prefs(a).getBoolean(Updater.KEY_LIVE, true)) {
             out.add(new Item("live", "Таймер в строке состояния",
-                    "Урок и минуты до звонка вверху экрана и на экране блокировки (Samsung: Now Bar, Xiaomi: Super Island). По желанию",
+                    "Урок и минуты до звонка вверху экрана и на экране блокировки (Samsung: Now Bar, Xiaomi: Super Island)",
                     promoted(nm), () -> {
                 if (!open(a, new Intent("android.settings.MANAGE_APP_PROMOTED_NOTIFICATIONS").putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName())))
                     open(a, new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, a.getPackageName()));
@@ -182,23 +182,19 @@ final class Perms {
         }
     }
 
-    /** Чего не хватает: выключенные пункты и непроверяемые, которые ещё ни разу не открывали (таймер в строке состояния по желанию). */
+    /** Чего не хватает: выключенные пункты и непроверяемые, которые ещё ни разу не открывали. */
     static List<Item> missing(Activity a) {
         List<Item> out = new ArrayList<>();
-        boolean timer = Updater.notifEnabled(a), buzz = Updater.prefs(a).getBoolean(Updater.KEY_BUZZ, false);
         for (Item i : list(a))
-            if (required(i.key, i.ok, timer, buzz, Updater.prefs(a).getBoolean("perm_seen_" + i.key, false))) out.add(i);
+            if (required(i.ok, Updater.prefs(a).getBoolean("perm_seen_" + i.key, false))) out.add(i);
         return out;
     }
 
     /**
-     * Нужен ли пункт в обязательной настройке. timer: уведомление с таймером включено в «Ещё»; buzz: включена
-     * вибрация перед звонком; seen: непроверяемый пункт (ok == null) уже открывали.
+     * Обязателен каждый пункт списка: выключенный нужно включить, а тот, что проверить нельзя (ok == null,
+     * автозапуск у некоторых марок), хотя бы раз открыть (seen).
      */
-    static boolean required(String key, Boolean ok, boolean timer, boolean buzz, boolean seen) {
-        if ("live".equals(key)) return false; // таймер в строке состояния по желанию
-        // уведомление с таймером выключено: его разрешения не требуем (вибрации нужны только уведомления вообще)
-        if (!timer && ("ch_live".equals(key) || "ch_lock".equals(key) || "notif".equals(key) && !buzz)) return false;
+    static boolean required(Boolean ok, boolean seen) {
         return Boolean.FALSE.equals(ok) || ok == null && !seen;
     }
 

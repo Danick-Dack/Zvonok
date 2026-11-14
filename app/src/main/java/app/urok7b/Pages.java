@@ -33,8 +33,8 @@ public class Pages extends Activity {
         else if (clubs) clubs();
         else {
             olymp();
-            // свежий список с сайта: только с разрешения ходить в интернет, раз за открытие
-            if (state == null && Updater.prefs(this).getBoolean(Updates.KEY_AUTO, false)) {
+            // свежий список с сайта, раз за открытие
+            if (state == null) {
                 new Thread(() -> {
                     if (Feed.fetch(getApplicationContext(), Feed.OLYMP)) new Handler(Looper.getMainLooper()).post(() -> { if (!isFinishing()) olymp(); });
                 }).start();
@@ -92,8 +92,7 @@ public class Pages extends Activity {
             LinearLayout card = Ui.card(this);
             card.setPadding(Ui.dp(this, 16), Ui.dp(this, 14), Ui.dp(this, 16), Ui.dp(this, 14));
             boolean hot = "hot".equals(o.optString("statusKind"));
-            TextView st = Ui.text(this, (o.optString("status") + " · " + o.optString("place")).toUpperCase(), 11, hot ? Ui.ACCENT : Ui.MUTED, "sans-serif-medium");
-            st.setLetterSpacing(0.08f);
+            TextView st = Ui.text(this, o.optString("status") + " · " + o.optString("place"), 13, hot ? Ui.ACCENT : Ui.MUTED, "sans-serif-medium");
             card.addView(st);
             TextView title = Ui.heading(Ui.text(this, Schedule.trim(o.optString("title")), 17, Ui.TEXT, "sans-serif-medium"));
             title.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 2));
@@ -167,7 +166,7 @@ public class Pages extends Activity {
         JSONArray picked = set.optJSONArray("shor") == null ? new JSONArray() : set.optJSONArray("shor");
         JSONArray own = set.optJSONArray("clubs") == null ? new JSONArray() : set.optJSONArray("clubs");
         JSONArray groups = Plus.shor();
-        if (groups.length() > 0) root.addView(Ui.heading(Ui.caps(this, "ШОР: ШКОЛА ОЛИМПИЙСКОГО РЕЗЕРВА")));
+        if (groups.length() > 0) root.addView(Ui.heading(Ui.label(this, "ШОР: школа олимпийского резерва")));
         LinearLayout shor = Ui.card(this);
         shor.setPadding(Ui.dp(this, 16), Ui.dp(this, 6), Ui.dp(this, 16), Ui.dp(this, 6));
         for (int i = 0; i < groups.length(); i++) {
@@ -190,7 +189,7 @@ public class Pages extends Activity {
         }
         if (groups.length() > 0) root.addView(shor, Ui.mw(this, 0));
 
-        root.addView(Ui.heading(Ui.caps(this, "СВОИ КРУЖКИ")));
+        root.addView(Ui.heading(Ui.label(this, "Свои кружки")));
         if (own.length() > 0) {
             LinearLayout list = Ui.card(this);
             list.setPadding(Ui.dp(this, 16), Ui.dp(this, 6), Ui.dp(this, 16), Ui.dp(this, 6));

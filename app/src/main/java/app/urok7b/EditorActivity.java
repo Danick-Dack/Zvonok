@@ -100,12 +100,12 @@ public class EditorActivity extends Activity {
         tools.setLayoutParams(Ui.mw(this, 4));
         root.addView(tools);
 
-        root.addView(Ui.caps(this, "ЗВОНКИ"));
+        root.addView(Ui.label(this, "Звонки"));
         bellList = Ui.card(this);
         for (int i = 0; i < SLOTS; i++) bellList.addView(bellRow(i));
         root.addView(bellList);
 
-        root.addView(Ui.caps(this, "ГОТОВО"));
+        root.addView(Ui.label(this, "Готово"));
         root.addView(Ui.button(this, "Сохранить и включить", true, v -> {
             if (save()) {
                 applyNow();

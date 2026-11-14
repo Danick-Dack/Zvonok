@@ -110,8 +110,7 @@ final class NowTab {
         hero.setPadding(a.dp(20), a.dp(18), a.dp(20), a.dp(22));
         hero.setFocusable(true);
         LinearLayout top = Ui.horizontal(a);
-        status = Ui.text(a, "", 11, Ui.SOFT, "sans-serif-medium");
-        status.setLetterSpacing(0.12f);
+        status = Ui.text(a, "", 13, Ui.SOFT, "sans-serif-medium");
         status.setPadding(a.dp(11), a.dp(6), a.dp(12), a.dp(6));
         status.setBackground(Ui.round(a, Ui.RAISED, 12, 0));
         top.addView(status);
@@ -139,8 +138,7 @@ final class NowTab {
             x.setGravity(Gravity.CENTER);
             center.addView(x);
         }
-        caption = Ui.text(a, "", 11, Ui.MUTED, "sans-serif-medium");
-        caption.setLetterSpacing(0.14f);
+        caption = Ui.text(a, "", 13, Ui.MUTED, null);
         caption.setPadding(0, a.dp(8), 0, 0);
         caption.setGravity(Gravity.CENTER);
         center.addView(caption);
@@ -193,8 +191,7 @@ final class NowTab {
         // что дальше
         nextCard = Ui.card(a);
         nextCard.setPadding(a.dp(18), a.dp(14), a.dp(18), a.dp(16));
-        nextH = Ui.text(a, "", 11, Ui.MUTED, "sans-serif-medium");
-        nextH.setLetterSpacing(0.14f);
+        nextH = Ui.text(a, "", 13, Ui.MUTED, null);
         nextCard.addView(nextH);
         LinearLayout nr = Ui.horizontal(a);
         nr.setPadding(0, a.dp(6), 0, 0);
@@ -247,8 +244,7 @@ final class NowTab {
         LinearLayout c = Ui.vertical(a);
         c.setGravity(Gravity.CENTER);
         c.setLayoutParams(Ui.weight(1));
-        TextView h = Ui.text(a, "", 10, Ui.MUTED, "sans-serif-medium");
-        h.setLetterSpacing(0.14f);
+        TextView h = Ui.text(a, "", 12, Ui.MUTED, null);
         c.addView(h);
         c.addView(Ui.text(a, "", 17, Ui.TEXT, "sans-serif-medium"));
         return c;
@@ -289,7 +285,7 @@ final class NowTab {
         if (avail) update.setText("Вышла версия " + Updates.latestText(a) + ". Нажми, чтобы обновить");
 
         boolean side = a.getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-        status.setText((d.live ? "●  " : "") + d.label + (side ? "  ·  " + Schedule.title() : "")); // набок шапка с классом выше
+        status.setText((d.live ? "●  " : "") + Ui.calm(d.label) + (side ? "  ·  " + Schedule.title() : "")); // набок шапка с классом выше
         status.setTextColor(d.live ? Ui.TEXT : Ui.SOFT);
         buildDots(d);
         renderSound();
@@ -316,7 +312,7 @@ final class NowTab {
         if (was > 0 && was != lastTarget && Math.abs(t.ms - was) < 5000) ring(); // таймер дошёл до нуля: это звонок
         chrono.setVisibility(d.timer ? View.VISIBLE : View.GONE);
         big.setVisibility(d.timer ? View.GONE : View.VISIBLE);
-        caption.setText(d.extra ? (d.progress >= 0 ? "ДО КОНЦА" : "ДО НАЧАЛА") : caption(s));
+        caption.setText(d.extra ? (d.progress >= 0 ? "до конца" : "до начала") : caption(s).toLowerCase(java.util.Locale.ROOT));
         String subj = d.extra ? null : d.kind == Schedule.Kind.LESSON ? d.title
                 : d.kind == Schedule.Kind.BREAK || d.kind == Schedule.Kind.BEFORE ? d.nextSubject : null;
         // праздничная тема: значок, фраза и цвет праздника у кольца, пока на нём нет урока
@@ -335,14 +331,14 @@ final class NowTab {
         hero.setBackground(heroBg(d.timer ? subj : null));
         title.setText(d.title);
         setRoom(roomBox, d.room, subj, d.timer);
-        sideH.setText(d.sideHead);
+        sideH.setText(Ui.calm(d.sideHead));
         sideV.setText(d.sideValue);
-        statH.setText(d.statHead);
+        statH.setText(Ui.calm(d.statHead));
         statV.setText(d.statValue);
         hero.setContentDescription(spoken(t));
 
         nextCard.setVisibility(d.nextSubject.isEmpty() ? View.GONE : View.VISIBLE);
-        nextH.setText(d.nextHead);
+        nextH.setText(Ui.calm(d.nextHead));
         nextS.setText(d.nextSubject);
         setRoom(nextRoomBox, d.nextRoom, d.nextSubject, false);
         foot.setText(d.foot);

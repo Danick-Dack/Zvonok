@@ -4,12 +4,12 @@
 .top{position:sticky;top:0;z-index:30;background:var(--bar-bg);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);
   border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
 .top-in{display:flex;align-items:center;gap:6px;height:var(--header-h)}
-.brand{display:inline-flex;align-items:center;gap:9px;font:650 19px/1 var(--font-display);letter-spacing:-.025em;text-decoration:none;
+.brand{display:inline-flex;align-items:center;gap:9px;font:600 19px/1 var(--font-display);letter-spacing:0;text-decoration:none;
   margin-right:auto;padding:6px 4px 6px 0;border-radius:10px}
 .brand svg{width:27px;height:27px;color:var(--text)}
 .mark-track{stroke:var(--ring-track)}
 .nav-top{display:none}
-.nav-top a{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:38px;text-decoration:none;color:var(--muted);font-weight:550;font-size:15px;padding:8px 13px;border-radius:10px;text-align:center;white-space:nowrap;transition:color .15s,background .15s}
+.nav-top a{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:38px;text-decoration:none;color:var(--muted);font-weight:500;font-size:15px;padding:8px 13px;border-radius:10px;text-align:center;white-space:nowrap;transition:color .15s,background .15s}
 .nav-top a:hover{color:var(--text);background:var(--surface-2)}
 .nav-top a[aria-current="page"]{color:var(--text)}
 .nav-top a[aria-current="page"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-9px;height:2px;border-radius:2px;background:var(--accent)}
@@ -20,10 +20,10 @@
   -webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);border-top:1px solid var(--line);
   padding:5px max(6px,env(safe-area-inset-left)) calc(5px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-right))}
 .tabbar a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;border-radius:12px;
-  text-decoration:none;color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap;transition:color .15s}
+  text-decoration:none;color:var(--muted);font-size:11.5px;font-weight:500;letter-spacing:.01em;white-space:nowrap;transition:color .15s}
 .tabbar a .icon{width:25px;height:25px;stroke-width:1.7}
 .tabbar a[aria-current="page"]{color:var(--accent)}
-.tabbar a[aria-current="page"] .icon{stroke-width:2.1}
+.tabbar a[aria-current="page"] .icon{stroke-width:1.9}
 body.has-tabbar{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
 body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
 @media (min-width:760px){.tabbar{display:none}body.has-tabbar{padding-bottom:0}body.has-tabbar .zv-toast{bottom:28px}}
@@ -55,7 +55,7 @@ body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-ins
 /* выбор класса в шапке */
 /* видимая высота 38, а нажимается 44 (::after ниже): шапка не растёт, пальцу удобно */
 .cls-btn{position:relative;display:inline-flex;align-items:center;gap:4px;height:38px;padding:0 10px 0 13px;border-radius:12px;background:var(--accent);color:var(--accent-ink);
-  font:650 16px/1 var(--font-display);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  font:600 16px/1 var(--font-display);letter-spacing:0;font-variant-numeric:tabular-nums}
 .cls-btn .icon{width:16px;height:16px;stroke-width:2.2}
 .cls-btn.empty{background:var(--surface-2);color:var(--text)}
 
@@ -99,7 +99,7 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 
 /* кабинет: 48/49 значит две группы в двух кабинетах */
 .room{display:inline-flex;align-items:center;flex:none;min-height:30px;padding:5px 10px;border-radius:10px;background:var(--surface-2);color:var(--text);
-  font:700 15px/1.1 var(--font);font-variant-numeric:tabular-nums;white-space:nowrap}
+  font:600 15px/1.1 var(--font);font-variant-numeric:tabular-nums;white-space:nowrap}
 .room i{font-style:normal;font-weight:400;color:var(--muted);margin:0 3px}
 [class*="hue-"] .room,.room[class*="hue-"]{background:var(--ss);color:var(--st)}
 .room.now{background:var(--sf,var(--accent));color:var(--si,var(--accent-ink))}
@@ -107,7 +107,7 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 .room.lg{min-height:42px;padding:8px 13px;border-radius:13px;font-size:20px}
 .room.gym{font-weight:600}
 
-.tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--text-2);white-space:nowrap}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--text-2);white-space:nowrap}
 .tag.hot{background:var(--accent-soft);color:var(--accent)}
 .tag.warn{background:var(--warn-soft);color:var(--warn)}
 .tag.ok{background:var(--ok-soft);color:var(--ok)}
@@ -135,7 +135,7 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 .grades{display:grid;gap:10px}
 .grade{display:grid;grid-template-columns:28px repeat(4,minmax(0,1fr));gap:8px;align-items:center}
 .grade b{font:600 14px/1 var(--font);color:var(--muted);font-variant-numeric:tabular-nums}
-.grade button{min-height:50px;border-radius:var(--r-md);background:var(--surface-2);font:650 17px/1 var(--font-display);font-variant-numeric:tabular-nums;transition:background .15s,transform .1s}
+.grade button{min-height:50px;border-radius:var(--r-md);background:var(--surface-2);font:600 17px/1 var(--font-display);font-variant-numeric:tabular-nums;transition:background .15s,transform .1s}
 .grade button:hover{background:var(--surface-3)}
 .grade button:active{transform:scale(.97)}
 .grade button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
@@ -146,7 +146,7 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 
 /* всплывающее сообщение */
 .zv-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;transform:translate(-50%,16px);opacity:0;pointer-events:none;
-  background:var(--text);color:var(--bg);padding:11px 16px;border-radius:14px;font-size:15px;font-weight:550;max-width:calc(100% - 32px);text-align:center;
+  background:var(--text);color:var(--bg);padding:11px 16px;border-radius:14px;font-size:15px;font-weight:500;max-width:calc(100% - 32px);text-align:center;
   box-shadow:0 10px 30px rgba(0,0,0,.2);transition:opacity .2s,transform .25s var(--ease)}
 .zv-toast.on{opacity:1;transform:translate(-50%,0)}
 
@@ -161,13 +161,13 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 /* подвал */
 .foot{padding:36px 0 44px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:24px}
 .foot nav{display:flex;flex-wrap:wrap;gap:4px 18px;margin-bottom:10px}
-.foot nav a{color:var(--text-2);text-decoration:none;font-weight:550}
+.foot nav a{color:var(--text-2);text-decoration:none;font-weight:500}
 .foot nav a:hover{text-decoration:underline}
 .foot p+p{margin-top:4px}
 
 /* заголовок раздела */
 .page-head{padding:28px 0 18px}
-.page-head h1{font-size:clamp(30px,6vw,40px);letter-spacing:-.03em}
+.page-head h1{font-size:clamp(30px,6vw,40px);letter-spacing:0}
 .page-head p{color:var(--muted);margin-top:8px;font-size:17px}
 .sec-title{font-size:21px;margin-bottom:12px}
 

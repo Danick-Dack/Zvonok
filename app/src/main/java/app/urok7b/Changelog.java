@@ -56,18 +56,17 @@ public class Changelog extends Activity {
                 last = date;
                 String[] p = date.split("-");
                 String text = p.length == 3 ? Integer.parseInt(p[2]) + " " + MONTHS[Integer.parseInt(p[1]) - 1] + " " + p[0] : date;
-                root.addView(Ui.heading(Ui.caps(this, text.toUpperCase())));
+                root.addView(Ui.heading(Ui.label(this, text)));
             }
             LinearLayout card = Ui.card(this);
             card.setPadding(Ui.dp(this, 16), Ui.dp(this, 14), Ui.dp(this, 16), Ui.dp(this, 14));
-            StringBuilder tags = new StringBuilder(shown == 0 ? "НОВОЕ · " : "");
+            StringBuilder tags = new StringBuilder(shown == 0 ? "Новое · " : "");
             for (int k = 0; pl != null && k < pl.length(); k++) {
                 String p = pl.optString(k);
-                tags.append(k > 0 ? " · " : "").append("android".equals(p) ? "ANDROID" + (r.has("version") ? " " + r.optString("version") : "")
-                        : "ios".equals(p) ? "IPHONE" : "САЙТ");
+                tags.append(k > 0 ? " · " : "").append("android".equals(p) ? "Android" + (r.has("version") ? " " + r.optString("version") : "")
+                        : "ios".equals(p) ? "iPhone" : "Сайт");
             }
-            TextView tg = Ui.text(this, tags.toString(), 11, shown == 0 ? Ui.ACCENT : Ui.MUTED, "sans-serif-medium");
-            tg.setLetterSpacing(0.1f);
+            TextView tg = Ui.text(this, tags.toString(), 13, shown == 0 ? Ui.ACCENT : Ui.MUTED, "sans-serif-medium");
             card.addView(tg);
             TextView title = Ui.heading(Ui.text(this, r.optString("title"), 18, Ui.TEXT, "sans-serif-medium"));
             title.setPadding(0, Ui.dp(this, 6), 0, Ui.dp(this, 4));

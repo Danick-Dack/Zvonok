@@ -47,18 +47,18 @@ public class StyleActivity extends Activity {
         preview.setLayoutParams(Ui.mw(this, 18));
         root.addView(preview);
 
-        root.addView(Ui.caps(this, "ТЕМА"));
+        root.addView(Ui.label(this, "Тема"));
         HorizontalScrollView hs = new HorizontalScrollView(this);
         hs.setHorizontalScrollBarEnabled(false);
         presets = Ui.horizontal(this);
         hs.addView(presets);
         root.addView(hs);
 
-        root.addView(Ui.caps(this, "АКЦЕНТ: ТАЙМЕР, ПРОГРЕСС, КАБИНЕТ"));
+        root.addView(Ui.label(this, "Акцент: таймер, прогресс, кабинет"));
         accents = Ui.horizontal(this);
         root.addView(accents);
 
-        root.addView(Ui.caps(this, "ФОН ВИДЖЕТОВ"));
+        root.addView(Ui.label(this, "Фон виджетов"));
         LinearLayout bgCard = Ui.card(this);
         TextView opLabel = Ui.text(this, "", 14, Ui.SOFT, null);
         bgCard.addView(opLabel);
@@ -93,11 +93,11 @@ public class StyleActivity extends Activity {
         bgCard.addView(opNote);
         root.addView(bgCard);
 
-        root.addView(Ui.caps(this, "СВОЙ ФОН: ФОТО"));
+        root.addView(Ui.label(this, "Свой фон: фото"));
         photoCard = Ui.card(this);
         root.addView(photoCard);
 
-        root.addView(Ui.caps(this, "ЧТО ПОКАЗЫВАТЬ"));
+        root.addView(Ui.label(this, "Что показывать"));
         LinearLayout show = Ui.card(this);
         show.addView(Ui.switchRow(this, "Секунды в таймере",
                 "Если выключить, таймер будет «24 мин», а батарея будет тратиться ещё меньше", t.seconds,
@@ -112,7 +112,7 @@ public class StyleActivity extends Activity {
                 (b, v) -> { t.subjectColor = v; changed(); }));
         root.addView(show);
 
-        root.addView(Ui.caps(this, "КОД ТЕМЫ"));
+        root.addView(Ui.label(this, "Код темы"));
         root.addView(Ui.button(this, "Скопировать код темы", false, v -> {
             ClipboardManager cm = getSystemService(ClipboardManager.class);
             if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("Тема", t.encode()));

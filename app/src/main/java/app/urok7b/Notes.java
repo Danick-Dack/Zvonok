@@ -81,9 +81,9 @@ final class Notes {
         return Schedule.notes() + "/notes/" + MoreTab.slug(c);
     }
 
-    /** Свежие подписи класса: не чаще раза в 5 минут и только если интернет разрешён. changed: в главном потоке, если что-то поменялось. */
+    /** Свежие подписи класса: не чаще раза в 5 минут. changed: в главном потоке, если что-то поменялось. */
     static void load(Context app, Runnable changed) {
-        if (!on() || !Updater.prefs(app).getBoolean(Updates.KEY_AUTO, false)) return;
+        if (!on()) return;
         days(app);
         if (System.currentTimeMillis() - at < 300_000) return;
         at = System.currentTimeMillis();

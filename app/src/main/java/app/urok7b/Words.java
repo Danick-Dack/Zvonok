@@ -173,7 +173,7 @@ final class Words {
             rows[r].setContentDescription(spoken);
         }
         for (Map.Entry<String, TextView> k : keys.entrySet()) paint(k.getValue(), best.getOrDefault(k.getKey(), -1), 8, 0);
-        msg.setText(won ? "Угадал с " + tries.size() + "-й попытки! Всего угадано слов: " + Updater.prefs(a).getInt(KEY_WON, 0)
+        msg.setText(won ? "Угадал с " + tries.size() + "-й попытки. Всего угадано слов: " + Updater.prefs(a).getInt(KEY_WON, 0)
                 : over ? "Не вышло. Это было слово «" + word + "»"
                 : (daily ? "Слово дня. " : "") + "Попытка " + (tries.size() + 1) + " из 6. Зелёная буква на месте, жёлтая есть в слове");
         more.setVisibility(over ? View.VISIBLE : View.GONE);

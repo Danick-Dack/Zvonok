@@ -143,14 +143,13 @@
   </section>
 
   <section class="view" id="v-more" aria-labelledby="moreH" hidden>
-    <div class="view-head th th-more"><h1 id="moreH">Ещё</h1></div>
-    <div class="menu">
-      <a class="sect sect-link" href="#olymp"><span class="sect-ic hue-yellow" aria-hidden="true"><svg class="icon"><use href="#i-cup"/></svg></span><b>Олимпиады<small>Алматы и онлайн, 7–11 классы</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
-      <a class="sect sect-link" href="changelog.html" id="logBtn"><span class="sect-ic hue-pink" aria-hidden="true"><svg class="icon"><use href="#i-star"/></svg></span><b>Что нового<small>Все обновления сайта и приложений</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
-      <a class="sect sect-link" href="feedback.html"><span class="sect-ic hue-cyan" aria-hidden="true"><svg class="icon"><use href="#i-mail"/></svg></span><b>Написать нам<small>Идея, ошибка или вопрос. Анонимно</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
-      <a class="sect sect-link app-only" href="#get"><span class="sect-ic hue-blue" aria-hidden="true"><svg class="icon"><use href="#i-phone"/></svg></span><b>Звонок на телефоне<small>Android и iPhone, гайды по установке</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
-      <details class="sect" id="games">
-        <summary><span class="sect-ic hue-green" aria-hidden="true"><svg class="icon"><use href="#i-game"/></svg></span><h2>Игры на перемену<small>Слова и змейка, работают без интернета</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+    <div class="view-head more-head"><h1 id="moreH">Ещё</h1></div>
+    <div class="seg more-seg" id="moreSeg" role="group" aria-label="Раздел"><button type="button" data-pane="main">Главное</button><button type="button" data-pane="set">Настройки</button><button type="button" data-pane="about">О «Звонке»</button></div>
+    <div class="menu" id="moreMenu" data-pane="main">
+      <a data-pane="main" class="sect sect-link" href="#olymp"><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-cup"/></svg></span><b>Олимпиады<small>Алматы и онлайн, 7–11 классы</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
+      <a data-pane="main" class="sect sect-link app-only" href="#get"><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-phone"/></svg></span><b>Звонок на телефоне<small>Android и iPhone, гайды по установке</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
+      <details data-pane="main" class="sect" id="games">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-game"/></svg></span><h2>Игры на перемену<small>Слова и змейка, без интернета</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
         <div class="stack">
           <button class="btn btn-quiet btn-wide" id="playWords" type="button">Слова: угадай слово из 5 букв</button>
@@ -159,12 +158,12 @@
         <p class="note">Слово дня у всего лицея одно. Рекорды остаются на этом устройстве.</p>
         </div>
       </details>
-      <details class="sect" id="anthem">
-        <summary><span class="sect-ic hue-red" aria-hidden="true"><svg class="icon"><use href="#i-note"/></svg></span><h2>Гимн лицея<small>Текст, чтобы не подглядывать у соседа</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <details data-pane="main" class="sect" id="anthem">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-note"/></svg></span><h2>Гимн лицея<small>Текст, чтобы не подглядывать у соседа</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body anthem" id="anthemText"></div>
       </details>
-      <details class="sect" id="extras">
-        <summary><span class="sect-ic hue-indigo" aria-hidden="true"><svg class="icon"><use href="#i-flag"/></svg></span><h2>Кружки и ШОР<small id="extrasSum">Занятия после уроков</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <details data-pane="main" class="sect" id="extras">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-flag"/></svg></span><h2>Кружки и ШОР<small id="extrasSum">Занятия после уроков</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
         <p class="note">Отметь свои группы ШОР и добавь кружки. «Звонок» покажет, сколько осталось до начала и до конца, и поставит их в неделю.</p>
         <span class="label">ШОР: школа олимпийского резерва</span>
@@ -180,35 +179,31 @@
         </form>
         </div>
       </details>
-      <details class="sect" id="look">
-        <summary><span class="sect-ic hue-purple" aria-hidden="true"><svg class="icon"><use href="#i-auto"/></svg></span><h2>Оформление<small>Светлая или тёмная тема и цвета</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <details data-pane="main" class="sect" id="calendar">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-week"/></svg></span><h2>Расписание в календаре<small>Уроки с напоминанием</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
-        <span class="label" id="schemeL">Тема</span>
-        <div class="seg" id="schemeSeg" role="group" aria-labelledby="schemeL"></div>
-        <span class="label" id="accentL" style="margin-top:18px">Цвет</span>
-        <div class="swatch-row" id="accentRow" role="group" aria-labelledby="accentL"></div>
-        <label class="switch" style="margin-top:8px"><span>Цвета предметов<small>Свой цвет у каждого урока: алгебра синяя, физика фиолетовая</small></span><input type="checkbox" id="hueToggle" checked></label>
-        <span class="label web-only" id="iconL" style="margin-top:18px">Иконка</span>
-        <div class="swatch-row icons web-only" id="iconRow" role="group" aria-labelledby="iconL"></div>
-        <label class="switch web-only"><span>Иконка с номером класса<small>Для экрана «Домой»: кольцо «Звонка», внутри твой класс. Видно, если добавить сайт заново</small></span><input type="checkbox" id="iconToggle"></label>
-        <label class="switch"><span>Звуки<small>На уроках и переменах тикают часы, на звонке звенит звонок</small></span><input type="checkbox" id="soundToggle"></label>
-        <label class="switch" id="buzzRow" hidden><span>Вибрация за 3 минуты до звонка<small>На урок и на перемену, пока «Звонок» открыт</small></span><input type="checkbox" id="buzzToggle"></label>
-        <label class="switch"><span>Праздничные темы<small>В праздники и каникулы «Звонок» сам меняет цвет и настроение</small></span><input type="checkbox" id="festToggle" checked></label>
-        <p class="note">Главный цвет у кнопок, вкладок и всего, что идёт сейчас. Запоминается в этом браузере.</p>
-        <span class="label" style="margin-top:18px">Свой фон</span>
-        <div class="row"><label class="btn btn-quiet btn-sm">Выбрать картинку<input type="file" id="bgFile" accept="image/*" hidden></label><button class="btn btn-line btn-sm" id="bgClear" type="button" hidden>Убрать фон</button></div>
-        <p class="note">Картинка ляжет под расписание и останется только на этом устройстве. Фон виджетов и уведомления на Android выбирается в приложении.</p>
-        <div class="embed-only">
-          <span class="label" style="margin-top:18px">Фон виджетов iPhone</span>
-          <div class="row"><button class="btn btn-quiet btn-sm" id="wbgPick" type="button">Выбрать фото</button><button class="btn btn-line btn-sm" id="wbgClear" type="button">Убрать</button></div>
-          <label class="switch" style="margin-top:8px"><span>Напоминать о СОР и СОЧ<small>Накануне в 18:00</small></span><input type="checkbox" id="ntfExam" checked></label>
-          <label class="switch"><span>Уведомлять о новостях лицея<small>Новый пост в канале, проверка не чаще раза в 6 часов</small></span><input type="checkbox" id="ntfNews" checked></label>
-          <label class="switch"><span>Вибрация за 3 минуты до звонка<small>Уведомление перед звонком на урок и с урока. В беззвучном режиме iPhone только вибрирует</small></span><input type="checkbox" id="ntfBell"></label>
+        <p class="note" id="calNote"></p>
+        <div class="stack" style="margin-top:14px">
+          <a class="btn btn-quiet btn-wide" id="calApple" href="#"><svg class="icon" aria-hidden="true"><use href="#i-week"/></svg>Подписаться в Календаре</a>
+          <a class="btn btn-quiet btn-wide" id="calGoogle" href="#" target="_blank" rel="noopener noreferrer">Google Календарь<svg class="icon" aria-hidden="true"><use href="#i-out"/></svg></a>
+          <a class="btn btn-line btn-wide" id="calIcs" href="#"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Скачать файл .ics</a>
         </div>
+        <div class="faq" style="margin-top:6px"><details><summary>На iPhone нет напоминаний?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary>
+          <ol class="steps"><li><div><b>Открой Настройки → Календарь</b><p>В новых iOS: Настройки → Приложения → Календарь.</p></div></li>
+          <li><div><b>Учётные записи → Подписные календари</b><p>Выбери «Звонок» своего класса.</p></div></li>
+          <li><div><b>Выключи «Удалять напоминания»</b><p>По-английски Remove Alerts.</p></div></li></ol></details></div>
         </div>
       </details>
-      <details class="sect" id="share">
-        <summary><span class="sect-ic hue-green" aria-hidden="true"><svg class="icon"><use href="#i-share"/></svg></span><h2>Поделиться с классом<small>Ссылка, QR-код и плакат</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <details data-pane="main" class="sect" id="make">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-edit"/></svg></span><h2>Конструктор<small>Своё расписание и цвета виджетов</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+        <div class="sect-body">
+        <p class="note">Собери своё расписание или подбери цвета для виджетов и уведомления. Получится код, его можно вставить в приложение.</p>
+        <label class="switch" id="customSwitch" hidden><span>Показывать своё расписание<small>Только в этом браузере</small></span><input type="checkbox" id="useCustom"></label>
+        <div class="row" style="margin-top:14px"><a class="btn btn-quiet" href="make.html"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>Открыть конструктор</a></div>
+        </div>
+      </details>
+      <details data-pane="main" class="sect" id="share">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-share"/></svg></span><h2>Поделиться с классом<small>Ссылка, QR-код и плакат</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
         <div class="share">
           <div class="qr" id="qr" role="img" aria-label="QR-код ссылки"></div>
@@ -229,46 +224,59 @@
         </div>
         </div>
       </details>
-      <details class="sect" id="calendar">
-        <summary><span class="sect-ic hue-red" aria-hidden="true"><svg class="icon"><use href="#i-week"/></svg></span><h2>Расписание в календаре<small>Уроки с напоминанием</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <details data-pane="set" class="sect" id="look">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-auto"/></svg></span><h2>Оформление<small>Светлая или тёмная тема и цвета</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
-        <p class="note" id="calNote"></p>
-        <div class="stack" style="margin-top:14px">
-          <a class="btn btn-quiet btn-wide" id="calApple" href="#"><svg class="icon" aria-hidden="true"><use href="#i-week"/></svg>Подписаться в Календаре</a>
-          <a class="btn btn-quiet btn-wide" id="calGoogle" href="#" target="_blank" rel="noopener noreferrer">Google Календарь<svg class="icon" aria-hidden="true"><use href="#i-out"/></svg></a>
-          <a class="btn btn-line btn-wide" id="calIcs" href="#"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Скачать файл .ics</a>
+        <span class="label" id="schemeL">Тема</span>
+        <div class="seg" id="schemeSeg" role="group" aria-labelledby="schemeL"></div>
+        <span class="label" id="accentL" style="margin-top:18px">Цвет</span>
+        <div class="swatch-row" id="accentRow" role="group" aria-labelledby="accentL"></div>
+        <label class="switch" style="margin-top:8px"><span>Цвета предметов<small>Свой цвет у каждого урока: алгебра синяя, физика фиолетовая</small></span><input type="checkbox" id="hueToggle" checked></label>
+        <span class="label web-only" id="iconL" style="margin-top:18px">Иконка</span>
+        <div class="swatch-row icons web-only" id="iconRow" role="group" aria-labelledby="iconL"></div>
+        <label class="switch web-only"><span>Иконка с номером класса<small>Для экрана «Домой»: кольцо «Звонка», внутри твой класс. Видно, если добавить сайт заново</small></span><input type="checkbox" id="iconToggle"></label>
+        <label class="switch"><span>Праздничные темы<small>В праздники и каникулы «Звонок» сам меняет цвет и настроение</small></span><input type="checkbox" id="festToggle" checked></label>
+        <p class="note">Главный цвет у кнопок, вкладок и всего, что идёт сейчас. Запоминается в этом браузере.</p>
+        <span class="label" style="margin-top:18px">Свой фон</span>
+        <div class="row"><label class="btn btn-quiet btn-sm">Выбрать картинку<input type="file" id="bgFile" accept="image/*" hidden></label><button class="btn btn-line btn-sm" id="bgClear" type="button" hidden>Убрать фон</button></div>
+        <p class="note">Картинка ляжет под расписание и останется только на этом устройстве. Фон виджетов и уведомления на Android выбирается в приложении.</p>
+        <div class="embed-only">
+          <span class="label" style="margin-top:18px">Фон виджетов iPhone</span>
+          <div class="row"><button class="btn btn-quiet btn-sm" id="wbgPick" type="button">Выбрать фото</button><button class="btn btn-line btn-sm" id="wbgClear" type="button">Убрать</button></div>
         </div>
-        <div class="faq" style="margin-top:6px"><details><summary>На iPhone нет напоминаний?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary>
-          <ol class="steps"><li><div><b>Открой Настройки → Календарь</b><p>В новых iOS: Настройки → Приложения → Календарь.</p></div></li>
-          <li><div><b>Учётные записи → Подписные календари</b><p>Выбери «Звонок» своего класса.</p></div></li>
-          <li><div><b>Выключи «Удалять напоминания»</b><p>По-английски Remove Alerts.</p></div></li></ol></details></div>
         </div>
       </details>
-      <details class="sect" id="make">
-        <summary><span class="sect-ic hue-orange" aria-hidden="true"><svg class="icon"><use href="#i-edit"/></svg></span><h2>Конструктор<small>Своё расписание и цвета виджетов</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <details data-pane="set" class="sect" id="sounds">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-bell"/></svg></span><h2>Звук и уведомления<small>Часы, звонок и вибрация</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
-        <p class="note">Собери своё расписание или подбери цвета для виджетов и уведомления. Получится код, его можно вставить в приложение.</p>
-        <label class="switch" id="customSwitch" hidden><span>Показывать своё расписание<small>Только в этом браузере</small></span><input type="checkbox" id="useCustom"></label>
-        <div class="row" style="margin-top:14px"><a class="btn btn-quiet" href="make.html"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>Открыть конструктор</a></div>
+        <label class="switch"><span>Звуки<small>На уроках и переменах тикают часы, на звонке звенит звонок</small></span><input type="checkbox" id="soundToggle"></label>
+        <label class="switch" id="buzzRow" hidden><span>Вибрация за 3 минуты до звонка<small>На урок и на перемену, пока «Звонок» открыт</small></span><input type="checkbox" id="buzzToggle"></label>
+        <div class="embed-only">
+          <label class="switch"><span>Напоминать о СОР и СОЧ<small>Накануне в 18:00</small></span><input type="checkbox" id="ntfExam" checked></label>
+          <label class="switch"><span>Уведомлять о новостях лицея<small>Новый пост в канале, проверка не чаще раза в 6 часов</small></span><input type="checkbox" id="ntfNews" checked></label>
+          <label class="switch"><span>Вибрация за 3 минуты до звонка<small>Уведомление перед звонком на урок и с урока. В беззвучном режиме iPhone только вибрирует</small></span><input type="checkbox" id="ntfBell"></label>
+        </div>
         </div>
       </details>
-      <details class="sect" id="faq">
-        <summary><span class="sect-ic hue-teal" aria-hidden="true"><svg class="icon"><use href="#i-help"/></svg></span><h2>Вопросы<small>Батарея, данные, обновления</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <a data-pane="about" class="sect sect-link" href="changelog.html" id="logBtn"><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-star"/></svg></span><b>Что нового<small>Все обновления сайта и приложений</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
+      <a data-pane="about" class="sect sect-link" href="feedback.html"><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-mail"/></svg></span><b>Написать нам<small>Идея, ошибка или вопрос. Анонимно</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
+      <details data-pane="about" class="sect web-only" id="faq">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-help"/></svg></span><h2>Вопросы<small>Батарея, данные, обновления</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
         <div class="faq">
           <details><summary>Это официальный сайт лицея?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Нет. «Звонок» сделал ученик лицея для своих. Расписание взято из утверждённого расписания четверти. Если где-то ошибка, <a href="feedback.html?about=schedule">напиши нам</a>, исправим.</p></details>
-          <details><summary>Что «Звонок» знает обо мне?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Ничего. Класс, кружки и настройки лежат у тебя на телефоне, аккаунтов и рекламы нет. В интернет приложение ходит только на сайт «Звонка» и GitHub: за новой версией, заменами и новостями лицея, если ты это разрешишь. Чтобы знать, сколько нас, раз в сутки сайт и приложения скачивают с GitHub пустой файл, а GitHub считает скачивания: ни IP, ни чего-либо о телефоне мы не видим и не храним. Если пишешь нам через «Написать нам», письмо уходит через сервис отправки Web3Forms.</p></details>
+          <details><summary>Что «Звонок» знает обо мне?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Ничего. Класс, кружки и настройки лежат у тебя на телефоне, аккаунтов и рекламы нет. В интернет приложение ходит только на сайт «Звонка» и GitHub: за новой версией, заменами и новостями лицея. Чтобы знать, сколько нас, раз в сутки сайт и приложения скачивают с GitHub пустой файл, а GitHub считает скачивания: ни IP, ни чего-либо о телефоне мы не видим и не храним. Если пишешь нам через «Написать нам», письмо уходит через сервис отправки Web3Forms.</p></details>
           <details><summary>Сколько тратит батареи и места?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Меньше 300 КБ места, а заряда почти не тратит. Пока экран выключен, приложение спит, а таймер тикает силами самой системы. В каникулы оно отдыхает вместе с тобой.</p></details>
           <details><summary>Почему Android пишет «Неизвестное приложение»?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Так он пишет про всё, что не из Play Маркета. Нажми «Подробнее» → «Всё равно установить». Код «Звонка» открыт.</p></details>
           <details><summary>Уведомление пропало или не обновляется<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Телефон закрыл его ради батареи. В <a href="#get">«Звонок на телефоне»</a> → Android → «Настрой телефон» выбери свою марку и сделай шаги.</p></details>
           <details><summary>Будет ли на iPhone уведомление, как на Android?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Нет, Apple этого не разрешает. Зато есть напоминания через Календарь, виджет на экране блокировки и ответ Siri.</p></details>
-          <details><summary>Как обновить приложение?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Приложение само скажет, что вышла новая версия: скачай и установи поверх. Сайт и виджет iPhone обновляются сами.</p></details>
+          <details><summary>Как обновить приложение?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>На Android обновления обязательные: когда выходит новая версия, приложение попросит скачать её и поставить поверх. Класс и настройки останутся. Сайт и виджет iPhone обновляются сами.</p></details>
           <details><summary>Работает без интернета?<svg class="icon" aria-hidden="true"><use href="#i-down"/></svg></summary><p>Да. Расписание внутри, а замены подтянутся, когда появится сеть.</p></details>
         </div>
         </div>
       </details>
-      <details class="sect" id="about">
-        <summary><span class="sect-ic hue-gray" aria-hidden="true"><svg class="icon"><use href="#i-info"/></svg></span><h2>О проекте<small>Кто сделал и сколько нас</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+      <details data-pane="about" class="sect" id="about">
+        <summary><span class="sect-ic" aria-hidden="true"><svg class="icon"><use href="#i-info"/></svg></span><h2>О проекте<small>Кто сделал и сколько нас</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
         <p class="note">«Звонок» сделал ученик лицея №165 для своих. Проект неофициальный, все права защищены. <span id="term"></span> Класс и настройки живут только в твоём браузере.</p>
         <p class="note age" id="age"></p>

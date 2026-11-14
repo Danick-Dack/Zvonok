@@ -46,7 +46,7 @@ final class Ui {
     };
 
     static boolean DARK = true, PLAIN;
-    static int BG, CARD, RAISED, FIELD, LINE, TEXT, SOFT, MUTED, FAINT, TRACK;
+    static int BG, CARD, RAISED, FIELD, LINE, TEXT, SOFT, MUTED, FAINT, TRACK, SEL;
     static int ACCENT, ON_ACCENT, OK, WARN, BAD;
     /** Меняется при каждой смене оформления: экраны по нему понимают, что пора перерисоваться. */
     static int version;
@@ -62,11 +62,11 @@ final class Ui {
         if (dark) {
             BG = 0xFF000000; CARD = 0xFF101012; RAISED = 0xFF1C1C1E; FIELD = 0xFF161618; LINE = 0xFF232326;
             TEXT = 0xFFF3F3F1; SOFT = 0xFFC6C6C2; MUTED = 0xFF8F8F8A; FAINT = 0xFF4A4A4F; TRACK = 0xFF1C1C1F;
-            OK = 0xFF30DB5B; WARN = 0xFFFFD426; BAD = 0xFFFF6961; ON_ACCENT = 0xFF0B0B0C;
+            OK = 0xFF30DB5B; WARN = 0xFFFFD426; BAD = 0xFFFF6961; ON_ACCENT = 0xFF0B0B0C; SEL = 0xFF2C2C30;
         } else {
             BG = 0xFFF4F4F1; CARD = 0xFFFFFFFF; RAISED = 0xFFECECE8; FIELD = 0xFFECECE8; LINE = 0xFFE3E3DE;
             TEXT = 0xFF141414; SOFT = 0xFF3B3B38; MUTED = 0xFF676762; FAINT = 0xFFB4B4AE; TRACK = 0xFFE6E6E1;
-            OK = 0xFF1F7A36; WARN = 0xFF8F5A00; BAD = 0xFFC40013; ON_ACCENT = 0xFFFFFFFF;
+            OK = 0xFF1F7A36; WARN = 0xFF8F5A00; BAD = 0xFFC40013; ON_ACCENT = 0xFFFFFFFF; SEL = 0xFFFFFFFF;
         }
         ACCENT = 0xFF000000 | Integer.parseInt(accent[dark ? 3 : 2], 16);
         version++;
@@ -135,9 +135,11 @@ final class Ui {
         root.setPadding(dp(a, 18), dp(a, 18), dp(a, 18), dp(a, 40));
         sv.addView(root);
 
-        TextView back = text(a, "←", 24, TEXT, null);
-        back.setPadding(0, 0, dp(a, 16), dp(a, 6));
+        ImageView back = icon(a, R.drawable.ic_right, TEXT, 44);
+        back.setRotation(180); // та же стрелка, что в строках, только назад
+        back.setPadding(dp(a, 20), dp(a, 10), 0, dp(a, 10));
         back.setOnClickListener(v -> a.finish());
+        back.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         back.setContentDescription("Назад");
         root.addView(back);
         root.addView(text(a, title, 28, TEXT, "sans-serif-medium"));
@@ -175,7 +177,7 @@ final class Ui {
 
     static LinearLayout card(Context c) {
         LinearLayout l = vertical(c);
-        l.setBackground(round(c, CARD, 24, LINE));
+        l.setBackground(round(c, CARD, 20, LINE));
         l.setPadding(dp(c, 16), dp(c, 12), dp(c, 16), dp(c, 12));
         return l;
     }
@@ -189,10 +191,17 @@ final class Ui {
         return t;
     }
 
-    static TextView caps(Context c, String s) {
-        TextView t = text(c, s, 10, MUTED, "sans-serif-medium");
-        t.setLetterSpacing(0.16f);
-        t.setPadding(dp(c, 4), dp(c, 26), 0, dp(c, 10));
+    /** «УРОК 3 ИЗ 7 · ЗАМЕНА» → «Урок 3 из 7 · замена»: на экранах подписи обычным регистром (в виджетах остаются как есть). */
+    static String calm(String s) {
+        if (s == null || s.isEmpty()) return "";
+        String low = s.toLowerCase(java.util.Locale.ROOT);
+        return Character.toUpperCase(low.charAt(0)) + low.substring(1);
+    }
+
+    /** Подпись раздела: спокойная строка над карточкой, обычным регистром. */
+    static TextView label(Context c, String s) {
+        TextView t = text(c, s, 13, MUTED, "sans-serif-medium");
+        t.setPadding(dp(c, 4), dp(c, 24), 0, dp(c, 8));
         return t;
     }
 
@@ -305,7 +314,7 @@ final class Ui {
             v.setPadding(dp(c, 10), 0, dp(c, 6), 0);
             r.addView(v);
         }
-        r.addView(text(c, "›", 22, MUTED, null));
+        r.addView(icon(c, R.drawable.ic_right, MUTED, 18));
         r.setOnClickListener(l);
         return r;
     }
@@ -326,7 +335,6 @@ final class Ui {
     /** Плашка кабинета в цвете предмета: «сейчас» залита, остальные на мягком фоне. */
     static TextView room(Context c, String room, String subject, boolean now, float sp) {
         TextView t = text(c, room, sp, now ? onStrong() : strong(subject), "sans-serif-medium");
-        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         t.setPadding(dp(c, 10), dp(c, 4), dp(c, 10), dp(c, 4));
         t.setBackground(round(c, now ? strong(subject) : soft(subject), 10, 0));
         t.setContentDescription(roomSpoken(room));
@@ -345,8 +353,8 @@ final class Ui {
             String g = c.replaceAll("\\D", "");
             if (!g.equals(grade)) {
                 grade = g;
-                TextView h = caps(a, g + " КЛАССЫ");
-                h.setPadding(0, dp(a, 12), 0, dp(a, 6));
+                TextView h = label(a, g + " классы");
+                h.setPadding(0, dp(a, 12), 0, dp(a, 8));
                 box.addView(h);
                 row = horizontal(a);
                 box.addView(row);
@@ -409,10 +417,12 @@ final class Ui {
         seg.setPadding(dp(c, 4), dp(c, 4), dp(c, 4), dp(c, 4));
         for (int i = 0; i < names.length; i++) {
             final int k = i;
-            TextView b = text(c, names[i], 14, i == selected ? ON_ACCENT : TEXT, "sans-serif-medium");
+            TextView b = text(c, names[i], 14, i == selected ? TEXT : MUTED, "sans-serif-medium");
             b.setGravity(Gravity.CENTER);
             b.setMinHeight(dp(c, 40));
-            b.setBackground(i == selected ? round(c, ACCENT, 12, 0) : null);
+            b.setMaxLines(1);
+            b.setAutoSizeTextTypeUniformWithConfiguration(11, 14, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+            b.setBackground(i == selected ? round(c, SEL, 12, 0) : null);
             b.setSelected(i == selected);
             b.setOnClickListener(v -> { tick(v); pick.accept(k); });
             seg.addView(b, weight(1));

@@ -85,8 +85,7 @@ public class LockActivity extends Activity {
         root.setOnClickListener(v -> finish());
         sv.addView(root);
 
-        label = Ui.text(this, "", 12, Ui.SOFT, "sans-serif-medium");
-        label.setLetterSpacing(0.14f);
+        label = Ui.text(this, "", 13, Ui.SOFT, "sans-serif-medium");
         root.addView(label);
 
         // кольцо с таймером внутри, как на главном экране и на сайте
@@ -112,7 +111,6 @@ public class LockActivity extends Activity {
         big.setGravity(Gravity.CENTER);
         center.addView(big);
         caption = Ui.text(this, "", 12, Ui.MUTED, "sans-serif-medium");
-        caption.setLetterSpacing(0.14f);
         caption.setPadding(0, dp(8), 0, 0);
         caption.setGravity(Gravity.CENTER);
         center.addView(caption);
@@ -126,7 +124,7 @@ public class LockActivity extends Activity {
         title.setLayoutParams(Ui.weight(1));
         row.addView(title);
         room = Ui.text(this, "", 26, Ui.TEXT, "sans-serif-medium");
-        room.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        room.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         room.setPadding(dp(14), dp(4), dp(14), dp(6));
         row.addView(room);
         root.addView(row);
@@ -139,7 +137,6 @@ public class LockActivity extends Activity {
         next.setPadding(dp(16), dp(12), dp(16), dp(14));
         LinearLayout.LayoutParams np = Ui.mw(this, 22);
         nextH = Ui.text(this, "", 11, Ui.MUTED, "sans-serif-medium");
-        nextH.setLetterSpacing(0.14f);
         next.addView(nextH);
         LinearLayout nr = Ui.horizontal(this);
         nr.setPadding(0, dp(6), 0, 0);
@@ -147,14 +144,14 @@ public class LockActivity extends Activity {
         nextS.setLayoutParams(Ui.weight(1));
         nr.addView(nextS);
         nextR = Ui.text(this, "", 17, Ui.TEXT, "sans-serif-medium");
-        nextR.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        nextR.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         nextR.setPadding(dp(10), dp(3), dp(10), dp(4));
         nr.addView(nextR);
         next.addView(nr);
         root.addView(next, np);
 
         // весь день: листается вниз
-        dayH = Ui.caps(this, "СЕГОДНЯ");
+        dayH = Ui.label(this, "Сегодня");
         root.addView(dayH);
         list = Ui.vertical(this);
         root.addView(list);
@@ -180,7 +177,7 @@ public class LockActivity extends Activity {
         Updater.Display d = Updater.describe(s, now);
         String subj = s.kind == Schedule.Kind.LESSON ? d.title : d.nextSubject;
 
-        label.setText((d.live ? "●  " : "") + d.label);
+        label.setText((d.live ? "●  " : "") + Ui.calm(d.label));
         if (d.timer) {
             if (d.target != lastTarget) {
                 chrono.setBase(Updater.chronoBase(d.target));
@@ -194,7 +191,7 @@ public class LockActivity extends Activity {
         }
         chrono.setVisibility(d.timer ? View.VISIBLE : View.GONE);
         big.setVisibility(d.timer ? View.GONE : View.VISIBLE);
-        caption.setText(d.extra ? (d.progress >= 0 ? "ДО КОНЦА" : "ДО НАЧАЛА") : d.timer ? (s.kind == Schedule.Kind.LESSON ? "ДО ЗВОНКА" : "ДО УРОКА") : d.sideHead);
+        caption.setText(d.extra ? (d.progress >= 0 ? "до конца" : "до начала") : d.timer ? (s.kind == Schedule.Kind.LESSON ? "до звонка" : "до урока") : d.sideHead.toLowerCase(java.util.Locale.ROOT));
         ring.setColor(subj == null || subj.isEmpty() ? Ui.ACCENT : Hues.vivid(subj, Ui.DARK));
         ring.setProgress(d.progress >= 0 ? d.progress / 100f : -1);
 
@@ -203,11 +200,11 @@ public class LockActivity extends Activity {
         room.setVisibility(d.room.isEmpty() ? View.GONE : View.VISIBLE);
         room.setTextColor(Hues.onStrong(Ui.DARK));
         room.setBackground(Ui.round(this, Hues.strong(subj, Ui.DARK), 16, 0));
-        sub.setText(d.sideHead.isEmpty() ? "" : capital(d.sideHead) + " " + d.sideValue);
+        sub.setText(d.sideHead.isEmpty() ? "" : Ui.calm(d.sideHead) + " " + d.sideValue);
         sub.setVisibility(d.sideHead.isEmpty() || !d.timer ? View.GONE : View.VISIBLE);
 
         next.setVisibility(d.nextSubject.isEmpty() ? View.GONE : View.VISIBLE);
-        nextH.setText(d.nextHead);
+        nextH.setText(Ui.calm(d.nextHead));
         nextS.setText(d.nextSubject);
         nextR.setText(d.nextRoom);
         nextR.setVisibility(d.nextRoom.isEmpty() ? View.GONE : View.VISIBLE);
@@ -241,7 +238,7 @@ public class LockActivity extends Activity {
         String sig = date + "|" + cur + "|" + nx + "|" + l.size();
         if (sig.equals(lastList)) return;
         lastList = sig;
-        dayH.setText(today ? "СЕГОДНЯ" : (s.nextDays == 1 ? "ЗАВТРА" : Schedule.dayName(date.getDayOfWeek()).toUpperCase()));
+        dayH.setText(today ? "Сегодня" : (s.nextDays == 1 ? "Завтра" : capital(Schedule.dayName(date.getDayOfWeek()))));
         list.removeAllViews();
         int nowMin = now.getHour() * 60 + now.getMinute();
         for (Schedule.Lesson x : l) {

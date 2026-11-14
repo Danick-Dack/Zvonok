@@ -497,6 +497,23 @@ def build_time():
         return int(datetime.datetime.now().timestamp())
 
 
+LATEST = {}  # {"build": 91, "tag": "v6.3-build-91"}: заполняет github_counts()
+
+
+def app_version():
+    """app.json: тег последнего основного релиза Android. Приложение спрашивает его при каждом входе (обновления
+    обязательные), поэтому файл лежит на сайте и почти всегда отвечает «не изменилось», а счётчик скачиваний GitHub
+    не растёт. GitHub не ответил: оставляем тот, что уже на сайте. None, если взять неоткуда."""
+    if LATEST.get("tag"):
+        return {"tag": LATEST["tag"]}
+    try:
+        with urllib.request.urlopen(SITE_URL + "app.json", timeout=10) as r:
+            old = json.load(r)
+        return {"tag": old["tag"]} if re.match(r"^v[\d.]+-build-\d+$", str(old.get("tag"))) else None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def github_counts():
     """Счётчики GitHub по всем релизам (все версии): сколько раз скачали APK, сколько раз приложения Android скачали
     version.json, проверяя обновление, и сколько раз сайт и приложение iPhone скачали пустой ping.json (раз в сутки
@@ -506,11 +523,16 @@ def github_counts():
         head["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
     apk = checks = pings = 0
     page = 1
+    LATEST.clear()
     try:
         while True:
             url = "https://api.github.com/repos/Danick-Dack/Zvonok/releases?per_page=100&page=%d" % page
             with urllib.request.urlopen(urllib.request.Request(url, headers=head), timeout=15) as r:
                 rel = json.load(r)
+            for x in rel:  # последний основной релиз (не пробный): его тег уходит в app.json
+                m = re.match(r"^v[\d.]+-build-(\d+)$", x.get("tag_name") or "")
+                if m and not x.get("prerelease") and not x.get("draft") and int(m.group(1)) > LATEST.get("build", 0):
+                    LATEST.update(build=int(m.group(1)), tag=x["tag_name"])
             for a in (a for x in rel for a in x["assets"]):
                 if a["name"].endswith(".apk"):
                     apk += a["download_count"]
@@ -863,6 +885,10 @@ def main():
     s = stats() if os.environ.get("CI") or os.environ.get("ZV_STATS") else None
     if s:
         write("stats.json", json.dumps(s))
+    if os.environ.get("CI") or os.environ.get("ZV_STATS"):
+        v = app_version()
+        if v:
+            write("app.json", json.dumps(v))
     # в GitHub Actions другие шрифты: картинку превью не перерисовываем, берём закоммиченную
     if not os.environ.get("CI") or not os.path.exists(os.path.join(OUT, "og.png")):
         og_image().save(os.path.join(OUT, "og.png"), optimize=True)

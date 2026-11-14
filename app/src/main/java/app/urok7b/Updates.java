@@ -14,13 +14,12 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Проверка обновлений: один HTTPS-запрос к GitHub (последний релиз), только когда приложение открыто,
- * не чаще раза в сутки и только если пользователь сам разрешил. Ничего о пользователе не отправляется.
+ * Обновления обязательные: при входе приложение узнаёт номер последней версии и, если она новее установленной,
+ * дальше не пускает, пока её не поставят (экран Setup). Номер версии лежит на сайте «Звонка» (крошечный app.json,
+ * почти всегда ответ «не изменилось»), раз в сутки его же подтверждает GitHub. Ничего о пользователе не отправляется.
  */
 final class Updates {
 
-    static final String KEY_AUTO = "update_auto";
-    static final String KEY_ASKED = "update_asked";
     private static final String KEY_LAST = "update_last_check";
     private static final String KEY_BUILD = "update_latest_build";
     private static final String KEY_NAME = "update_latest_name";
@@ -30,6 +29,9 @@ final class Updates {
     private static final String VERSION = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/version.json";
     static final String SITE = "https://danick-dack.github.io/Zvonok/";
     static final String APK_URL = "https://github.com/Danick-Dack/Zvonok/releases/latest/download/Zvonok-165.apk";
+    // тот же тег последнего основного релиза, но с сайта: его можно спрашивать при каждом входе, счётчик GitHub не растёт
+    private static final String APP = SITE + "app.json";
+    private static final String KEY_ENTRY = "update_entry_check", KEY_APP_TAG = "app_etag";
     private static final String CHANGES = SITE + "changes.json";
     private static final String SCHEDULE = SITE + "schedule.json";
     private static final String KEY_CH_LAST = "changes_last_check";
@@ -66,36 +68,15 @@ final class Updates {
         return Updater.prefs(ctx).getLong(KEY_BUILD, 0) > currentBuild(ctx);
     }
 
+    /** «6.3»: имя последней известной версии. */
+    static String latestName(Context ctx) {
+        return Updater.prefs(ctx).getString(KEY_NAME, "?");
+    }
+
     /** "3.1 (сборка 12)" последней известной версии. */
     static String latestText(Context ctx) {
         SharedPreferences p = Updater.prefs(ctx);
         return p.getString(KEY_NAME, "?") + " (сборка " + p.getLong(KEY_BUILD, 0) + ")";
-    }
-
-    /** Пора ли спросить замены (раз в 3 часа, только если пользователь разрешил выход в интернет). */
-    static boolean changesDue(Context ctx) {
-        SharedPreferences p = Updater.prefs(ctx);
-        return p.getBoolean(KEY_AUTO, false) && !BUSY.get()
-                && System.currentTimeMillis() - p.getLong(KEY_CH_LAST, 0) > 3 * 3600_000L;
-    }
-
-    /** Скачать замены с сайта в фоне; если что-то поменялось, обновить уведомление и виджеты. */
-    static void checkChanges(Context ctx, Runnable done) {
-        Context app = ctx.getApplicationContext();
-        Handler main = new Handler(Looper.getMainLooper());
-        BUSY.set(true);
-        new Thread(() -> {
-            boolean changed;
-            try {
-                changed = fetchSchedule(app) | fetchChanges(app);
-            } finally {
-                BUSY.set(false);
-            }
-            main.post(() -> {
-                if (changed) Updater.update(app);
-                if (done != null) done.run();
-            });
-        }).start();
     }
 
     /**
@@ -165,43 +146,40 @@ final class Updates {
     private static final String KEY_BG = "background_last";
 
     /**
-     * Проверка на плановом тике, когда экран включён и телефон и так не спит: не чаще раза в 6 часов и только
-     * с разрешения ходить в интернет. Раз в сутки версия (вышла новая: уведомление), замены и свежие новости лицея.
+     * Проверка на плановом тике, когда экран включён и телефон и так не спит: не чаще раза в 6 часов.
+     * Версия (вышла новая: уведомление), замены и свежие новости лицея.
      */
     static void background(Context ctx) {
         SharedPreferences p = Updater.prefs(ctx);
         long now = System.currentTimeMillis();
-        if (!p.getBoolean(KEY_AUTO, false) || BUSY.get() || Math.abs(now - p.getLong(KEY_BG, 0)) < 6 * 3600_000L) return;
+        if (BUSY.get() || Math.abs(now - p.getLong(KEY_BG, 0)) < 6 * 3600_000L) return;
         p.edit().putLong(KEY_BG, now).apply();
         Context app = ctx.getApplicationContext();
-        if (due(app)) check(app, ok -> Feed.tellUpdate(app));
-        else checkChanges(app, null);
+        check(app, ok -> Feed.tellUpdate(app));
         new Thread(() -> {
             if (Feed.fetch(app, Feed.NEWS)) Feed.tellNews(app);
         }).start();
     }
 
+    /** Вход в приложение: пора ли спросить номер последней версии (не чаще раза в 10 минут). */
     static boolean due(Context ctx) {
-        SharedPreferences p = Updater.prefs(ctx);
-        return p.getBoolean(KEY_AUTO, false) && !BUSY.get()
-                && System.currentTimeMillis() - p.getLong(KEY_LAST, 0) > 24 * 3600_000L;
+        return !BUSY.get() && Math.abs(System.currentTimeMillis() - Updater.prefs(ctx).getLong(KEY_ENTRY, 0)) > 600_000L;
     }
 
-    /** Один раз спросить разрешение на автоматическую проверку (по умолчанию выключена). */
-    static void askOnce(android.app.Activity a, Runnable allowed) {
-        SharedPreferences p = Updater.prefs(a);
-        if (p.getBoolean(KEY_ASKED, false)) return;
-        p.edit().putBoolean(KEY_ASKED, true).apply();
-        new android.app.AlertDialog.Builder(a, Ui.dialogTheme())
-                .setTitle("Проверять обновления?")
-                .setMessage("Раз в сутки приложение спросит GitHub, вышла ли новая версия, "
-                        + "и раз в несколько часов скачает с сайта «Звонка» замены в расписании и новости лицея. О тебе ничего не отправляется. Это можно изменить в настройках.")
-                .setPositiveButton("Разрешить", (d, w) -> {
-                    p.edit().putBoolean(KEY_AUTO, true).apply();
-                    allowed.run();
-                })
-                .setNegativeButton("Не надо", null)
-                .show();
+    /** «v6.3-build-91» → {«6.3», «91»}; пробные версии (-beta) и всё чужое null. */
+    static String[] parseTag(String tag) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^v([\\d.]+)-build-(\\d+)$").matcher(tag == null ? "" : tag);
+        return m.find() ? new String[]{m.group(1), m.group(2)} : null;
+    }
+
+    /** Запомнить последнюю версию. Номер сборки только растёт: устаревший ответ сайта не отменит обновление. */
+    private static boolean remember(Context app, String tag) {
+        String[] v = parseTag(tag);
+        if (v == null) return false;
+        SharedPreferences p = Updater.prefs(app);
+        long build = Long.parseLong(v[1]);
+        if (build > p.getLong(KEY_BUILD, 0)) p.edit().putString(KEY_NAME, v[0]).putLong(KEY_BUILD, build).apply();
+        return true;
     }
 
     /** Проверить в фоне; результат — в главном потоке. */
@@ -210,34 +188,46 @@ final class Updates {
         Handler main = new Handler(Looper.getMainLooper());
         BUSY.set(true);
         new Thread(() -> {
-            boolean ok = false, changed;
+            boolean ok = false, changed = false;
             try {
+                SharedPreferences p = Updater.prefs(app);
+                long now = System.currentTimeMillis();
+                p.edit().putLong(KEY_ENTRY, now).apply();
                 try {
-                    // тег вида v3.1-build-12; у релизов до 5.0 файла version.json нет, тогда спрашиваем API
-                    String tag;
-                    try {
-                        tag = new JSONObject(get(VERSION, 4096, null)[0]).getString("tag");
-                    } catch (Exception e) {
-                        tag = new JSONObject(get(API, 512_000, null)[0]).getString("tag_name");
-                    }
-                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("^v([\\d.]+)-build-(\\d+)$").matcher(tag);
-                    if (m.find()) {
-                        Updater.prefs(app).edit().putString(KEY_NAME, m.group(1))
-                                .putLong(KEY_BUILD, Long.parseLong(m.group(2)))
-                                .putLong(KEY_LAST, System.currentTimeMillis()).apply();
+                    // обычно спрашиваем сайт: файл в сотню байт, с ETag ответ почти всегда «не изменилось»
+                    String[] r = get(APP, 4096, p.getString(KEY_APP_TAG, null));
+                    if (r[0] == null || remember(app, new JSONObject(r[0]).getString("tag"))) {
+                        p.edit().putString(KEY_APP_TAG, r[1]).apply();
                         ok = true;
                     }
                 } catch (Exception ignored) {
-                    // нет сети: не страшно, проверим в другой раз
+                    // сайт не ответил: раз в сутки версию подтверждает GitHub (ниже)
                 }
-                // заодно свежее расписание и замены (тот же разрешённый выход в интернет)
-                changed = fetchSchedule(app) | fetchChanges(app);
+                if (Math.abs(now - p.getLong(KEY_LAST, 0)) > 24 * 3600_000L) {
+                    try {
+                        // раз в сутки GitHub: тег вида v3.1-build-12; у релизов до 5.0 файла version.json нет, тогда спрашиваем API
+                        String tag;
+                        try {
+                            tag = new JSONObject(get(VERSION, 4096, null)[0]).getString("tag");
+                        } catch (Exception e) {
+                            tag = new JSONObject(get(API, 512_000, null)[0]).getString("tag_name");
+                        }
+                        if (remember(app, tag)) {
+                            p.edit().putLong(KEY_LAST, now).apply();
+                            ok = true;
+                        }
+                    } catch (Exception ignored) {
+                        // нет сети: не страшно, проверим в другой раз
+                    }
+                }
+                // заодно свежее расписание и замены, не чаще раза в 3 часа
+                changed = Math.abs(now - p.getLong(KEY_CH_LAST, 0)) > 3 * 3600_000L && (fetchSchedule(app) | fetchChanges(app));
             } finally {
                 BUSY.set(false); // что бы ни случилось, следующая проверка не застрянет
             }
-            final boolean r = ok;
+            final boolean r = ok, fresh = changed;
             main.post(() -> {
-                if (changed) Updater.update(app);
+                if (fresh) Updater.update(app);
                 cb.done(r);
             });
         }).start();

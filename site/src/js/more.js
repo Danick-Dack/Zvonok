@@ -61,6 +61,14 @@ function renderBrand() {
   $("calIcs").onclick = () => { if (useCustom) { download("Звонок.ics", icsFor(WEEK, "Своё расписание"), "text/calendar"); return false; } };
   renderOs();
 })();
+/* «Ещё» из трёх разделов: главное, настройки и о «Звонке». В настройках оба блока сразу раскрыты. */
+function morePane(p) {
+  $("moreMenu").dataset.pane = p;
+  $$("#moreSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pane === p)));
+  if (p === "set") $$('#moreMenu > details[data-pane="set"]').forEach(d => { d.open = true; });
+}
+$$("#moreSeg button").forEach(b => b.onclick = () => { morePane(b.dataset.pane); window.scrollTo(0, 0); });
+morePane("main");
 function renderMore() {
   // мини-счётчик в «О проекте»: не на главном экране, а здесь и на сайте о проекте
   const age = projectAgeText(new Date()), ageEl = $("age");

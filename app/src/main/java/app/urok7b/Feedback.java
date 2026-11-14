@@ -121,7 +121,7 @@ public class Feedback extends Activity {
 
         done = Ui.vertical(this);
         done.setVisibility(View.GONE);
-        TextView ok = Ui.heading(Ui.text(this, "Спасибо! Письмо ушло.", 22, Ui.TEXT, "sans-serif-medium"));
+        TextView ok = Ui.heading(Ui.text(this, "Спасибо, письмо ушло", 22, Ui.TEXT, "sans-serif-medium"));
         ok.setPadding(0, Ui.dp(this, 24), 0, Ui.dp(this, 6));
         done.addView(ok);
         done.addView(Ui.text(this, "Мы читаем всё. Если нужно исправить расписание, исправим в ближайшее время.", 15, Ui.SOFT, null));
@@ -217,7 +217,7 @@ public class Feedback extends Activity {
                     text.setText("");
                     form.setVisibility(View.GONE);
                     done.setVisibility(View.VISIBLE);
-                    done.announceForAccessibility("Спасибо! Письмо ушло.");
+                    done.announceForAccessibility("Спасибо, письмо ушло");
                 } else {
                     fail("Не получилось отправить: нет интернета или сервис не ответил. Текст сохранён, попробуй чуть позже.");
                 }
