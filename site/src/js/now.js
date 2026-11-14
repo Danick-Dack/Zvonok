@@ -67,6 +67,8 @@ function renderNow(now) {
   $("lTitle").textContent = m.title;
   const r = $("lRoom"); r.replaceWith(m.room ? Object.assign(roomChip(m.room, m.roomNow, true), {id: "lRoom"}) : h("span", {id: "lRoom", hidden: true}));
   $("lSub").textContent = m.sub; $("lSub").hidden = !m.sub;
+  const noted = s.kind === "LESSON" ? s.cur : s.kind === "BREAK" || s.kind === "BEFORE" ? s.next : null, nt = noted ? noteOf(now, noted.num) : "";
+  $("lNote").textContent = nt; $("lNote").hidden = !nt;
   $("lNext").hidden = !m.nextS;
   $("lNextH").textContent = m.nextH; $("lNextS").textContent = m.nextS;
   const nr = $("lNextR"); nr.replaceWith(m.nextR ? Object.assign(roomChip(m.nextR), {id: "lNextR"}) : h("span", {id: "lNextR", hidden: true}));
@@ -83,8 +85,8 @@ function renderNow(now) {
   $("todayNote").textContent = note ? note.text : ""; $("todayNote").hidden = !note; $("todayNote").className = "day-note" + (note ? " " + note.kind : "");
   const exams = date ? dayExams(date) : [];
   $("todayExam").textContent = exams.length ? (today ? "Сегодня " : s.nDays === 1 ? "Завтра " : "") + examText(exams) : ""; $("todayExam").hidden = !exams.length;
-  $("todayList").replaceWith(Object.assign(timeline(list, today, s, "Ближайших уроков нет", exams), {id: "todayList"}));
-  renderExtra(now, s); renderFest(now);
+  $("todayList").replaceWith(Object.assign(timeline(list, today, s, "Ближайших уроков нет", exams, date), {id: "todayList"}));
+  renderExtra(now, s); renderFest(now); renderStreak();
   renderPromo();
 }
 // Таймер в заголовке вкладки виден только в браузере на компьютере. На телефоне заголовка не видно,
@@ -107,6 +109,7 @@ function paint(now) {
     $("lTimer").textContent = t; $("lTimer").classList.toggle("long", t.length > 5);
     $("lArc").style.strokeDashoffset = (C * (1 - Math.max(.004, p))).toFixed(2);
     setTitle(LIVE_TITLE ? t + " · Звонок · " + title() : baseTitle());
+    tickSound(now.getSeconds()); preBuzz(now);
   } else setTitle(baseTitle());
   // точка «идёт» мигает в такт секундам: в том же кадре, что и цифры, без отдельной вечной анимации
   if (M.live && !CALM) $("lPulse").classList.toggle("dim", now.getSeconds() % 2 === 1);
@@ -124,11 +127,12 @@ function tick() {
   S = compute(now, src);
   const k = stateKey(S, now);
   if (k !== key) {
-    const first = !key; key = k;
+    const first = !key, rang = !first && M.timer && Math.abs(now - M.target) < 4000; key = k; // таймер дошёл до нуля: это звонок
     VIEWS.forEach(v => { dirty[v] = true; });
     dirty[view] = false; RENDER[view]();
     if (view !== "now") { dirty.now = false; renderNow(now); }
     if (!first) announce();
+    if (rang) ring();
     examTab();
   } else if (view === "now" && EXTRA_ON && now.getSeconds() < 2) renderExtra(now, S); // минуты до кружка
   paint(now);
@@ -139,7 +143,7 @@ function tick() {
  *  урока (0,5 %, раз в 10–15 с) и начала минуты: звонки, «скоро уроки» и смена дня всегда приходятся на неё. */
 function nextTick() {
   const ms = Date.now();
-  const seconds = view === "now" ? M.timer || (M.live && !CALM) : LIVE_TITLE && M.timer;
+  const seconds = view === "now" ? M.timer || (M.live && !CALM) : M.timer && (LIVE_TITLE || soundOn()); // со звуком часы тикают на любой вкладке
   if (seconds) return 1000 - ms % 1000 + 15;
   let wait = 60000 - ms % 60000 + 15;
   if (S && S.kind === "LESSON" && +S.target > +S.start) {
@@ -157,7 +161,7 @@ function background() {
   setTitle((min < 60 ? min + " мин" : Math.floor(min / 60) + " ч " + min % 60 + " мин") + " · Звонок · " + title());
   tickT = setTimeout(tick, 60000 - Date.now() % 60000 + 15);
 }
-document.addEventListener("visibilitychange", () => { tick(); if (!document.hidden) { loadChanges(); loadOlympiads(); loadNews(); } });
+document.addEventListener("visibilitychange", () => { tick(); if (!document.hidden) { loadChanges(); loadOlympiads(); loadNews(); loadNotes(); } });
 /** Для экранного диктора: только смена урока, а не каждая секунда. */
 function announce() {
   if (pick || !M.title) return;

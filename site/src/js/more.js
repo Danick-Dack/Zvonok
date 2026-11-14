@@ -97,6 +97,7 @@ function renderLook() {
     onclick: () => { applyScheme(k); renderScheme(); renderLook(); }})));
   $("hueToggle").checked = !store.get("plain", false);
   $("iconToggle").checked = !!store.get("classIcon", false);
+  renderIcons();
   const row = $("accentRow"), dark = isDark(), cur = accent(); row.textContent = "";
   const light = hex => { const n = parseInt(hex.slice(1), 16); return (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255 > .55; };
   ACCENTS.forEach(a => {
@@ -115,28 +116,18 @@ function download(name, text, type) {
   document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 
-/* Своя иконка на экране «Домой»: кольцо часов «Звонка» с номером класса внутри.
+/* Своя иконка на экране «Домой»: выбранный вариант (fun.js), по желанию с номером класса вместо стрелок.
    iPhone берёт apple-touch-icon, Android манифест; оба читают их в момент добавления на экран. */
 function homeIcon() {
-  const apple = document.querySelector('link[rel="apple-touch-icon"]'), man = document.querySelector('link[rel="manifest"]');
-  if (!apple || !man || !ONLINE_SITE || EMBED) return;
-  if (!homeIcon.orig) homeIcon.orig = [apple.getAttribute("href"), man.getAttribute("href")];
-  if (!store.get("classIcon", false) || pick || useCustom) { apple.setAttribute("href", homeIcon.orig[0]); man.setAttribute("href", homeIcon.orig[1]); return; }
-  const png = size => {
-    const c = document.createElement("canvas"); c.width = c.height = size;
-    const g = c.getContext("2d"), m = size / 2, r = size * .34, w = size * .07;
-    g.fillStyle = "#0B0B0C"; g.fillRect(0, 0, size, size);
-    g.lineWidth = w; g.lineCap = "round"; g.strokeStyle = "#2E2E32"; g.beginPath(); g.arc(m, m, r, 0, Math.PI * 2); g.stroke();
-    g.strokeStyle = "#FFFFFF"; g.beginPath(); g.arc(m, m, r, -Math.PI / 2, Math.PI); g.stroke();
-    g.fillStyle = "#FFFFFF"; g.textAlign = "center"; g.textBaseline = "middle";
-    g.font = "700 " + Math.round(size * (cls.length > 2 ? .2 : .24)) + "px -apple-system,'Segoe UI',Roboto,sans-serif";
-    g.fillText(cls, m, m + size * .01);
-    return c.toDataURL("image/png");
-  };
-  apple.setAttribute("href", png(180));
-  const base = location.href.split("#")[0].replace(/[^/]*$/, "");
-  const m = {name: "Звонок · " + cls, short_name: "Звонок " + cls, lang: "ru", start_url: base + "#" + slugOf(cls), scope: base, display: "standalone",
-    background_color: "#0B0B0C", theme_color: "#0B0B0C", icons: [{src: png(192), sizes: "192x192", type: "image/png"}, {src: png(512), sizes: "512x512", type: "image/png"}]};
-  man.setAttribute("href", URL.createObjectURL(new Blob([JSON.stringify(m)], {type: "application/manifest+json"})));
+  const links = ["apple-touch-icon", "manifest", "icon"].map(r => document.querySelector('link[rel="' + r + '"]'));
+  if (links.includes(null) || !ONLINE_SITE || EMBED) return;
+  if (!homeIcon.orig) homeIcon.orig = links.map(l => l.getAttribute("href"));
+  const v = iconPick(), named = !!store.get("classIcon", false) && !pick && !useCustom && !v[5];
+  if (v === ICON_SET[0] && !named) { links.forEach((l, i) => l.setAttribute("href", homeIcon.orig[i])); return; }
+  const base = location.href.split("#")[0].replace(/[^/]*$/, ""), png = size => (v[5] ? base : "") + iconPng(v, size, named ? cls : "");
+  links[0].setAttribute("href", png(180)); links[2].setAttribute("href", png(64));
+  const m = {name: named ? "Звонок · " + cls : "Звонок", short_name: named ? "Звонок " + cls : "Звонок", lang: "ru", start_url: base + (named ? "#" + slugOf(cls) : ""), scope: base,
+    display: "standalone", background_color: "#0B0B0C", theme_color: "#0B0B0C", icons: (v[5] ? [512] : [192, 512]).map(n => ({src: png(n), sizes: n + "x" + n, type: "image/png"}))};
+  links[1].setAttribute("href", URL.createObjectURL(new Blob([JSON.stringify(m)], {type: "application/manifest+json"})));
 }
 $("iconToggle").onchange = e => { store.set("classIcon", e.target.checked); homeIcon(); toast(e.target.checked ? "Готово. Добавь сайт на экран «Домой» заново" : "Иконка снова обычная"); };

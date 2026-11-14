@@ -5,8 +5,9 @@
 @media (min-width:760px){#schemeBtn{display:inline-grid}}
 @media (min-width:760px){.top .install-btn{margin-right:6px}}
 
-.view{padding:18px 0 36px;animation:view-in .22s var(--ease)}
-@keyframes view-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.view{padding:18px 0 36px;animation:view-in .26s var(--ease)}
+@keyframes view-in{from{opacity:0;transform:translate(calc(var(--dir,0)*18px),6px)}to{opacity:1;transform:none}}
+main{overflow-x:clip} /* въезжающая сбоку вкладка не растягивает страницу */
 .view-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:6px 0 16px}
 .view-head h1{font-size:clamp(28px,5vw,36px);letter-spacing:-.03em}
 .view-head p{color:var(--muted);font-size:15px;margin-top:4px}
@@ -42,7 +43,7 @@
 .status{font-weight:600;font-size:15px;color:var(--text-2)}
 .pulse{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
 .pulse.dim{opacity:.4}
-.live-top .tag{margin-left:auto}
+.live-top .status{margin-right:auto}
 .dial{position:relative;width:min(252px,66vw);aspect-ratio:1;margin:2px auto 0}
 .dial svg{width:100%;height:100%;transform:rotate(-90deg)}
 .dial .track{fill:none;stroke:var(--ring-track);stroke-width:7}
@@ -449,6 +450,72 @@ body.flip{transition:transform .8s var(--ease);transform:rotate(180deg)}
 :root[data-bg] body{background:transparent}
 :root[data-bg] body::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(color-mix(in srgb,var(--bg) 72%,transparent),color-mix(in srgb,var(--bg) 72%,transparent)),var(--bgimg) center/cover no-repeat}
 @media (prefers-reduced-motion:reduce){.rain,.dial.spin svg{animation:none}body.flip{transform:none}}
+
+/* серия дней и звук в шапке карточки «Сейчас» */
+.streak{display:inline-flex;align-items:center;gap:3px;min-height:32px;padding:0 11px 0 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font:700 14px/1 var(--font-display);font-variant-numeric:tabular-nums}
+.streak .icon{fill:currentColor;stroke:none}
+.streak.grew{animation:streak-pop 1.2s var(--ease)}
+.streak.grew .icon{animation:flame .4s ease-in-out 3}
+@keyframes streak-pop{0%{transform:scale(.6)}30%{transform:scale(1.35)}55%{transform:scale(.95)}}
+@keyframes flame{50%{transform:rotate(-12deg) scale(1.25)}}
+.snd{margin:-9px -10px -9px -4px;color:var(--muted)}
+.snd[aria-pressed="true"]{color:var(--accent)}
+.snd .icon{transform-origin:50% 12%}
+.live.ringing .snd .icon{animation:bell-swing .23s ease-in-out 10}
+.live.ringing .dial{animation:dial-ring .46s ease-in-out 5}
+@keyframes bell-swing{25%{transform:rotate(22deg)}75%{transform:rotate(-22deg)}}
+@keyframes dial-ring{50%{transform:scale(1.03)}}
+
+/* подписи к урокам */
+.live-note,.tl .m .lnote{display:inline-block;padding:3px 9px;border-radius:9px;background:var(--surface-2);color:var(--text-2);font-size:13.5px;font-weight:500;line-height:1.3;text-align:left;overflow-wrap:anywhere}
+.live-note{justify-self:center;margin-top:-6px}
+.tl .m{position:relative}
+.tl .m .lnote{margin-top:4px}
+.tl .m .lnote.add{position:absolute;right:0;top:50%;margin-top:-20px;padding:11px;background:none;color:var(--muted);opacity:.6}
+.tl .les .m:has(.lnote.add){padding-right:38px}
+@media (hover:hover) and (pointer:fine){.tl .m .lnote.add{opacity:0}.tl .les:hover .lnote.add,.tl .m .lnote.add:focus-visible{opacity:.8}}
+
+/* гимн */
+.anthem p{font-size:16.5px;line-height:1.55;margin-top:12px}
+.anthem p:nth-child(even){padding-left:22px}
+
+/* «Слова» */
+.sheet-body.words{display:grid;gap:10px;justify-items:center;padding-inline:8px}
+.w-grid{display:grid;gap:6px}
+.w-row{display:grid;grid-template-columns:repeat(5,52px);gap:6px}
+.w-cell{height:52px;display:grid;place-items:center;border-radius:12px;border:2px solid var(--line-2);font:700 26px/1 var(--font-display);text-transform:uppercase}
+.w-cell.on{border-color:var(--muted)}
+.w-cell.s0,.w-keys .s0{background:var(--surface-3);border-color:transparent;color:var(--muted)}
+.w-cell.s1,.w-keys .s1{background:#E0A800;border-color:transparent;color:#141414}
+.w-cell.s2,.w-keys .s2{background:#1F9D45;border-color:transparent;color:#fff}
+.w-row.flip .w-cell{animation:w-flip .45s var(--ease) backwards;animation-delay:calc(var(--i)*90ms)}
+.w-row.shake{animation:w-shake .3s}
+@keyframes w-flip{from{transform:rotateX(90deg);opacity:.2}}
+@keyframes w-shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.words .note{text-align:center;min-height:2.6em}
+#wordsKeys{width:100%;max-width:420px;touch-action:manipulation}
+.w-keys{display:flex;justify-content:center;gap:4px;margin-top:5px}
+.w-keys button{flex:1 1 0;min-width:0;max-width:36px;height:46px;border-radius:8px;background:var(--surface-2);font-size:16px;font-weight:600;text-transform:uppercase;-webkit-user-select:none;user-select:none}
+.w-keys .wide{flex-grow:1.7;max-width:60px;font-size:12.5px;text-transform:none}
+
+/* иконки на выбор */
+.swatch-row.icons img{width:48px;height:48px;border-radius:12px;box-shadow:0 0 0 1px rgba(128,128,128,.25)}
+.swatch-row.icons button[aria-pressed="true"] img{outline:2px solid var(--text);outline-offset:3px}
+
+/* появление: строки уроков по очереди, значок выбранной вкладки, карточки при прокрутке (каждому списку своё движение) */
+.tl>li{animation:rise .34s var(--ease) both;animation-delay:calc(var(--i,0)*26ms)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.tabbar a[aria-current] .icon{animation:tab-pop .3s var(--ease)}
+@keyframes tab-pop{40%{transform:scale(1.22)}}
+@supports (animation-timeline:view()){@media (prefers-reduced-motion:no-preference){
+  .menu>.sect,.post,.exam-day{animation:reveal linear both;animation-timeline:view();animation-range:entry 0% entry 60%}
+  .post{animation-name:reveal-up}
+  .exam-day{animation-name:reveal-side}
+}}
+@keyframes reveal{from{opacity:0;transform:scale(.94)}}
+@keyframes reveal-up{from{opacity:0;transform:translateY(28px)}}
+@keyframes reveal-side{from{opacity:0;transform:translateX(-24px)}}
+@media print{.tl>li{animation:none}}
 
 @media print{
   :root{--bg:#fff;--surface:#fff;--surface-2:#f2f2f2;--line:#ccc;--line-2:#999;--text:#000;--text-2:#222;--muted:#555;--accent:#000;--accent-ink:#fff;--shadow:none}

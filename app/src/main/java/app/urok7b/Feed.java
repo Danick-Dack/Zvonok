@@ -176,7 +176,7 @@ final class Feed {
         if (told == 0 || !p.getBoolean(KEY_NOTIFY, true)) return; // первый раз только запоминаем, с чего начать
         String text = Schedule.clean(top.optString("text").split("\n")[0]);
         post(c, NEWS_ID, "Новости лицея", text.isEmpty() ? "Новый пост" : text,
-                new Intent(c, MainActivity.class).putExtra(MainActivity.EXTRA_TAB, "news").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                new Intent(c, Home.class).putExtra(MainActivity.EXTRA_TAB, "news").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
     /** Вышла новая версия: одно уведомление на версию, нажатие начинает скачивание. */

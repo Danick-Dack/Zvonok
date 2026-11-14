@@ -108,8 +108,8 @@ final class Perms {
         // 4. канал вибрации (только если она включена)
         if (appOn && Updater.prefs(a).getBoolean(Updater.KEY_BUZZ, false) && nm != null) {
             NotificationChannel buzz = nm.getNotificationChannel(Updater.CHANNEL_BUZZ);
-            out.add(new Item("ch_buzz", "Вибрация перед уроком",
-                    "Напоминание за 2 минуты до звонка. Без этого вибрации не будет",
+            out.add(new Item("ch_buzz", "Вибрация перед звонком",
+                    "Напоминание за 3 минуты до звонка. Без этого вибрации не будет",
                     buzz == null || buzz.getImportance() != NotificationManager.IMPORTANCE_NONE,
                     () -> openChannel(a, Updater.CHANNEL_BUZZ)));
         }
@@ -193,7 +193,7 @@ final class Perms {
 
     /**
      * Нужен ли пункт в обязательной настройке. timer: уведомление с таймером включено в «Ещё»; buzz: включена
-     * вибрация перед уроком; seen: непроверяемый пункт (ok == null) уже открывали.
+     * вибрация перед звонком; seen: непроверяемый пункт (ok == null) уже открывали.
      */
     static boolean required(String key, Boolean ok, boolean timer, boolean buzz, boolean seen) {
         if ("live".equals(key)) return false; // таймер в строке состояния по желанию

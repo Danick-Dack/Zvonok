@@ -102,6 +102,9 @@ for kind in ("sor", "soch"):
                 continue
             for d in dates if kind == "sor" else [dates]:
                 exam_date(where, d)
+# подписи к урокам: адрес базы Firebase или пусто (подписи выключены)
+if not re.fullmatch(r"(https://[a-z0-9-]+(\.[a-z0-9-]+)*\.(firebaseio\.com|firebasedatabase\.app))?", data.get("notes", "")):
+    errors.append("notes: нужен адрес вида https://имя.firebasedatabase.app без косой черты в конце или пустая строка")
 # ШОР: группы с расписанием, ученик отмечает свои
 ids = [g.get("id") for g in data.get("shor", [])]
 if len(set(ids)) != len(ids):

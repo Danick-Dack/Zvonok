@@ -86,14 +86,14 @@ final class Day {
                 int len = x.start - list.get(i - 1).end;
                 boolean on = live && s.kind == Schedule.Kind.BREAK && s.next != null && s.next.num == x.num;
                 if (len > 0) box.addView(row(c, null, (on ? "Сейчас " : "") + (len > 25 ? "окно " : "перемена ") + len + " мин",
-                        on, false, false, -1, false, false));
+                        on, false, false, -1, false, false, null));
             }
             boolean cur = live && s.kind == Schedule.Kind.LESSON && s.current != null && s.current.num == x.num;
             boolean next = live && (s.kind == Schedule.Kind.BREAK || s.kind == Schedule.Kind.BEFORE) && s.next != null && s.next.num == x.num;
             String exam = "";
             for (Plus.Exam e : exams) if (e.subject.equals(x.subject)) exam = e.type;
             box.addView(row(c, x, exam, cur, next, live && !cur && x.end <= nowMin, cur ? progress : -1,
-                    i == 0, i == list.size() - 1));
+                    i == 0, i == list.size() - 1, date == null || Schedule.dayOff(date) != null ? null : date));
         }
         // кружки и ШОР этого дня
         for (Plus.Extra x : date == null ? java.util.Collections.<Plus.Extra>emptyList() : Plus.extrasOn(date)) {
@@ -105,12 +105,23 @@ final class Day {
             r.addView(Ui.twoLines(c, x.name, x.place), Ui.weight(1));
             box.addView(r);
         }
+        // строки появляются по очереди, как на сайте
+        for (int i = 0; i < box.getChildCount(); i++) {
+            View v = box.getChildAt(i);
+            float alpha = v.getAlpha();
+            v.setAlpha(0);
+            v.setTranslationY(Ui.dp(c, 8));
+            v.animate().alpha(alpha).translationY(0).setStartDelay(i * 26L).setDuration(340).start();
+        }
         return box;
     }
 
-    /** Строка ленты: время | точка на линии | урок с кабинетом (или перемена, если x == null). gap у урока: «СОР», «СОЧ» или "". */
+    /**
+     * Строка ленты: время | точка на линии | урок с кабинетом (или перемена, если x == null). gap у урока: «СОР», «СОЧ» или "".
+     * date: день урока для подписей (null: подписей у строки нет). Подписать можно урок, который ещё не прошёл.
+     */
     private static View row(Context c, Schedule.Lesson x, String gap, boolean cur, boolean next, boolean past,
-                            int progress, boolean first, boolean last) {
+                            int progress, boolean first, boolean last, LocalDate date) {
         LinearLayout r = Ui.horizontal(c);
         r.setGravity(Gravity.TOP);
         if (past) r.setAlpha(0.45f);
@@ -181,7 +192,21 @@ final class Day {
             pl.topMargin = Ui.dp(c, 8);
             mid.addView(pb, pl);
         }
+        String note = date == null ? "" : Notes.of(c, date, x.num);
+        boolean notable = date != null && Notes.on() && !past && !date.isBefore(LocalDate.now()) && c instanceof MainActivity;
+        if (!note.isEmpty()) {
+            TextView n = Ui.text(c, note, 13, Ui.SOFT, null);
+            n.setPadding(Ui.dp(c, 9), Ui.dp(c, 3), Ui.dp(c, 9), Ui.dp(c, 3));
+            n.setBackground(Ui.round(c, Ui.RAISED, 9, 0));
+            LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            np.topMargin = Ui.dp(c, 5);
+            mid.addView(n, np);
+        }
         box.addView(mid);
+        if (notable) {
+            if (note.isEmpty()) box.addView(Ui.text(c, "✎", 16, Ui.FAINT, null));
+            r.setOnClickListener(v -> Notes.edit((MainActivity) c, date, x, ((MainActivity) c)::rebuild));
+        }
         if (!x.room.isEmpty()) {
             TextView chip = Ui.room(c, x.room, x.subject, cur, 14);
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -190,7 +215,8 @@ final class Day {
         }
         // диктор читает строку целиком: «8:50–9:35. Физика, кабинет 48. Идёт, урок 2»
         r.setContentDescription(x.startText() + "–" + x.endText() + ". " + x.subject
-                + (x.room.isEmpty() ? "" : ", " + Ui.roomSpoken(x.room)) + ". " + sub.getText());
+                + (x.room.isEmpty() ? "" : ", " + Ui.roomSpoken(x.room)) + ". " + sub.getText()
+                + (note.isEmpty() ? "" : ". Подпись: " + note) + (notable ? ". Нажми, чтобы подписать урок" : ""));
         r.setFocusable(true);
         r.addView(box);
         return r;

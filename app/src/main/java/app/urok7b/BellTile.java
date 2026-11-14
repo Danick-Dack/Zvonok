@@ -76,7 +76,7 @@ public class BellTile extends TileService {
     @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated") // старый вызов только до Android 14
     @Override
     public void onClick() {
-        Intent i = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent i = new Intent(this, Home.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (Build.VERSION.SDK_INT >= 34) {
             startActivityAndCollapse(PendingIntent.getActivity(this, 11, i, PendingIntent.FLAG_IMMUTABLE));
         } else {

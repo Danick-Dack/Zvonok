@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- фон иконок на выбор (activity-alias в манифесте) -->
+<resources>
+    <color name="icon_light">#FFF4F4F1</color>
+    <color name="icon_blue">#FF0062DA</color>
+    <color name="icon_green">#FF1F7A36</color>
+    <color name="icon_pink">#FFC70F45</color>
+    <color name="icon_sun">#FFFFCC00</color>
+</resources>

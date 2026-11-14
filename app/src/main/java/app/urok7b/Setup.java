@@ -60,7 +60,7 @@ public class Setup extends Activity {
         left.setPadding(Ui.dp(this, 4), Ui.dp(this, 16), 0, 0);
         root.addView(left);
         TextView why = Ui.text(this, "Разрешения не заставляют «Звонок» работать чаще: пока экран выключен, он ничего не делает и телефон не будит "
-                + "(кроме вибрации перед уроком, если ты её включишь). "
+                + "(кроме вибрации перед звонком, если ты её включишь). "
                 + "Разрешения нужны, чтобы система не закрывала его и показывала таймер вовремя.", 13, Ui.MUTED, null);
         why.setLineSpacing(0, 1.15f);
         why.setPadding(Ui.dp(this, 4), Ui.dp(this, 12), Ui.dp(this, 4), 0);

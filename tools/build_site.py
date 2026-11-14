@@ -294,6 +294,10 @@ ICONS = {
     "mail": '<rect x="3.6" y="5.4" width="16.8" height="13.2" rx="2.6"/><path d="M4.4 7.4l7.6 5.6 7.6-5.6"/>',
     "play": '<circle cx="12" cy="12" r="8.6"/><path d="M10.2 8.6v6.8l5.4-3.4z" fill="currentColor"/>',
     "flag": '<path d="M5.6 20.6V4.2M5.6 5h10.2l-1.9 3.4 1.9 3.4H5.6"/>',
+    "fire": '<path d="M12.4 2.6c.5 2.9-.9 4.6-2.5 6.3-1.6 1.7-3.3 3.5-3.3 6.3a5.4 5.4 0 0 0 10.8 0c0-1.9-.7-3.5-1.8-4.9-.3 1.4-1.1 2.3-2.2 2.6.7-3.5-.1-7.5-1-10.3z"/>',
+    "belloff": '<path d="M6.2 16.4V11a5.8 5.8 0 0 1 9-4.8M17.8 11.6v4.8l1.6 1.8H7.8"/><path d="M10 20.4a2.1 2.1 0 0 0 4 0M4.4 4.4l15.2 15.2"/>',
+    "game": '<rect x="2.8" y="7" width="18.4" height="10.6" rx="5.3"/><path d="M7.4 10.6v3.4M5.7 12.3h3.4"/><circle cx="15.4" cy="13.6" r=".8" fill="currentColor"/><circle cx="17.6" cy="11" r=".8" fill="currentColor"/>',
+    "note": '<path d="M9.4 17.6V5.4l9-1.8v12.2"/><circle cx="7" cy="17.6" r="2.4"/><circle cx="16" cy="15.8" r="2.4"/>',
     "cup": '<path d="M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4.5a1.5 1.5 0 0 0-1.5 1.5v.5a4 4 0 0 0 4 4M17 6h2.5A1.5 1.5 0 0 1 21 7.5v.5a4 4 0 0 1-4 4M12 14v5M8.5 19h7"/>',
 }
 
@@ -409,6 +413,18 @@ def splash_images():
                          '(-webkit-device-pixel-ratio:%d) and (orientation:portrait) and (prefers-color-scheme:%s)">'
                          % (name, w, h, k, "dark" if dark else "light"))
     return "\n".join(links)
+
+
+def extra_icons():
+    """Свои иконки: каждый PNG из папки icons/ (имя файла станет подписью) сайт предлагает в «Оформлении»
+    рядом со встроенными. Формат строки как у ICON_SET в js/fun.js, шестое поле это адрес картинки."""
+    src = os.path.join(ROOT, "icons")
+    out = []
+    for i, f in enumerate(sorted(x for x in os.listdir(src) if x.lower().endswith(".png")), 1):
+        os.makedirs(os.path.join(OUT, "icons"), exist_ok=True)
+        Image.open(os.path.join(src, f)).convert("RGB").resize((512, 512), Image.LANCZOS).save(os.path.join(OUT, "icons", "%d.png" % i), optimize=True)
+        out.append(["own%d" % i, os.path.splitext(f)[0][:16], "", "", "", "icons/%d.png" % i])
+    return out
 
 
 # ---------- скрипт iPhone (Scriptable) ----------
@@ -779,10 +795,12 @@ def main():
     get_cta = ('<a class="btn btn-primary btn-sm" href="android.html"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Гайд для Android</a>'
                '<a class="btn btn-quiet btn-sm" href="iphone.html#guide"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Видеогайд для iPhone</a>')
     common["@SHOW@"] = show.replace("@SHOW_CTA@", get_cta)
-    index = page("index.html", ["tokens", "base", "components", "app", "show"], ["core", "embed", "schedule", "rules", "app", "now", "week", "rooms", "more", "plus", "olymp", "snake", "show", "start"],
+    index = page("index.html", ["tokens", "base", "components", "app", "show"], ["core", "embed", "schedule", "rules", "app", "now", "week", "rooms", "more", "plus", "olymp", "snake", "fun", "show", "start"],
                  dict(data_js, **{"/*@QRS@*/null": js_literal(qrs), "/*@NEWS@*/null": js_literal(news), "/*@LOG@*/[]": js_literal(changelog[:4]),
-                                  "/*@OLYMPIADS@*/null": js_literal(olympiads), "@HEAD_JS@": HEAD_JS + HEAD_PC}),
-                 connect="'self' https://codeforces.com " + PING_HOSTS, common=common)
+                                  "/*@OLYMPIADS@*/null": js_literal(olympiads), "@HEAD_JS@": HEAD_JS + HEAD_PC,
+                                  "/*@ANTHEM@*/null": js_literal([st.split("\n") for st in read("data", "anthem.txt").strip().split("\n\n")]),
+                                  "/*@WORDS@*/null": js_literal(read("data", "words.txt").split()), "/*@ICONS_EXTRA@*/[]": js_literal(extra_icons())}),
+                 connect="'self' https://codeforces.com " + PING_HOSTS + (" " + data["notes"] if data.get("notes") else ""), common=common)
     page("make.html", ["tokens", "base", "components", "pages", "make"], ["core", "schedule", "rules", "make"], data_js, common=common)
     about_cta = ('<a class="btn btn-primary" href="./#get" data-app><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Поставить на телефон</a>'
                  '<a class="btn btn-quiet" href="./#now" data-app>Открыть расписание</a>')

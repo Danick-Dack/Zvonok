@@ -15,7 +15,7 @@ import android.widget.Toast;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-/** Вкладка «Ещё»: класс, оформление, уведомление, поделиться, календарь, проверка телефона, о проекте. */
+/** Вкладка «Ещё»: класс, игры, оформление, уведомление, поделиться, календарь, проверка телефона, о проекте. */
 final class MoreTab {
 
     /** «Звонку» столько дней: первая версия вышла 1 ноября 2026 (как на сайте). */
@@ -74,6 +74,12 @@ final class MoreTab {
                 v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.OLYMP))));
         top.addView(Ui.linkRow(a, "Что нового", "Все обновления сайта, Android и iPhone", null, v -> a.startActivity(new Intent(a, Changelog.class))));
         top.addView(Ui.linkRow(a, "Написать нам", "Идея, ошибка или вопрос. Анонимно", null, v -> a.startActivity(new Intent(a, Feedback.class))));
+        top.addView(Ui.linkRow(a, "Гимн лицея", "Текст, чтобы не подглядывать у соседа", null,
+                v -> a.startActivity(new Intent(a, Pages.class).putExtra(Pages.EXTRA_PAGE, Pages.ANTHEM))));
+
+        LinearLayout games = section("Игры на перемену", R.drawable.ic_game, 3);
+        games.addView(Ui.linkRow(a, "Слова", "Угадай слово из 5 букв. Слово дня у всего лицея одно", null, v -> Words.show(a)));
+        games.addView(Ui.linkRow(a, "Змейка", "Работает без интернета, рекорд остаётся на телефоне", null, v -> Snake.show(a)));
 
         LinearLayout cls = section("Класс и расписание", R.drawable.ic_week, 7);
         cls.addView(Ui.linkRow(a, "Класс", Schedule.isCustom() ? "Сейчас включено своё расписание" : null,
@@ -111,6 +117,27 @@ final class MoreTab {
             colors.addView(dot, new android.view.ViewGroup.LayoutParams(a.dp(44), a.dp(44)));
         }
         look.addView(colors, Ui.mw(a, 8));
+        look.addView(caption("Иконка приложения"));
+        Ui.Flow icons = new Ui.Flow(a, 10);
+        for (android.content.pm.ActivityInfo i : Fun.icons(a)) {
+            boolean on = Fun.iconOn(a, i);
+            android.widget.ImageView v = new android.widget.ImageView(a);
+            v.setImageDrawable(i.loadIcon(a.getPackageManager()));
+            v.setPadding(a.dp(4), a.dp(4), a.dp(4), a.dp(4));
+            if (on) v.setBackground(Ui.round(a, 0, 16, Ui.TEXT));
+            v.setContentDescription("Иконка: " + i.metaData.getString("icon_name") + (on ? ", выбрана" : ""));
+            v.setOnClickListener(x -> {
+                Ui.tick(x);
+                Fun.setIcon(a, i);
+                build();
+                Toast.makeText(a, "Иконка сменится через пару секунд. Если значок пропал с рабочего стола, верни его из списка приложений",
+                        Toast.LENGTH_LONG).show();
+            });
+            icons.addView(v, new android.view.ViewGroup.LayoutParams(a.dp(56), a.dp(56)));
+        }
+        look.addView(icons, Ui.mw(a, 8));
+        look.addView(Ui.switchRow(a, "Звуки", "На уроках и переменах тикают часы, на звонке звенит звонок", Fun.soundOn(a),
+                (b, on) -> Updater.prefs(a).edit().putBoolean(Fun.KEY_SOUND, on).apply()));
         look.addView(Ui.switchRow(a, "Цвет предметов", "Алгебра синяя, физика фиолетовая, химия бирюзовая", !Ui.PLAIN,
                 (b, on) -> { Updater.prefs(a).edit().putBoolean(Ui.KEY_PLAIN, !on).apply(); a.recreate(); }));
         look.addView(Ui.switchRow(a, "Праздничные темы", "В праздники и каникулы значок и цвет дня", Updater.prefs(a).getBoolean(Plus.KEY_FEST, true), (b, on) -> {
@@ -133,7 +160,7 @@ final class MoreTab {
             t.save(a);
             Updater.update(a);
         }));
-        notif.addView(flag("Вибрация перед уроком", "Тихо вибрирует за 2 минуты до звонка на урок", Updater.KEY_BUZZ, false));
+        notif.addView(flag("Вибрация перед звонком", "Вибрирует за 3 минуты до звонка на урок и на перемену", Updater.KEY_BUZZ, false));
 
         shareSection();
 
@@ -182,6 +209,7 @@ final class MoreTab {
         age = note(ageText());
         age.setPadding(0, a.dp(12), 0, a.dp(4));
         about.addView(age);
+        about.addView(note("За помощь спасибо Кириллу и Руслану."));
 
         LinearLayout faq = section("Вопросы", R.drawable.ic_help, 4);
         for (String[] qa : FAQ) faq.addView(question(qa[0], qa[1]));
@@ -190,7 +218,7 @@ final class MoreTab {
                 + "про новую версию, замены в расписании и новости лицея (со своего сайта), или когда ты сам отправляешь нам письмо. "
                 + "Рекламы и аккаунтов нет. Сколько нас, считает GitHub по скачиваниям файла с номером версии: о телефоне ничего не передаётся.\n\n"
                 + "Про батарею: пока экран выключен, приложение ничего не делает и телефон не будит. Исключение одно: "
-                + "вибрация перед уроком, если ты её включишь, будит телефон один раз перед каждым уроком.", 13, Ui.MUTED, null);
+                + "вибрация перед звонком, если ты её включишь, будит телефон один раз перед каждым звонком.", 13, Ui.MUTED, null);
         privacy.setLineSpacing(0, 1.2f);
         privacy.setPadding(a.dp(4), a.dp(22), a.dp(4), 0);
         root.addView(privacy);

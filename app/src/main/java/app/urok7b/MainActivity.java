@@ -188,6 +188,7 @@ public class MainActivity extends Activity {
 
     /** Показать вкладку; содержимое строится при первом открытии. */
     void show(int k) {
+        int from = tab;
         tab = k;
         if (pages[k] == null) {
             if (k == NOW) pages[k] = (nowTab = new NowTab(this)).view;
@@ -205,6 +206,11 @@ public class MainActivity extends Activity {
             ((android.widget.ImageView) tabs[i].getChildAt(0)).setColorFilter(on ? Ui.ACCENT : Ui.MUTED);
             ((TextView) tabs[i].getChildAt(1)).setTextColor(on ? Ui.ACCENT : Ui.MUTED);
         }
+        // новая вкладка въезжает со своей стороны, её значок подпрыгивает (как на сайте)
+        pages[k].setAlpha(0);
+        pages[k].setTranslationX(dp(18) * Integer.signum(k - from));
+        pages[k].animate().alpha(1).translationX(0).setDuration(220).start();
+        if (k != from) Fun.pop(tabs[k].getChildAt(0), 300, 1, 1f, 1.22f, 1f);
         lastKey = "";
         if (k == NEWS) newsTab.show();
         refresh(true);
@@ -257,6 +263,7 @@ public class MainActivity extends Activity {
         if (Updates.due(this)) Updates.check(this, ok -> rebuild());
         else if (Updates.changesDue(this)) Updates.checkChanges(this, this::rebuild);
         if (moreTab != null) moreTab.build();
+        Notes.load(getApplicationContext(), this::rebuild);
         rebuild();
     }
 
@@ -265,6 +272,7 @@ public class MainActivity extends Activity {
         super.onPause();
         handler.removeCallbacks(tick);
         if (nowTab != null) nowTab.pause();
+        Fun.quiet();
     }
 
     @Override

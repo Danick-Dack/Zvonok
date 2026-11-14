@@ -23,7 +23,7 @@ function renderWeek() {
       h("div", {class: "day-head"}, h("h2", null, DAYN[d], isToday ? h("span", {class: "tag hot", text: "сегодня"}) : null), h("span", {text: dm(date) + " · " + dayRange(list)})),
       strip(list, isToday && !dayOff(date), S),
       note, exams.length ? h("p", {class: "day-note exam", text: examText(exams)}) : null,
-      timeline(list, isToday && !dayOff(date), S || compute(now, src), "Уроков нет", exams), extrasEl(date)));
+      timeline(list, isToday && !dayOff(date), S || compute(now, src), "Уроков нет", exams, dayOff(date) ? null : date), extrasEl(date)));
   });
   requestAnimationFrame(() => scrollToDay(selDay, false));
 }

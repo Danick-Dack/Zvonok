@@ -31,9 +31,10 @@ final class NowTab {
 
     final ScrollView view;
     private final MainActivity a;
-    private final LinearLayout hero, nextCard, dots, list, news;
+    private final LinearLayout hero, nextCard, dots, list, news, streak;
     private final TextView date, badge, status, title, big, caption, sideH, sideV, statH, statV, update, fest;
-    private final TextView nextH, nextS, foot, vac, tz, dayTitle, dayMeta;
+    private final TextView nextH, nextS, foot, vac, tz, dayTitle, dayMeta, streakN;
+    private final android.widget.ImageView sound;
     private final Chronometer chrono;
     private final RingView ring;
     private final FrameLayout roomBox, nextRoomBox, noteBox, ringBox;
@@ -60,6 +61,22 @@ final class NowTab {
         date = Ui.text(a, "", 14, Ui.MUTED, null);
         t.addView(date);
         head.addView(t);
+        // серия дней, как на сайте: растёт, когда заходишь посмотреть расписание
+        streak = Ui.horizontal(a);
+        streak.setPadding(a.dp(8), 0, a.dp(11), 0);
+        streak.setBackground(Ui.round(a, (Ui.WARN & 0x00FFFFFF) | 0x26000000, 16, 0));
+        streak.addView(Ui.icon(a, R.drawable.ic_fire, Ui.WARN, 16));
+        streakN = Ui.text(a, "", 14, Ui.WARN, "sans-serif-medium");
+        streakN.setPadding(a.dp(3), 0, 0, 0);
+        streak.addView(streakN);
+        streak.setOnClickListener(v -> {
+            int[] s = Fun.streak(a);
+            android.widget.Toast.makeText(a, "Серия " + Schedule.word(s[0], "день", "дня", "дней") + ", рекорд " + s[1]
+                    + ". Выходные и каникулы её не рвут", android.widget.Toast.LENGTH_LONG).show();
+        });
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, a.dp(32));
+        sp.rightMargin = a.dp(8);
+        head.addView(streak, sp);
         badge = Ui.text(a, "", 16, Ui.ON_ACCENT, "sans-serif-medium");
         badge.setGravity(Gravity.CENTER);
         badge.setMinWidth(a.dp(52));
@@ -112,6 +129,7 @@ final class NowTab {
         center.setGravity(Gravity.CENTER);
         chrono = new Chronometer(a);
         chrono.setCountDown(true);
+        chrono.setOnChronometerTickListener(c -> Fun.play(a, false)); // со звуком часы тикают каждую секунду, пока экран открыт
         big = Ui.text(a, "", 50, Ui.TEXT, null);
         for (TextView x : new TextView[]{chrono, big}) {
             x.setTextColor(Ui.TEXT);
@@ -132,6 +150,19 @@ final class NowTab {
             android.widget.Toast.makeText(a, QUOTES[(int) (Math.random() * QUOTES.length)], android.widget.Toast.LENGTH_LONG).show();
             return true;
         });
+        // звук: на уроках и переменах тикают часы, на звонке звенит звонок. Колокольчик качается на звонке и без звука
+        sound = Ui.icon(a, R.drawable.ic_bell, Ui.MUTED, 22);
+        sound.setPadding(a.dp(9), a.dp(9), a.dp(9), a.dp(9));
+        sound.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        sound.setOnClickListener(v -> {
+            boolean on = !Fun.soundOn(a);
+            Updater.prefs(a).edit().putBoolean(Fun.KEY_SOUND, on).apply();
+            renderSound();
+            Fun.play(a, false);
+            android.widget.Toast.makeText(a, on ? "Звуки включены: часы тикают, на звонке звенит звонок" : "Звуки выключены",
+                    android.widget.Toast.LENGTH_SHORT).show();
+        });
+        ringBox.addView(sound, new FrameLayout.LayoutParams(a.dp(40), a.dp(40), Gravity.TOP | Gravity.END));
         hero.addView(ringBox, rp);
         fitRing();
 
@@ -261,6 +292,16 @@ final class NowTab {
         status.setText((d.live ? "●  " : "") + d.label + (side ? "  ·  " + Schedule.title() : "")); // набок шапка с классом выше
         status.setTextColor(d.live ? Ui.TEXT : Ui.SOFT);
         buildDots(d);
+        renderSound();
+        int[] st = Fun.streak(a);
+        streakN.setText(String.valueOf(st[0]));
+        streak.setContentDescription("Серия: " + Schedule.word(st[0], "день", "дня", "дней") + " подряд");
+        if (st[2] == 1) {
+            Fun.pop(streak, 1200, 1, .6f, 1.35f, .95f, 1f);
+            if (st[0] > 1) android.widget.Toast.makeText(a, "Серия: " + Schedule.word(st[0], "день", "дня", "дней") + " подряд",
+                    android.widget.Toast.LENGTH_SHORT).show();
+        }
+        long was = lastTarget;
         if (d.timer) {
             if (d.target != lastTarget) {
                 chrono.setBase(Updater.chronoBase(d.target));
@@ -272,6 +313,7 @@ final class NowTab {
             big.setText(d.big);
             lastTarget = -1;
         }
+        if (was > 0 && was != lastTarget && Math.abs(t.ms - was) < 5000) ring(); // таймер дошёл до нуля: это звонок
         chrono.setVisibility(d.timer ? View.VISIBLE : View.GONE);
         big.setVisibility(d.timer ? View.GONE : View.VISIBLE);
         caption.setText(d.extra ? (d.progress >= 0 ? "ДО КОНЦА" : "ДО НАЧАЛА") : caption(s));
@@ -327,6 +369,23 @@ final class NowTab {
         if (note != null) noteBox.addView(note);
         list.removeAllViews();
         list.addView(Day.timeline(a, l, day, live, s, t.min, d.kind == Schedule.Kind.LESSON ? d.progress : -1, "Ближайших уроков нет"));
+    }
+
+    private void renderSound() {
+        boolean on = Fun.soundOn(a);
+        sound.setImageResource(on ? R.drawable.ic_bell : R.drawable.ic_belloff);
+        sound.setColorFilter(on ? Ui.ACCENT : Ui.MUTED);
+        sound.setContentDescription("Звуки: тиканье и звонок. " + (on ? "Включены" : "Выключены"));
+    }
+
+    /** Звонок: кольцо вздрагивает, колокольчик качается, а со звуком ещё и звенит. */
+    private void ring() {
+        Fun.play(a, true);
+        Fun.pop(ringBox, 460, 5, 1f, 1.03f, 1f);
+        android.animation.ObjectAnimator swing = android.animation.ObjectAnimator.ofFloat(sound, View.ROTATION, 0, 22, -22, 0);
+        swing.setDuration(230);
+        swing.setRepeatCount(9);
+        swing.start();
     }
 
     private String caption(Schedule.Status s) {

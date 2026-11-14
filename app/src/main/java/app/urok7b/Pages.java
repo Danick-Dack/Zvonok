@@ -14,10 +14,10 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Экраны из «Ещё»: «Олимпиады» (как вкладка на сайте) и «Кружки и ШОР» (занятия после уроков). */
+/** Экраны из «Ещё»: «Олимпиады» (как вкладка на сайте), «Кружки и ШОР» (занятия после уроков) и гимн лицея. */
 public class Pages extends Activity {
 
-    static final String EXTRA_PAGE = "page", OLYMP = "olymp", CLUBS = "clubs";
+    static final String EXTRA_PAGE = "page", OLYMP = "olymp", CLUBS = "clubs", ANTHEM = "anthem";
     private static final String[] DAYS = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
     private boolean clubs;
     private int grade = -1;                       // олимпиады: 0 = все классы
@@ -29,7 +29,8 @@ public class Pages extends Activity {
         super.onCreate(state);
         clubs = CLUBS.equals(getIntent().getStringExtra(EXTRA_PAGE));
         Schedule.load(this);
-        if (clubs) clubs();
+        if (ANTHEM.equals(getIntent().getStringExtra(EXTRA_PAGE))) anthem();
+        else if (clubs) clubs();
         else {
             olymp();
             // свежий список с сайта: только с разрешения ходить в интернет, раз за открытие
@@ -38,6 +39,25 @@ public class Pages extends Activity {
                     if (Feed.fetch(getApplicationContext(), Feed.OLYMP)) new Handler(Looper.getMainLooper()).post(() -> { if (!isFinishing()) olymp(); });
                 }).start();
             }
+        }
+    }
+
+    // ---------- гимн лицея: текст из data/anthem.txt, тот же, что на сайте ----------
+
+    private void anthem() {
+        LinearLayout root = Ui.screen(this, "Гимн лицея", Schedule.school());
+        String text;
+        try {
+            text = Ui.asset(this, "anthem.txt");
+        } catch (java.io.IOException e) {
+            return;
+        }
+        String[] verses = text.trim().split("\\r?\\n\\s*\\r?\\n");
+        for (int i = 0; i < verses.length; i++) {
+            TextView t = Ui.text(this, verses[i], 17, Ui.TEXT, null);
+            t.setLineSpacing(0, 1.3f);
+            t.setPadding(Ui.dp(this, i % 2 * 22), 0, 0, 0); // чётные куплеты с отступом, как на сайте
+            root.addView(t, Ui.mw(this, 20));
         }
     }
 

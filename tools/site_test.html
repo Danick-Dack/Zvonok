@@ -485,6 +485,7 @@ async function iosScript(w) {
     const env = {config: {runsInApp: true, runsWithSiri: !!opts.siri, runsInWidget: false}, args: {widgetParameter: opts.param || ""}, module: {filename: "/icloud/Звонок.js"},
       Script: {complete() {}, setWidget() {}, setShortcutOutput(v) { out = v; }}, FileManager: {local: () => fm, iCloud: () => fm}, Request,
       Notification: class { setTriggerDate(d) { this.when = d; }
+        static allPending() { return Promise.resolve([]); }
         schedule() { (/^zv-exam-/.test(this.identifier || "") ? reminders : notes).push(this.title + " / " + this.body); return Promise.resolve(); } },
       WebView: class { loadHTML() { return Promise.resolve(); } present() { return Promise.resolve(); } },
       Color: Stub, Font: Stub, Size: Stub, Point: Stub, LinearGradient: Stub, ListWidget: Stub, SFSymbol: Stub, DrawContext: Stub, Image: Stub, Path: Stub, Rect: Stub,
@@ -504,6 +505,14 @@ async function iosScript(w) {
     const good = pt("ZV1;bg=0b1220;ac=60A5FA;p=0;n=1;d=0;sc=1;tx=ffffff;zz=1");
     themeOk = themeOk && good.bg === "0B1220" && good.ac === "60A5FA" && good.p === 0 && good.d === 0 && good.sc === 1 && good.tx === "FFFFFF" && !("zz" in good);
     ok(themeOk, "код темы в виджете: мусор даёт тему по умолчанию, верный код читается целиком");
+    // вибрация перед звонком: у 7Б в понедельник 8 уроков, по уведомлению за 3 минуты до звонка на урок и с урока
+    const rb = await run({versions: {classes: {}}}, src.replace("Script.complete();", "Script.complete(); return remindBells;"));
+    const quiet = rb.notes.length;
+    await rb.ret(new Date(2026, 10, 16, 7, 0), {ntf: {bell: true}});
+    ok(rb.notes.length - quiet === 16 && rb.notes[quiet].startsWith("Через 3 минуты урок / ") && rb.notes[quiet + 15] === "Через 3 минуты звонок с урока / Это последний урок",
+      "iPhone: вибрация за 3 минуты до каждого звонка, на урок и с урока (" + (rb.notes.length - quiet) + ")");
+    await rb.ret(new Date(2026, 10, 16, 7, 5), {ntf: {bell: true}});
+    ok(rb.notes.length - quiet === 16, "iPhone: те же звонки второй раз не ставятся");
     // подпись новых версий: тестовый ключ из tools/test_site.py вместо настоящего
     const F = window.SIG_FIXTURE || {};
     const withKey = k => src.replace(/const UPDATE_KEY = "[^"]*";/, 'const UPDATE_KEY = "' + k + '";');

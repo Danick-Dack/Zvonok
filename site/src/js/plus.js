@@ -192,9 +192,9 @@ applyBg();
 
 /* в приложении iPhone: фон виджетов и уведомления (сохраняет и присылает сам скрипт Scriptable) */
 if (EMBED) {
-  const ntf = () => Object.assign({exam: true, news: true}, store.get("ntf", null));
-  $("ntfExam").checked = ntf().exam; $("ntfNews").checked = ntf().news;
-  $("ntfExam").onchange = $("ntfNews").onchange = () => store.set("ntf", {exam: $("ntfExam").checked, news: $("ntfNews").checked});
+  const ntf = () => Object.assign({exam: true, news: true, bell: false}, store.get("ntf", null));
+  $("ntfExam").checked = ntf().exam; $("ntfNews").checked = ntf().news; $("ntfBell").checked = ntf().bell;
+  $("ntfExam").onchange = $("ntfNews").onchange = $("ntfBell").onchange = () => store.set("ntf", {exam: $("ntfExam").checked, news: $("ntfNews").checked, bell: $("ntfBell").checked});
   $("wbgPick").onclick = () => bridge({bg: "pick"});
   $("wbgClear").onclick = () => { bridge({bg: "clear"}); toast("Фон виджетов убран"); };
 }

@@ -12,6 +12,7 @@ tick();
 loadChanges();
 loadOlympiads();
 loadNews();
+loadNotes();
 examTab();
 pingOnce();
 homeIcon();

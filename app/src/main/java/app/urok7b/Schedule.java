@@ -136,6 +136,7 @@ public final class Schedule {
     // ---- исходные данные (читаются один раз) ----
     private static String school = "Лицей №165";
     private static String term = "";
+    private static String notes = "";
     private static int[][] baseBells;
     private static final Map<String, String> SUBJECTS = new LinkedHashMap<>();
     private static final Map<String, String[][]> CLASSES = new HashMap<>();
@@ -256,6 +257,7 @@ public final class Schedule {
     private static void parseBase(JSONObject root) throws Exception {
         school = root.optString("school", school);
         term = root.optString("term", "");
+        notes = root.optString("notes", "");
         termEnd = root.optString("term_end", "");
         JSONArray hol = root.optJSONArray("holidays");
         for (int i = 0; hol != null && i < hol.length(); i++) {
@@ -601,6 +603,8 @@ public final class Schedule {
     public static synchronized String cls() { return cls; }
     public static String school() { return school; }
     public static String term() { return term; }
+    /** Адрес базы подписей к урокам ("": подписей нет). Только HTTPS. */
+    static String notes() { return notes.startsWith("https://") ? notes : ""; }
     public static String termEnd() { return termEnd; }
 
     // ================= кабинеты =================

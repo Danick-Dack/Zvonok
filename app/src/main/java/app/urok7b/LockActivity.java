@@ -66,7 +66,7 @@ public class LockActivity extends Activity {
     }
 
     private void openMain() {
-        startActivity(new Intent(this, MainActivity.class)
+        startActivity(new Intent(this, Home.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP));
         finish();
         overridePendingTransition(0, 0);

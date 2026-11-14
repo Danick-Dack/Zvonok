@@ -67,7 +67,7 @@
     <button class="fest" id="fest" type="button" hidden><span id="festIcon" aria-hidden="true"></span><span><b id="festName"></b><small id="festText"></small></span></button>
     <div class="now-grid" id="nowMain">
         <article class="live" id="live" aria-labelledby="lTitle">
-          <div class="live-top"><span class="pulse" id="lPulse" hidden></span><span class="status" id="lStatus"></span><span class="tag hot" id="lTag" hidden></span></div>
+          <div class="live-top"><span class="pulse" id="lPulse" hidden></span><span class="status" id="lStatus"></span><span class="tag hot" id="lTag" hidden></span><button class="streak" id="streak" type="button" hidden><svg class="icon sm" aria-hidden="true"><use href="#i-fire"/></svg><b id="streakN"></b></button><button class="icon-btn snd" id="sndBtn" type="button"></button></div>
           <div class="strip" id="liveStrip" aria-hidden="true"></div>
           <div class="dial idle" id="lDial">
             <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"/><circle class="arc" id="lArc" cx="60" cy="60" r="54" stroke-dasharray="339.29" stroke-dashoffset="339.29"/></svg>
@@ -75,6 +75,7 @@
           </div>
           <div class="subject"><h2 id="lTitle">Сейчас</h2><span id="lRoom" hidden></span></div>
           <p class="subject-sub" id="lSub"></p>
+          <p class="live-note" id="lNote" hidden></p>
           <div class="next" id="lNext" hidden><div class="next-txt"><small id="lNextH"></small><b id="lNextS"></b></div><span id="lNextR" hidden></span></div>
           <p class="live-foot" id="lFoot"></p>
           <div class="extra" id="extra" hidden><svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg><div><b id="extraText"></b><p id="extraSub"></p></div></div>
@@ -148,6 +149,20 @@
       <a class="sect sect-link" href="changelog.html" id="logBtn"><span class="sect-ic hue-pink" aria-hidden="true"><svg class="icon"><use href="#i-star"/></svg></span><b>Что нового<small>Все обновления сайта и приложений</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
       <a class="sect sect-link" href="feedback.html"><span class="sect-ic hue-cyan" aria-hidden="true"><svg class="icon"><use href="#i-mail"/></svg></span><b>Написать нам<small>Идея, ошибка или вопрос. Анонимно</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
       <a class="sect sect-link app-only" href="#get"><span class="sect-ic hue-blue" aria-hidden="true"><svg class="icon"><use href="#i-phone"/></svg></span><b>Звонок на телефоне<small>Android и iPhone, гайды по установке</small></b><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></a>
+      <details class="sect" id="games">
+        <summary><span class="sect-ic hue-green" aria-hidden="true"><svg class="icon"><use href="#i-game"/></svg></span><h2>Игры на перемену<small>Слова и змейка, работают без интернета</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+        <div class="sect-body">
+        <div class="stack">
+          <button class="btn btn-quiet btn-wide" id="playWords" type="button">Слова: угадай слово из 5 букв</button>
+          <button class="btn btn-quiet btn-wide" id="playSnake" type="button">Змейка</button>
+        </div>
+        <p class="note">Слово дня у всего лицея одно. Рекорды остаются на этом устройстве.</p>
+        </div>
+      </details>
+      <details class="sect" id="anthem">
+        <summary><span class="sect-ic hue-red" aria-hidden="true"><svg class="icon"><use href="#i-note"/></svg></span><h2>Гимн лицея<small>Текст, чтобы не подглядывать у соседа</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
+        <div class="sect-body anthem" id="anthemText"></div>
+      </details>
       <details class="sect" id="extras">
         <summary><span class="sect-ic hue-indigo" aria-hidden="true"><svg class="icon"><use href="#i-flag"/></svg></span><h2>Кружки и ШОР<small id="extrasSum">Занятия после уроков</small></h2><svg class="icon chev" aria-hidden="true"><use href="#i-right"/></svg></summary>
         <div class="sect-body">
@@ -173,7 +188,11 @@
         <span class="label" id="accentL" style="margin-top:18px">Цвет</span>
         <div class="swatch-row" id="accentRow" role="group" aria-labelledby="accentL"></div>
         <label class="switch" style="margin-top:8px"><span>Цвета предметов<small>Свой цвет у каждого урока: алгебра синяя, физика фиолетовая</small></span><input type="checkbox" id="hueToggle" checked></label>
+        <span class="label web-only" id="iconL" style="margin-top:18px">Иконка</span>
+        <div class="swatch-row icons web-only" id="iconRow" role="group" aria-labelledby="iconL"></div>
         <label class="switch web-only"><span>Иконка с номером класса<small>Для экрана «Домой»: кольцо «Звонка», внутри твой класс. Видно, если добавить сайт заново</small></span><input type="checkbox" id="iconToggle"></label>
+        <label class="switch"><span>Звуки<small>На уроках и переменах тикают часы, на звонке звенит звонок</small></span><input type="checkbox" id="soundToggle"></label>
+        <label class="switch" id="buzzRow" hidden><span>Вибрация за 3 минуты до звонка<small>На урок и на перемену, пока «Звонок» открыт</small></span><input type="checkbox" id="buzzToggle"></label>
         <label class="switch"><span>Праздничные темы<small>В праздники и каникулы «Звонок» сам меняет цвет и настроение</small></span><input type="checkbox" id="festToggle" checked></label>
         <p class="note">Главный цвет у кнопок, вкладок и всего, что идёт сейчас. Запоминается в этом браузере.</p>
         <span class="label" style="margin-top:18px">Свой фон</span>
@@ -184,6 +203,7 @@
           <div class="row"><button class="btn btn-quiet btn-sm" id="wbgPick" type="button">Выбрать фото</button><button class="btn btn-line btn-sm" id="wbgClear" type="button">Убрать</button></div>
           <label class="switch" style="margin-top:8px"><span>Напоминать о СОР и СОЧ<small>Накануне в 18:00</small></span><input type="checkbox" id="ntfExam" checked></label>
           <label class="switch"><span>Уведомлять о новостях лицея<small>Новый пост в канале, проверка не чаще раза в 6 часов</small></span><input type="checkbox" id="ntfNews" checked></label>
+          <label class="switch"><span>Вибрация за 3 минуты до звонка<small>Уведомление перед звонком на урок и с урока. В беззвучном режиме iPhone только вибрирует</small></span><input type="checkbox" id="ntfBell"></label>
         </div>
         </div>
       </details>
@@ -256,6 +276,7 @@
           <a class="btn btn-line btn-sm" href="about">Сайт о проекте</a>
           <a class="btn btn-line btn-sm" href="https://github.com/Danick-Dack/Zvonok" target="_blank" rel="noopener noreferrer">Исходный код</a>
         </div>
+        <p class="note" style="margin-top:14px">За помощь спасибо Кириллу и Руслану.</p>
         </div>
       </details>
     </div>
@@ -382,6 +403,26 @@
     <p class="note" id="gameScore" aria-live="polite"></p>
     <div class="pad" role="group" aria-label="Управление"><button type="button" class="up" data-d="0,-1" aria-label="Вверх">↑</button><button type="button" class="lt" data-d="-1,0" aria-label="Влево">←</button><button type="button" class="rt" data-d="1,0" aria-label="Вправо">→</button><button type="button" class="dn" data-d="0,1" aria-label="Вниз">↓</button></div>
   </div>
+</dialog>
+<dialog class="sheet" id="words" aria-labelledby="wordsH">
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-head"><h2 id="wordsH">Слова</h2><button class="icon-btn" type="button" data-close aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="sheet-body words">
+    <div class="w-grid" id="wordsGrid"></div>
+    <p class="note" id="wordsMsg" aria-live="polite"></p>
+    <button class="btn btn-primary btn-sm" id="wordsMore" type="button" hidden>Ещё слово</button>
+    <div id="wordsKeys"></div>
+  </div>
+</dialog>
+<dialog class="sheet" id="noteSheet" aria-labelledby="noteH">
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-head"><h2 id="noteH">Подпись к уроку</h2><button class="icon-btn" type="button" data-close aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <form class="sheet-body stack" id="noteForm" autocomplete="off">
+    <p class="note" id="noteMeta"></p>
+    <input class="field" id="noteText" maxlength="80" placeholder="Что будет на уроке: контрольная, принести атлас" aria-label="Подпись">
+    <p class="note">Подпись увидит весь класс. Пустая строка убирает подпись.</p>
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+  </form>
 </dialog>
 <dialog class="sheet" id="logSheet" aria-labelledby="logSheetH">
   <div class="grabber" aria-hidden="true"></div>

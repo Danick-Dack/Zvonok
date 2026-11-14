@@ -83,7 +83,7 @@ adb shell settings put system user_rotation 0; sleep 1
 for a in Changelog Feedback StyleActivity EditorActivity; do
   adb shell am start -W -n $PKG/.$a >/dev/null; sleep 2; shot "dark_screen_$a"
 done
-for page in olymp clubs; do
+for page in olymp clubs anthem; do
   adb shell am start -W -n $PKG/.Pages --es page $page >/dev/null; sleep 2; shot "dark_screen_$page"
 done
 ls -la "$OUT"

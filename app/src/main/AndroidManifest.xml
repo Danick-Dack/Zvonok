@@ -30,15 +30,11 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".Home"
             android:exported="true"
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <!-- ссылки и QR-коды классов: …/Zvonok/#10a и …/Zvonok/10a открывают расписание класса -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -46,17 +42,104 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="danick-dack.github.io" android:pathPrefix="/Zvonok" />
             </intent-filter>
-            <!-- ярлыки на иконке: «Свободные кабинеты», «Неделя», «Найти кабинет» -->
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
         </activity>
+
+        <!--
+            Иконки на выбор («Ещё» → «Оформление»): значок приложения это один из этих ярлыков, включён всегда ровно один.
+            Первый носит старое имя главного экрана, поэтому после обновления значок на рабочем столе остаётся на месте.
+            Своя иконка: ещё один такой же блок с новым именем, картинкой и подписью в icon_name (см. icons/README.md).
+            В каждом блоке ярлыки на иконке: «Свободные кабинеты», «Неделя», «Найти кабинет».
+        -->
+        <activity-alias
+            android:name=".MainActivity"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:targetActivity=".Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+            <meta-data android:name="icon_name" android:value="Тёмная" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconLight"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_light"
+            android:roundIcon="@mipmap/ic_launcher_light"
+            android:targetActivity=".Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+            <meta-data android:name="icon_name" android:value="Светлая" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconBlue"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_blue"
+            android:roundIcon="@mipmap/ic_launcher_blue"
+            android:targetActivity=".Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+            <meta-data android:name="icon_name" android:value="Синяя" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconGreen"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_green"
+            android:roundIcon="@mipmap/ic_launcher_green"
+            android:targetActivity=".Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+            <meta-data android:name="icon_name" android:value="Зелёная" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconPink"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pink"
+            android:roundIcon="@mipmap/ic_launcher_pink"
+            android:targetActivity=".Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+            <meta-data android:name="icon_name" android:value="Розовая" />
+        </activity-alias>
+        <activity-alias
+            android:name=".IconSun"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_sun"
+            android:roundIcon="@mipmap/ic_launcher_sun"
+            android:targetActivity=".Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+            <meta-data android:name="icon_name" android:value="Солнечная" />
+        </activity-alias>
 
         <!-- старое имя экрана кабинетов: закреплённые ярлыки из версии 4.0 продолжают работать -->
         <activity-alias
             android:name=".RoomsActivity"
             android:exported="false"
-            android:targetActivity=".MainActivity" />
+            android:targetActivity=".Home" />
 
         <!-- Большой таймер поверх экрана блокировки (по нажатию на уведомление). Экран не включает, блокировку не снимает -->
         <activity

@@ -28,7 +28,7 @@ import java.time.ZonedDateTime;
  *
  * Экономия батареи:
  *  • все будильники «не будящие» (RTC): спящий телефон приложение не будит. Исключение одно: «Вибрация
- *    перед уроком», если пользователь сам её включил (один RTC_WAKEUP перед каждым уроком, scheduleBuzz);
+ *    перед звонком», если пользователь сам её включил (один RTC_WAKEUP перед каждым звонком, scheduleBuzz);
  *  • пока экран выключен, поминутных обновлений нет совсем — только на звонках;
  *  • при включении экрана служба сразу обновляет всё одним вызовом;
  *  • таймеры тикают сами (Chronometer), а в экономном режиме их нет вовсе;
@@ -43,12 +43,12 @@ public final class Updater {
     public static final String PREFS = "settings";
     public static final String KEY_NOTIF = "notif_enabled";
     public static final String KEY_SCHOOL_ONLY = "school_only";
-    public static final String KEY_BUZZ = "buzz_before_lesson";   // вибрация за 2 мин до урока
+    public static final String KEY_BUZZ = "buzz_before_lesson";   // вибрация за 3 мин до звонка на урок и на перемену
     public static final String KEY_LIVE = "live_update";          // Android 16: таймер урока в строке состояния
     static final String ACTION_BUZZ = "app.urok7b.BUZZ";
-    static final String CHANNEL_BUZZ = "lesson_buzz";
+    static final String CHANNEL_BUZZ = "bell_buzz"; // до 6.2 был lesson_buzz: вибрация короче и только перед уроком
     static final int BUZZ_ID = 8;
-    static final long BUZZ_LEAD = 2 * 60_000L;
+    static final long BUZZ_LEAD = 3 * 60_000L;
 
     /** Готовые тексты для уведомления, виджетов и главного экрана. */
     public static final class Display {
@@ -618,7 +618,7 @@ public final class Updater {
     }
 
     public static PendingIntent openApp(Context ctx) {
-        Intent i = new Intent(ctx, MainActivity.class)
+        Intent i = new Intent(ctx, Home.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(ctx, 1, i,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -692,7 +692,7 @@ public final class Updater {
         }
     }
 
-    // ---------- вибрация перед уроком ----------
+    // ---------- вибрация перед звонком ----------
 
     private static PendingIntent buzzIntent(Context ctx) {
         Intent i = new Intent(ctx, TickReceiver.class).setAction(ACTION_BUZZ);
@@ -700,34 +700,33 @@ public final class Updater {
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    /** Начало ближайшего урока, до которого ещё больше 2 минут (0: уроков впереди нет). */
-    static long nextBuzzLesson(ZonedDateTime now) {
+    /** Ближайший звонок: с урока, если он идёт, иначе на следующий урок (0: звонков впереди нет). */
+    private static long bell(Schedule.Status s) {
+        return s.kind == Schedule.Kind.LESSON ? s.targetMillis : s.nextStartMillis;
+    }
+
+    /** Ближайший звонок (на урок или на перемену), до которого ещё больше 3 минут (0: звонков впереди нет). */
+    static long nextBuzz(ZonedDateTime now) {
         long nowMs = now.toInstant().toEpochMilli();
         ZonedDateTime t = now;
-        for (int i = 0; i < 4; i++) {
-            Schedule.Status s = Schedule.compute(t);
-            long start = s.nextStartMillis;
-            if (start == 0) {
-                // последний урок дня: смотрим, что будет после звонка
-                if (s.targetMillis <= t.toInstant().toEpochMilli()) return 0;
-                start = s.targetMillis;
-            } else if (start - BUZZ_LEAD > nowMs) {
-                return start;
-            }
-            t = ZonedDateTime.ofInstant(Instant.ofEpochMilli(start + 1000), now.getZone());
+        for (int i = 0; i < 6; i++) {
+            long bell = bell(Schedule.compute(t));
+            if (bell <= t.toInstant().toEpochMilli()) return 0;
+            if (bell - BUZZ_LEAD > nowMs) return bell;
+            t = ZonedDateTime.ofInstant(Instant.ofEpochMilli(bell + 1000), now.getZone()); // этот уже близко: смотрим следующий
         }
         return 0;
     }
 
     /**
-     * Одно точное будильное напоминание (RTC_WAKEUP) за 2 минуты до ближайшего звонка на урок.
+     * Одно точное будильное напоминание (RTC_WAKEUP) за 3 минуты до ближайшего звонка на урок или на перемену.
      * Только если пользователь сам включил вибрацию в настройках.
      */
     private static void scheduleBuzz(Context ctx, ZonedDateTime now, boolean on) {
         AlarmManager am = ctx.getSystemService(AlarmManager.class);
         if (am == null) return;
         PendingIntent pi = buzzIntent(ctx);
-        long start = on ? nextBuzzLesson(now) : 0;
+        long start = on ? nextBuzz(now) : 0;
         if (start == 0) {
             am.cancel(pi);
             return;
@@ -742,7 +741,7 @@ public final class Updater {
         }
     }
 
-    /** Сработало напоминание: тихо вибрируем, если урок правда вот-вот начнётся. */
+    /** Сработало напоминание: вибрируем, если звонок правда вот-вот. */
     static void buzz(Context ctx) {
         SharedPreferences p = prefs(ctx);
         if (!p.getBoolean(KEY_BUZZ, false)) return;
@@ -750,26 +749,30 @@ public final class Updater {
         ZonedDateTime now = ZonedDateTime.now();
         long nowMs = now.toInstant().toEpochMilli();
         Schedule.Status s = Schedule.compute(now);
-        long left = s.nextStartMillis - nowMs;
-        if (s.next == null || left <= 0 || left > BUZZ_LEAD + 60_000) return;
+        boolean lesson = s.kind == Schedule.Kind.LESSON; // идёт урок: звонок на перемену
+        long left = bell(s) - nowMs;
+        if (left <= 0 || left > BUZZ_LEAD + 60_000 || (!lesson && s.next == null)) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null) return;
         if (nm.getNotificationChannel(CHANNEL_BUZZ) == null) {
             // без звука, только вибрация; в беззвучном режиме и «Не беспокоить» телефон промолчит сам
-            NotificationChannel ch = new NotificationChannel(CHANNEL_BUZZ, "Вибрация перед уроком",
+            nm.deleteNotificationChannel("lesson_buzz");
+            NotificationChannel ch = new NotificationChannel(CHANNEL_BUZZ, "Вибрация перед звонком",
                     NotificationManager.IMPORTANCE_DEFAULT);
-            ch.setDescription("Короткая вибрация за 2 минуты до звонка на урок");
+            ch.setDescription("Вибрация за 3 минуты до звонка на урок и на перемену");
             ch.setSound(null, null);
             ch.enableVibration(true);
-            ch.setVibrationPattern(new long[]{0, 120, 140, 120});
+            ch.setVibrationPattern(new long[]{0, 300, 150, 300}); // средняя: два толчка по 0,3 с
             ch.setShowBadge(false);
             nm.createNotificationChannel(ch);
         }
         Schedule.Lesson n = s.next;
+        String in = "Через " + Math.max(1, Math.round(left / 60000f)) + " мин";
         Notification.Builder b = new Notification.Builder(ctx, CHANNEL_BUZZ)
                 .setSmallIcon(R.drawable.ic_notif)
-                .setContentTitle("Через " + Math.max(1, Math.round(left / 60000f)) + " мин: " + n.subject)
-                .setContentText(n.room.isEmpty() ? "Звонок в " + n.startText() : n.roomText() + " · звонок в " + n.startText())
+                .setContentTitle(lesson ? in + " звонок с урока" : in + ": " + n.subject)
+                .setContentText(lesson ? n == null ? "Это последний урок" : "Дальше " + n.subject + (n.room.isEmpty() ? "" : " · " + n.roomText())
+                        : n.room.isEmpty() ? "Звонок в " + n.startText() : n.roomText() + " · звонок в " + n.startText())
                 .setCategory(Notification.CATEGORY_REMINDER)
                 .setAutoCancel(true)
                 .setLocalOnly(true)

@@ -45,7 +45,7 @@ function setCustom(on) {
 /* ---------- вкладки ---------- */
 const VIEWS = ["now", "week", "rooms", "exams", "news", "more", "olymp", "get"];
 // старые якоря и разделы внутри «Ещё»
-const SECTIONS = {schedule: "week", top: "now", install: "get", calendar: "more", make: "more", share: "more", faq: "more", about: "more", safe: "more", look: "more", extras: "more",
+const SECTIONS = {schedule: "week", top: "now", install: "get", calendar: "more", make: "more", share: "more", faq: "more", about: "more", safe: "more", look: "more", extras: "more", games: "more", anthem: "more",
   olympiads: "olymp", sor: "exams"};
 let view = "now";
 const dirty = {};
@@ -53,6 +53,7 @@ VIEWS.forEach(v => { dirty[v] = true; });
 const RENDER = {now: () => renderNow(new Date()), week: () => renderWeek(), rooms: () => renderRooms(), more: () => renderMore(), olymp: () => renderOlymp(),
   exams: () => renderExams(), news: () => renderNews(), get: () => renderOs()};
 function show(v) {
+  $("main").style.setProperty("--dir", Math.sign(VIEWS.indexOf(v) - VIEWS.indexOf(view))); // новая вкладка въезжает со своей стороны
   view = v;
   VIEWS.forEach(x => { $("v-" + x).hidden = x !== v; });
   const tab = v === "olymp" || (v === "get" && (EMBED || STANDALONE)) ? "more" : v; // олимпиады живут в «Ещё», как и установка в приложении
@@ -77,7 +78,7 @@ addEventListener("hashchange", () => route(false));
 /** Что-то поменялось (класс, замены, день): перерисовать видимое, остальное при открытии. */
 function refresh() {
   VIEWS.forEach(v => { dirty[v] = true; });
-  key = ""; renderHeader(); examTab(); tick();
+  key = ""; renderHeader(); examTab(); tick(); loadNotes();
   if (dirty[view]) { dirty[view] = false; RENDER[view](); }
 }
 
@@ -141,8 +142,8 @@ function roomChip(r, now, lg) {
 const mark = l => l && l.changed ? "замена" : l && l.short ? "сокращённый" : "";
 
 /* ---------- лента дня ---------- */
-/** Уроки дня с переменами. live = это сегодня: отмечаем прошедшие, текущий и следующий. */
-function timeline(list, live, s, empty, exams) {
+/** Уроки дня с переменами. live = это сегодня: отмечаем прошедшие, текущий и следующий. date: день ленты, для подписей к урокам. */
+function timeline(list, live, s, empty, exams, date) {
   const ol = h("ol", {class: "tl"});
   if (!list.length) { ol.append(h("li", {class: "empty", text: empty || "Уроков нет. Можно выдохнуть"})); return ol; }
   const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
@@ -160,9 +161,10 @@ function timeline(list, live, s, empty, exams) {
       h("span", {class: "rail"}, h("i", {class: "dot"})),
       h("span", {class: "m"}, SHORTS[l.subject] ? h("b", null, h("span", {class: "full", text: l.subject}), h("span", {class: "short", text: SHORTS[l.subject], title: l.subject})) : h("b", {text: l.subject}),
         cur || nx || m || ex ? h("small", null, cur ? "Идёт, урок " + l.num : nx ? "Следующий, урок " + l.num : "Урок " + l.num,
-          m ? [" · ", h("span", {class: "chg", text: m})] : null, ex ? [" · ", h("span", {class: "exm", text: ex.type})] : null) : null),
+          m ? [" · ", h("span", {class: "chg", text: m})] : null, ex ? [" · ", h("span", {class: "exm", text: ex.type})] : null) : null, noteEl(date, l, past)),
       l.room ? roomChip(l.room, cur) : h("span")));
   });
+  Array.from(ol.children).forEach((li, i) => li.style.setProperty("--i", i)); // строки появляются по очереди
   return ol;
 }
 /** Пометка дня: каникулы, отмены, заметка из замен. */
