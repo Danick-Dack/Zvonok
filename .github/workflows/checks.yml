@@ -6,7 +6,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Данные расписания
         run: python3 tools/check_data.py
       - name: Тесты сайта
@@ -25,7 +25,7 @@ jobs:
   lighthouse:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Lighthouse, телефон и компьютер
         run: |
           # со сжатием, как на GitHub Pages: без него главная в 190 КБ на «медленном 4G» Lighthouse нечестно тормозит

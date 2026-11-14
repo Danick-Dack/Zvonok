@@ -34,7 +34,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # сайт собирается из data/schedule.json: поменял расписание на GitHub — сайт обновился сам
       - uses: actions/setup-python@v5
         with:
