@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-MG8vV8aRLURne0O5iu3JZbQxxqENrZlZ93JJnAkNwCY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-s6h3OI0sRZxE+j4ETfKF6zT5uOJL3ioRmDJ2t313JX4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="description" content="«Звонок» на iPhone: виджет с таймером до звонка на экране блокировки, ответ Siri и напоминания перед уроком. Скрипт для своего класса и пошаговая анимация.">
 <meta name="theme-color" content="#09090a">
 <title>Звонок на iPhone: виджет, Siri и напоминания</title>
@@ -456,145 +456,118 @@
   </section>
 </div>
 <script>"use strict";
-/* Звонок · общее для всех страниц: DOM, хранилище, время, тема, офлайн */
-
 const $ = id => document.getElementById(id);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
-
-// Наш карманный createElement. Текст кладём через textContent, поэтому никакой HTML из расписания или замен
-// не выполнится. Работает уже давно и всем нравится, трогать осторожно.
 function h(tag, attrs, ...kids) {
-  const e = document.createElement(tag);
-  if (attrs) for (const k in attrs) {
-    const v = attrs[k];
-    if (v == null || v === false) continue;
-    if (k === "class") e.className = v;
-    else if (k === "text") e.textContent = v;
-    else if (k === "style") e.style.cssText = v;
-    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
-    else e.setAttribute(k, v === true ? "" : v);
-  }
-  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
-  return e;
+const e = document.createElement(tag);
+if (attrs) for (const k in attrs) {
+const v = attrs[k];
+if (v == null || v === false) continue;
+if (k === "class") e.className = v;
+else if (k === "text") e.textContent = v;
+else if (k === "style") e.style.cssText = v;
+else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+else e.setAttribute(k, v === true ? "" : v);
+}
+for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+return e;
 }
 const SVGNS = "http://www.w3.org/2000/svg";
-/** Иконка из спрайта страницы (сборка кладёт в страницу только нужные значки). */
 function icon(name, cls) {
-  const s = document.createElementNS(SVGNS, "svg"), u = document.createElementNS(SVGNS, "use");
-  s.setAttribute("class", "icon" + (cls ? " " + cls : "")); s.setAttribute("aria-hidden", "true");
-  u.setAttribute("href", "#i-" + name); s.append(u);
-  return s;
+const s = document.createElementNS(SVGNS, "svg"), u = document.createElementNS(SVGNS, "use");
+s.setAttribute("class", "icon" + (cls ? " " + cls : "")); s.setAttribute("aria-hidden", "true");
+u.setAttribute("href", "#i-" + name); s.append(u);
+return s;
 }
-
-// localStorage, который не падает: в приватном режиме Safari и в браузере Telegram он любит кидаться исключениями.
 const store = {
-  get(k, d) { try { const v = localStorage.getItem("zv." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem("zv." + k, JSON.stringify(v)); } catch (e) {} },
-  del(k) { try { localStorage.removeItem("zv." + k); } catch (e) {} }
+get(k, d) { try { const v = localStorage.getItem("zv." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+set(k, v) { try { localStorage.setItem("zv." + k, JSON.stringify(v)); } catch (e) {} },
+del(k) { try { localStorage.removeItem("zv." + k); } catch (e) {} }
 };
-
-/* Цвета виджетов из конструктора. Код темы уходит внутрь скрипта для iPhone и в приложение на Android,
-   поэтому из хранилища берём только известные поля с правильными значениями, остальное по умолчанию. */
-const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 1, tx: ""}; // sc: цвет урока, по умолчанию включён (4.0)
+const TH_DEFAULT = {bg: "000000", ac: "FFFFFF", op: 100, r: 26, s: 1, p: 1, n: 1, d: 1, sc: 1, tx: ""};
 function cleanTheme(raw) {
-  const o = raw && typeof raw === "object" ? raw : {}, t = Object.assign({}, TH_DEFAULT);
-  const hex = v => typeof v === "string" && /^[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;
-  const int = (v, lo, hi) => { const n = typeof v === "string" && /^\d{1,3}$/.test(v) ? +v : v; return Number.isInteger(n) && n >= lo && n <= hi ? n : null; };
-  if (hex(o.bg)) t.bg = hex(o.bg);
-  if (hex(o.ac)) t.ac = hex(o.ac);
-  if (o.tx === "" || hex(o.tx)) t.tx = hex(o.tx) || "";
-  if (int(o.op, 30, 100) != null) t.op = int(o.op, 30, 100);
-  if (int(o.r, 0, 60) != null) t.r = int(o.r, 0, 60);
-  for (const k of ["s", "p", "n", "d", "sc"]) if (int(o[k], 0, 1) != null) t[k] = int(o[k], 0, 1);
-  return t;
+const o = raw && typeof raw === "object" ? raw : {}, t = Object.assign({}, TH_DEFAULT);
+const hex = v => typeof v === "string" && /^[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;
+const int = (v, lo, hi) => { const n = typeof v === "string" && /^\d{1,3}$/.test(v) ? +v : v; return Number.isInteger(n) && n >= lo && n <= hi ? n : null; };
+if (hex(o.bg)) t.bg = hex(o.bg);
+if (hex(o.ac)) t.ac = hex(o.ac);
+if (o.tx === "" || hex(o.tx)) t.tx = hex(o.tx) || "";
+if (int(o.op, 30, 100) != null) t.op = int(o.op, 30, 100);
+if (int(o.r, 0, 60) != null) t.r = int(o.r, 0, 60);
+for (const k of ["s", "p", "n", "d", "sc"]) if (int(o[k], 0, 1) != null) t[k] = int(o[k], 0, 1);
+return t;
 }
-/** Код темы «ZV1;bg=…;ac=…» в одном порядке полей для iPhone и Android. */
 const themeString = t => `ZV1;bg=${t.bg};ac=${t.ac};op=${t.op};r=${t.r};s=${t.s};p=${t.p};n=${t.n};d=${t.d};sc=${t.sc}` + (t.tx ? `;tx=${t.tx}` : "");
-
 let toastT;
 function toast(t) {
-  let e = $("zvToast");
-  if (!e) { e = h("div", {class: "zv-toast", id: "zvToast", role: "status", "aria-live": "polite"}); document.body.append(e); }
-  e.textContent = t; e.classList.add("on");
-  clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove("on"), 2400);
+let e = $("zvToast");
+if (!e) { e = h("div", {class: "zv-toast", id: "zvToast", role: "status", "aria-live": "polite"}); document.body.append(e); }
+e.textContent = t; e.classList.add("on");
+clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove("on"), 2400);
 }
-// Копирование. Где нет Clipboard API (файл из Telegram, старый Android), выделяем текст по старинке.
 async function copyText(text, msg) {
-  // внутри приложения Scriptable копирует само приложение (embed.js)
-  if (typeof bridge === "function" && bridge({copy: text})) { toast(msg || "Скопировано"); return true; }
-  let ok = false;
-  try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
-    const t = h("textarea", {readonly: true, style: "position:fixed;top:0;left:0;opacity:0;font-size:16px"});
-    t.value = text; document.body.append(t); t.focus(); t.select(); t.setSelectionRange(0, text.length);
-    try { ok = document.execCommand("copy"); } catch (x) {}
-    t.remove();
-  }
-  toast(ok ? (msg || "Скопировано") : "Не получилось скопировать. Выдели текст и скопируй вручную");
-  return ok;
+if (typeof bridge === "function" && bridge({copy: text})) { toast(msg || "Скопировано"); return true; }
+let ok = false;
+try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+const t = h("textarea", {readonly: true, style: "position:fixed;top:0;left:0;opacity:0;font-size:16px"});
+t.value = text; document.body.append(t); t.focus(); t.select(); t.setSelectionRange(0, text.length);
+try { ok = document.execCommand("copy"); } catch (x) {}
+t.remove();
 }
-
-/* ---------- слова и время ---------- */
-/** 1 урок, 3 урока, 7 уроков. */
+toast(ok ? (msg || "Скопировано") : "Не получилось скопировать. Выдели текст и скопируй вручную");
+return ok;
+}
 function word(n, one, few, many) { const a = n % 10, b = n % 100; return n + " " + (a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many); }
 const plural = n => word(n, "урок", "урока", "уроков");
 const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
 const DAYN = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
 const DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const WHEN = ["в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу", "в воскресенье"];
-const dow = d => (d.getDay() + 6) % 7; // 0 = понедельник
+const dow = d => (d.getDay() + 6) % 7;
 const two = n => String(n).padStart(2, "0");
 const iso = d => d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate());
 const dm = d => d.getDate() + " " + MONTHS[d.getMonth()];
 const toMin = t => { const m = /^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(t || ""); if (!m) return -1; const H = +m[1], M = +m[2]; return H < 24 && M < 60 ? H * 60 + M : -1; };
 const hm = m => Math.floor(m / 60) + ":" + two(m % 60);
-/** Время в мс: min минут от начала дня по стенным часам (в день перевода часов звонок остаётся в 8:00, а не в 9:00). */
 function at(date, min) { const d = new Date(date); d.setHours(0, min, 0, 0); return d.getTime(); }
-/* «Звонку» столько дней: первая версия вышла 1 ноября 2026 (первый коммит) */
 const BORN = new Date(2026, 10, 1);
 const projectAge = now => Math.max(1, Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - BORN) / 864e5));
-/** Тексты счётчика для «Ещё» и сайта о проекте: {n, days: «дней», born: «1 ноября 2026»}. */
 function projectAgeText(now) {
-  const n = projectAge(now);
-  return {n, days: word(n, "день", "дня", "дней").slice(String(n).length + 1), born: dm(BORN) + " " + BORN.getFullYear()};
+const n = projectAge(now);
+return {n, days: word(n, "день", "дня", "дней").slice(String(n).length + 1), born: dm(BORN) + " " + BORN.getFullYear()};
 }
 const clean = s => String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40);
 const esc = t => String(t).replace(/[&<>"']/g, ch => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[ch]);
-
-/* ---------- тема: как в системе, светлая или тёмная ---------- */
 const SCHEMES = ["auto", "light", "dark"];
 function scheme() { const s = store.get("scheme", "auto"); return SCHEMES.includes(s) ? s : "auto"; }
 function isDark() {
-  const s = scheme();
-  return s === "dark" || (s === "auto" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+const s = scheme();
+return s === "dark" || (s === "auto" && !!window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
 }
 function applyScheme(s) {
-  if (s) store.set("scheme", s);
-  s = scheme();
-  const root = document.documentElement;
-  if (s === "auto") delete root.dataset.theme; else root.dataset.theme = s;
-  // цвет полосы браузера и статус-бара iPhone под тему
-  $$('meta[name="theme-color"]').forEach(m => {
-    if (s === "auto") m.setAttribute("content", m.dataset.c);
-    else m.setAttribute("content", s === "dark" ? "#0B0B0C" : "#F4F4F1");
-  });
-  document.dispatchEvent(new CustomEvent("zv:scheme"));
+if (s) store.set("scheme", s);
+s = scheme();
+const root = document.documentElement;
+if (s === "auto") delete root.dataset.theme; else root.dataset.theme = s;
+$$('meta[name="theme-color"]').forEach(m => {
+if (s === "auto") m.setAttribute("content", m.dataset.c);
+else m.setAttribute("content", s === "dark" ? "#0B0B0C" : "#F4F4F1");
+});
+document.dispatchEvent(new CustomEvent("zv:scheme"));
 }
-/* цвет акцента: им отмечено то, что идёт сейчас. Первый в списке по умолчанию */
 const ACCENTS = [{"id":"blue","name":"Синий","light":"#0062DA","dark":"#409CFF"},{"id":"indigo","name":"Индиго","light":"#3D3BB8","dark":"#8B89FF"},{"id":"purple","name":"Фиолетовый","light":"#8944AB","dark":"#DA8FFF"},{"id":"pink","name":"Розовый","light":"#C70F45","dark":"#FF6482"},{"id":"red","name":"Красный","light":"#D70015","dark":"#FF6961"},{"id":"orange","name":"Оранжевый","light":"#B83D00","dark":"#FFB340"},{"id":"green","name":"Зелёный","light":"#1F7A36","dark":"#30DB5B"},{"id":"mint","name":"Мятный","light":"#0B7570","dark":"#66D4CF"},{"id":"mono","name":"Без цвета","light":"#141414","dark":"#F3F3F1"}] || [{id: "red", name: "Звонок", light: "#C8320F", dark: "#FF5A36"}];
 function accent() { const a = store.get("accent", ACCENTS[0].id); return ACCENTS.some(x => x.id === a) ? a : ACCENTS[0].id; }
 function applyAccent(a) {
-  if (a) store.set("accent", a);
-  a = accent();
-  if (a === ACCENTS[0].id) delete document.documentElement.dataset.accent; else document.documentElement.dataset.accent = a;
-  document.dispatchEvent(new CustomEvent("zv:scheme"));
+if (a) store.set("accent", a);
+a = accent();
+if (a === ACCENTS[0].id) delete document.documentElement.dataset.accent; else document.documentElement.dataset.accent = a;
+document.dispatchEvent(new CustomEvent("zv:scheme"));
 }
 if (window.matchMedia) {
-  const mq = matchMedia("(prefers-color-scheme: dark)");
-  const on = () => { if (scheme() === "auto") document.dispatchEvent(new CustomEvent("zv:scheme")); };
-  if (mq.addEventListener) mq.addEventListener("change", on); else if (mq.addListener) mq.addListener(on);
+const mq = matchMedia("(prefers-color-scheme: dark)");
+const on = () => { if (scheme() === "auto") document.dispatchEvent(new CustomEvent("zv:scheme")); };
+if (mq.addEventListener) mq.addEventListener("change", on); else if (mq.addListener) mq.addListener(on);
 }
-
-/* ---------- платформа ---------- */
 const UA = navigator.userAgent || "";
 const IOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const ANDROID = /Android/i.test(UA);
@@ -602,359 +575,284 @@ const STANDALONE = (!!window.matchMedia && matchMedia("(display-mode: standalone
 if (STANDALONE) document.documentElement.classList.add("standalone");
 if (IOS) document.documentElement.classList.add("ios");
 const ONLINE_SITE = /^https?:$/.test(location.protocol);
-
-/** Service worker: сайт работает без интернета и обновляется сам, данные в браузере не трогает. */
 function registerSW() {
-  if (!ONLINE_SITE || !("serviceWorker" in navigator)) return;
-  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+if (!ONLINE_SITE || !("serviceWorker" in navigator)) return;
+addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 }
-
-/* Звонок · расписание: уроки, звонки, каникулы, замены, кабинеты.
-   Правила дня (каникулы, замены, «что сейчас») в rules.js: тот же файл сборка вставляет в скрипт iPhone.
-   Та же логика в приложении Android (Schedule.java). */
-
 const DATA = {"school":"Лицей №165","term":"2 четверть 2026–2027","updated":"2026-11-12","term_end":"2026-12-27","holidays":[["2026-12-16","2026-12-16","День Независимости"],["2026-12-28","2027-01-10","Зимние каникулы"],["2027-03-08","2027-03-08","Международный женский день"],["2027-03-15","2027-03-15","День Конституции"],["2027-03-22","2027-03-28","Весенние каникулы"],["2027-05-01","2027-05-01","Праздник единства народа Казахстана"],["2027-05-03","2027-05-03","Выходной за 1 мая"],["2027-05-07","2027-05-07","День защитника Отечества"],["2027-05-09","2027-05-10","День Победы"],["2027-05-26","2027-08-31","Летние каникулы"]],"sor":{"7А":{"kaz":["2026-11-13","2026-12-11"],"rus":["2026-11-26","2026-12-10"],"rlit":["2026-11-27","2026-12-11"],"alg":["2026-12-02","2026-12-17"],"geom":["2026-12-08"],"fiz":["2026-11-24","2026-12-08"],"eng":["2026-11-24","2026-12-18"],"him":["2026-12-04"],"bio":["2026-12-08"],"geo":["2026-12-14"],"inf":["2026-12-18"],"istk":["2026-11-16","2026-12-14"],"vist":["2026-11-19","2026-12-10"]},"7Б":{"kaz":["2026-11-13","2026-12-11"],"rus":["2026-11-26","2026-12-10"],"rlit":["2026-11-27","2026-12-11"],"alg":["2026-12-02","2026-12-17"],"geom":["2026-12-08"],"fiz":["2026-11-24","2026-12-08"],"eng":["2026-11-24","2026-12-18"],"him":["2026-12-04"],"bio":["2026-12-08"],"geo":["2026-12-09"],"inf":["2026-12-18"],"istk":["2026-11-16","2026-12-14"],"vist":["2026-11-19","2026-12-10"]},"7В":{"kaz":["2026-11-13","2026-12-11"],"rus":["2026-11-26","2026-12-10"],"rlit":["2026-11-27","2026-12-11"],"alg":["2026-12-02","2026-12-17"],"geom":["2026-12-08"],"fiz":["2026-11-24","2026-12-08"],"eng":["2026-11-24","2026-12-18"],"him":["2026-12-04"],"bio":["2026-12-08"],"geo":["2026-12-14"],"inf":["2026-12-18"],"istk":["2026-11-16","2026-12-14"],"vist":["2026-11-19","2026-12-10"]},"8А":{"kaz":["2026-11-16","2026-12-07"],"rus":["2026-11-23","2026-12-07"],"rlit":["2026-11-25","2026-12-09"],"alg":["2026-11-16","2026-12-07"],"geom":["2026-11-24"],"fiz":["2026-11-20","2026-12-18"],"eng":["2026-11-24","2026-12-15"],"him":["2026-12-08"],"bio":["2026-12-08"],"geo":["2026-12-11"],"inf":["2026-12-17"],"istk":["2026-12-14"],"vist":["2026-11-18","2026-12-09"]},"8Б":{"kaz":["2026-11-16","2026-12-07"],"rus":["2026-11-23","2026-12-07"],"rlit":["2026-11-25","2026-12-09"],"alg":["2026-11-16","2026-12-07"],"geom":["2026-11-24"],"fiz":["2026-11-20","2026-12-18"],"eng":["2026-11-24","2026-12-15"],"him":["2026-12-08"],"bio":["2026-12-08"],"geo":["2026-12-11"],"inf":["2026-12-17"],"istk":["2026-12-17"],"vist":["2026-11-24","2026-12-15"]},"8В":{"kaz":["2026-11-16","2026-12-07"],"rus":["2026-11-23","2026-12-10"],"rlit":["2026-11-17","2026-12-08"],"alg":["2026-11-16","2026-12-07"],"geom":["2026-11-24"],"fiz":["2026-11-20","2026-12-18"],"eng":["2026-11-24","2026-12-18"],"him":["2026-12-08"],"bio":["2026-12-08"],"geo":["2026-12-11"],"inf":["2026-12-17"],"istk":["2026-12-17"],"vist":["2026-11-26","2026-12-10"]},"8Г":{"kaz":["2026-11-16","2026-12-07"],"rus":["2026-11-23","2026-12-10"],"rlit":["2026-11-19","2026-12-08"],"alg":["2026-11-16","2026-12-07"],"geom":["2026-11-24"],"fiz":["2026-11-20","2026-12-18"],"eng":["2026-11-24","2026-12-18"],"him":["2026-12-08"],"bio":["2026-12-08"],"geo":["2026-12-11"],"inf":["2026-12-17"],"istk":["2026-12-14"],"vist":["2026-11-18","2026-12-09"]},"9А":{"kaz":["2026-11-16","2026-12-02"],"rus":["2026-11-16","2026-11-30"],"rlit":["2026-11-13","2026-12-04"],"alg":["2026-11-12","2026-12-14"],"geom":["2026-12-08"],"fiz":["2026-11-23","2026-12-17"],"eng":["2026-11-23","2026-12-11"],"him":["2026-12-09"],"bio":["2026-12-09"],"geo":["2026-12-09"],"inf":["2026-12-15"],"istk":["2026-11-23","2026-12-14"],"vist":["2026-11-26","2026-12-17"],"prav":["2026-12-15"]},"9Б":{"kaz":["2026-11-16","2026-12-02"],"rus":["2026-11-16","2026-11-30"],"rlit":["2026-11-13","2026-12-04"],"alg":["2026-11-12","2026-12-14"],"geom":["2026-12-08"],"fiz":["2026-11-23","2026-12-17"],"eng":["2026-11-23","2026-12-11"],"him":["2026-12-09"],"bio":["2026-12-09"],"geo":["2026-12-09"],"inf":["2026-12-15"],"istk":["2026-11-23","2026-12-14"],"vist":["2026-11-26","2026-12-17"],"prav":["2026-12-15"]},"9В":{"kaz":["2026-11-16","2026-12-02"],"rus":["2026-11-25","2026-12-11"],"rlit":["2026-11-24","2026-12-10"],"alg":["2026-11-12","2026-12-14"],"geom":["2026-12-08"],"fiz":["2026-11-23","2026-12-17"],"eng":["2026-11-23","2026-12-11"],"him":["2026-12-09"],"bio":["2026-12-09"],"geo":["2026-12-09"],"inf":["2026-12-15"],"istk":["2026-11-23","2026-12-14"],"vist":["2026-11-27","2026-12-18"],"prav":["2026-12-15"]},"9Г":{"kaz":["2026-11-16","2026-12-02"],"rus":["2026-11-25","2026-12-11"],"rlit":["2026-11-24","2026-12-11"],"alg":["2026-11-12","2026-12-14"],"geom":["2026-12-08"],"fiz":["2026-11-23","2026-12-17"],"eng":["2026-11-23","2026-12-11"],"him":["2026-12-09"],"bio":["2026-12-09"],"geo":["2026-12-09"],"inf":["2026-12-15"],"istk":["2026-11-23","2026-12-14"],"vist":["2026-11-26","2026-12-17"],"prav":["2026-12-15"]},"10А":{"kaz":["2026-11-19","2026-12-08"],"rus":["2026-11-30","2026-12-15"],"rlit":["2026-11-23","2026-12-07"],"alg":["2026-11-18","2026-12-02","2026-12-14"],"geom":["2026-12-08"],"fiz":["2026-11-16","2026-11-27","2026-12-11"],"eng":["2026-11-23","2026-12-14"],"him":["2026-12-03"],"bio":["2026-12-07"],"geo":["2026-12-14"],"inf":["2026-12-11"],"istk":["2026-12-08"],"prav":["2026-12-09"]},"10Б":{"kaz":["2026-11-18","2026-12-08"],"rus":["2026-11-30","2026-12-15"],"rlit":["2026-11-23","2026-12-07"],"alg":["2026-11-18","2026-12-02","2026-12-14"],"geom":["2026-12-08"],"fiz":["2026-11-16","2026-11-27","2026-12-11"],"eng":["2026-11-23","2026-12-14"],"him":["2026-12-02"],"bio":["2026-12-07"],"geo":["2026-12-14"],"inf":["2026-12-11"],"istk":["2026-12-08"],"vist":["2026-12-10"],"prav":["2026-12-08"]},"10В":{"kaz":["2026-11-19","2026-12-08"],"rus":["2026-11-30","2026-12-15"],"rlit":["2026-11-23","2026-12-07"],"alg":["2026-11-18","2026-12-02","2026-12-14"],"geom":["2026-12-08"],"fiz":["2026-11-16","2026-12-01","2026-12-15"],"eng":["2026-11-23","2026-12-14"],"him":["2026-12-02"],"bio":["2026-12-07"],"geo":["2026-12-14"],"inf":["2026-12-11"],"istk":["2026-12-08"],"vist":["2026-12-09"],"prav":["2026-12-09"]},"10Г":{"kaz":["2026-11-18","2026-12-08"],"rus":["2026-11-30","2026-12-15"],"rlit":["2026-11-23","2026-12-07"],"alg":["2026-11-18","2026-12-02","2026-12-14"],"geom":["2026-12-08"],"fiz":["2026-11-16","2026-12-01","2026-12-15"],"eng":["2026-11-23","2026-12-14"],"him":["2026-12-03"],"bio":["2026-12-07"],"geo":["2026-12-14"],"inf":["2026-12-11"],"istk":["2026-12-08"],"vist":["2026-12-09"],"prav":["2026-12-11"]},"11А":{"kaz":["2026-11-19","2026-12-07"],"rus":["2026-11-17","2026-12-08"],"rlit":["2026-11-19","2026-12-03"],"alg":["2026-11-16","2026-12-07"],"geom":["2026-11-24"],"fiz":["2026-11-20","2026-11-27","2026-12-11"],"eng":["2026-11-26","2026-12-10"],"him":["2026-12-09"],"bio":["2026-12-11"],"geo":["2026-12-11"],"inf":["2026-12-07"],"istk":["2026-12-08"],"vist":["2026-12-17"],"prav":["2026-12-14"]},"11Б":{"kaz":["2026-11-19","2026-12-07"],"rus":["2026-11-17","2026-12-08"],"rlit":["2026-11-19","2026-12-03"],"alg":["2026-11-16","2026-12-07"],"geom":["2026-11-24"],"fiz":["2026-11-20","2026-11-27","2026-12-11"],"eng":["2026-11-26","2026-12-10"],"him":["2026-12-08"],"bio":["2026-12-11"],"geo":["2026-12-11"],"inf":["2026-12-07"],"istk":["2026-12-08"],"vist":["2026-12-17"],"prav":["2026-12-15"]},"11В":{"kaz":["2026-11-18","2026-12-07"],"rus":["2026-11-17","2026-12-08"],"rlit":["2026-11-19","2026-12-03"],"alg":["2026-11-16","2026-12-07"],"geom":["2026-11-24"],"fiz":["2026-11-20","2026-11-27","2026-12-11"],"eng":["2026-11-25","2026-12-10"],"him":["2026-12-08"],"bio":["2026-12-11"],"geo":["2026-12-11"],"inf":["2026-12-07"],"istk":["2026-12-08"],"vist":["2026-12-17"],"prav":["2026-12-14"]},"11Г":{"kaz":["2026-11-19","2026-12-09"],"rus":["2026-11-17","2026-12-08"],"rlit":["2026-11-20","2026-12-04"],"alg":["2026-11-16","2026-12-07"],"geom":["2026-11-24"],"fiz":["2026-11-20","2026-11-27","2026-12-11"],"eng":["2026-11-25","2026-12-10"],"him":["2026-12-08"],"bio":["2026-12-11"],"geo":["2026-12-11"],"inf":["2026-12-07"],"istk":["2026-12-08"],"vist":["2026-12-17"],"prav":["2026-12-15"]}},"soch":{"7А":{"kaz":"2026-12-18","rus":"2026-12-17","rlit":"2026-12-23","alg":"2026-12-21","geom":"2026-12-22","fiz":"2026-12-22","eng":"2026-12-22"},"7Б":{"kaz":"2026-12-18","rus":"2026-12-17","rlit":"2026-12-23","alg":"2026-12-21","geom":"2026-12-22","fiz":"2026-12-22","eng":"2026-12-22"},"7В":{"kaz":"2026-12-18","rus":"2026-12-17","rlit":"2026-12-23","alg":"2026-12-21","geom":"2026-12-22","fiz":"2026-12-22","eng":"2026-12-22"},"8А":{"kaz":"2026-12-18","rus":"2026-12-17","rlit":"2026-12-17","alg":"2026-12-21","geom":"2026-12-22","fiz":"2026-12-21","eng":"2026-12-22"},"8Б":{"kaz":"2026-12-18","rus":"2026-12-17","rlit":"2026-12-14","alg":"2026-12-21","geom":"2026-12-22","fiz":"2026-12-21","eng":"2026-12-22"},"8В":{"kaz":"2026-12-18","rus":"2026-12-17","rlit":"2026-12-18","alg":"2026-12-21","geom":"2026-12-22","fiz":"2026-12-21","eng":"2026-12-22"},"8Г":{"kaz":"2026-12-18","rus":"2026-12-17","rlit":"2026-12-17","alg":"2026-12-21","geom":"2026-12-22","fiz":"2026-12-21","eng":"2026-12-22"},"9А":{"kaz":"2026-12-17","rus":"2026-12-21","rlit":"2026-12-18","alg":"2026-12-21","geom":"2026-12-18","fiz":"2026-12-22","eng":"2026-12-18"},"9Б":{"kaz":"2026-12-17","rus":"2026-12-21","rlit":"2026-12-18","alg":"2026-12-21","geom":"2026-12-18","fiz":"2026-12-22","eng":"2026-12-18"},"9В":{"kaz":"2026-12-17","rus":"2026-12-23","rlit":"2026-12-22","alg":"2026-12-21","geom":"2026-12-18","fiz":"2026-12-21","eng":"2026-12-18"},"9Г":{"kaz":"2026-12-17","rus":"2026-12-23","rlit":"2026-12-22","alg":"2026-12-21","geom":"2026-12-18","fiz":"2026-12-21","eng":"2026-12-18"},"10А":{"kaz":"2026-12-17","rlit":"2026-12-17","alg":"2026-12-21","geom":"2026-12-18","fiz":"2026-12-18","eng":"2026-12-21","inf":"2026-12-18","istk":"2026-12-15"},"10Б":{"kaz":"2026-12-22","rlit":"2026-12-17","alg":"2026-12-21","geom":"2026-12-18","fiz":"2026-12-18","eng":"2026-12-21","inf":"2026-12-18","istk":"2026-12-15"},"10В":{"kaz":"2026-12-17","rlit":"2026-12-17","alg":"2026-12-21","geom":"2026-12-18","fiz":"2026-12-22","eng":"2026-12-21","inf":"2026-12-18","istk":"2026-12-15"},"10Г":{"kaz":"2026-12-22","rlit":"2026-12-17","alg":"2026-12-21","geom":"2026-12-18","eng":"2026-12-21","inf":"2026-12-18","istk":"2026-12-15"},"11А":{"kaz":"2026-12-18","rlit":"2026-12-17","alg":"2026-12-14","geom":"2026-12-15","fiz":"2026-12-21","eng":"2026-12-17","inf":"2026-12-14","istk":"2026-12-15"},"11Б":{"kaz":"2026-12-18","rlit":"2026-12-17","alg":"2026-12-14","geom":"2026-12-15","fiz":"2026-12-21","eng":"2026-12-17","inf":"2026-12-14","istk":"2026-12-15"},"11В":{"kaz":"2026-12-18","rlit":"2026-12-17","alg":"2026-12-14","geom":"2026-12-15","fiz":"2026-12-21","eng":"2026-12-17","inf":"2026-12-14","istk":"2026-12-15"},"11Г":{"kaz":"2026-12-18","rlit":"2026-12-18","alg":"2026-12-14","geom":"2026-12-15","fiz":"2026-12-21","eng":"2026-12-17","inf":"2026-12-14","istk":"2026-12-15"}},"shor":[{"id":"mat1","subject":"Математика","coach":"Абдыкулов А. Т.","grades":[7,8,9,10,11],"place":"каб. 28","times":[[1,"14:00","16:00"],[5,"10:00","13:00"]]},{"id":"mat2","subject":"Математика","coach":"Қайсар Н.","grades":[7,8,9,10,11],"place":"каб. 28","times":[[1,"16:00","18:00"]]},{"id":"fiz7","subject":"Физика","coach":"Соколов В. В.","grades":[7],"place":"каб. 48/49","times":[[1,"14:30","16:30"],[3,"14:00","15:30"]]},{"id":"fiz8","subject":"Физика","coach":"Хасенов С. О.","grades":[8],"place":"каб. 53","times":[[0,"15:30","17:30"],[2,"15:30","17:30"],[5,"10:00","14:00"]]},{"id":"fiz9","subject":"Физика","coach":"Кронгарт Б. А.","grades":[9,10],"place":"каб. 53","times":[[0,"15:30","17:30"],[2,"15:30","17:30"],[4,"15:30","17:30"]]},{"id":"inf11","subject":"Информатика","coach":"Баймуканов А.","grades":[11],"place":"Vertex Academy, Сатпаева 60а, оф. 203","times":[[0,"17:00","19:00"],[3,"16:00","18:00"],[5,"16:00","18:00"]]},{"id":"inf9","subject":"Информатика","coach":"Оразбаев М.","grades":[9,10],"place":"Vertex Academy, Сатпаева 60а, оф. 203","times":[[0,"18:00","20:00"],[2,"18:00","20:00"],[4,"18:00","20:00"]]},{"id":"inf7","subject":"Информатика","coach":"Чесноков Р.","grades":[7,8],"place":"Нархоз, Жандосова 55, ауд. 103","times":[[2,"17:00","19:00"],[4,"17:00","19:00"]]}],"themes":[["09-01","09-01","🔔","FF9500","День знаний","С первым звонком. Поехали"],["10-01","10-05","🍎","FF3B30","День учителя","Скажи учителю спасибо, ему приятно"],["10-25","10-25","🦅","00AFCA","День Республики","С Днём Республики"],["10-29","10-31","🎃","FF7A00","Хэллоуин","Самое страшное сегодня это контрольная"],["11-01","11-01","🎂","FF2D55","День рождения «Звонка»","«Звонку» сегодня ещё один год"],["12-16","12-16","🦅","00AFCA","День Независимости","С Днём Независимости"],["12-20","01-08","🎄","34C759","Новый год","С наступающим. Пусть в четверти выйдет то, что хочется"],["01-09","02-13","❄️","5AC8FA","Зима","Шапку надень"],["02-14","02-14","💌","FF2D55","День святого Валентина","Валентинки принимаются на перемене"],["02-15","02-28","❄️","5AC8FA","Зима","До весны совсем чуть-чуть"],["03-08","03-08","🌷","FF2D55","8 Марта","С 8 Марта"],["03-15","03-15","🦅","00AFCA","День Конституции","С Днём Конституции"],["03-21","03-23","🌱","34C759","Наурыз","Наурыз мейрамы құтты болсын"],["04-01","04-01","🤡","AF52DE","День смеха","Сегодня уроков нет. Шутка"],["05-01","05-01","🤝","00AFCA","Праздник единства народа","С праздником единства"],["05-07","05-07","🎖️","34C759","День защитника Отечества","С Днём защитника Отечества"],["05-09","05-09","🕊️","FF9500","День Победы","С Днём Победы"],["05-25","05-25","🔔","FF9500","Последний звонок","Последний звонок. Дальше лето"],["06-01","08-31","☀️","FFCC00","Лето","Каникулы. Телефон можно убрать, но мы не настаиваем"],["12-01","12-19","❄️","5AC8FA","Зима","Шапку надень"]],"bells":[["8:00","8:45"],["8:50","9:35"],["9:45","10:30"],["10:50","11:35"],["11:55","12:40"],["12:50","13:35"],["13:45","14:30"],["14:40","15:25"],["15:35","16:25"]],"subjects":{"alg":"Алгебра","geom":"Геометрия","mat":"Математика","fiz":"Физика","prf":"Практ. физика","kaz":"Казахский яз. и лит.","rus":"Русский язык","rlit":"Русская литература","eng":"Английский язык","istk":"История Казахстана","vist":"Всемирная история","geo":"География","bio":"Биология","him":"Химия","inf":"Информатика","prog":"Программирование","fk":"Физкультура","hud":"Худ. труд","kl":"Классный час","prav":"Основы права","nvp":"НВП","avto":"Автодело"},"classes":{"7А":[["kaz 42/21","kl 40","alg 24/35","fk с/з","istk 46","prf 48/50","geo 54"],["fiz 48/49","fiz 48/49","geom 24/35","geom 24/35","eng 44/35","prog 56/57","bio 25"],["rus 46","fk с/з","alg 24/35","alg 24/35","rlit 46","eng 45/47"],["fiz 48/49","fiz 48/49","alg 24/35","mat 24/35","rus 46","vist 54","kaz 42/21","fk с/з"],["kaz 42/21","inf 56/57","geom 24/35","rlit 46","hud 11/1","him 40","eng 25/20"]],"7Б":[["kl 40","kaz 42/21","istk 46","alg 24/35","mat 24/35","fk с/з","fk с/з","prf 48/73"],["geom 24/35","eng 44/47","fiz 48/49","fiz 48/49","prog 56/57","bio 25","hud 11/1"],["alg 24/35","alg 24/35","eng 45/47","geo 54","fk с/з","rus 46"],["kaz 42/21","alg 24/35","rus 46","rlit 46","fiz 48/49","fiz 48/49","vist 54"],["geom 24/35","geom 24/35","kaz 42/21","eng 25/47","him 40","inf 56/57","rlit 46"]],"7В":[["alg 24/35","alg 24/35","kaz 42/21","istk 46","fk с/з","geo 54","prf 48/73","kl 40"],["hud 11/1","geom 24/35","eng 44/47","bio 25","fiz 48/50","fiz 48/50","prog 56/57"],["fk с/з","rus 46","rlit 46","eng 45/47","alg 24/35"],["rus 46","kaz 42/21","fiz 48/49","fiz 48/49","alg 24/35","mat 24/35","fk с/з","vist 54"],["inf 56/57","kaz 42/21","eng 25/47","geom 24/35","geom 24/35","rlit 46","him 40"]],"8А":[["fiz 48/50","kl 25","rus 55","kaz 42/21","istk 41","alg 22/24","alg 22/24","fk с/з"],["eng 47/44","bio 25","kaz 42/43","him 40","geom 22/24","geom 22/24"],["eng 47/45","rlit 55","vist 41","fk с/з","prog 56/57","alg 22/24","fiz 48/50","prf 48/50"],["alg 22/24","inf 56/57","rus 55","rlit 55","eng 47/40","fk с/з"],["fiz 48/50","fiz 48/50","hud 11/1","kaz 42/21","geo 54","geom 22/24","mat 22/24"]],"8Б":[["kl 25","fiz 48/50","fk с/з","rus 55","alg 58/22","kaz 42/21","rlit 55"],["bio 25","kaz 42/43","geom 58/22","eng 47/44","vist 41","hud 11/1","him 40"],["rlit 55","eng 47/45","alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","fk с/з","prog 56/57"],["fk с/з","alg 58/22","mat 58/22","inf 56/57","rus 55","eng 47/40"],["geom 58/22","geom 58/22","istk 41","geo 54","fiz 48/50","prf 48/50","kaz 42/21"]],"8В":[["alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","kaz 42/21","rus 45","kl 41"],["kaz 42/43","hud 11/1","bio 25","geom 58/22","rlit 45","him 40","eng 35/44"],["alg 58/22","alg 58/22","fiz 48/50","fiz 48/50","eng 47/45","fk с/з","prog 56/57"],["inf 56/57","vist 41","rus 45","fk с/з","fk с/з","mat 58/22"],["geo 54","eng 20/25","geom 58/22","geom 58/22","kaz 42/21","rlit 45","prf 48/50","istk 41"]],"8Г":[["rus 45","fk с/з","alg 58/22","mat 58/22","fiz 48/50","istk 41","kaz 42/21","kl 25"],["geom 58/22","geom 58/22","hud 11/1","kaz 42/43","bio 25","eng 35/44","rlit 45","him 40"],["fiz 48/50","fiz 48/50","fk с/з","vist 41","alg 58/22","prog 56/57","eng 47/45"],["rus 45","fk с/з","inf 56/57","alg 58/22","alg 58/22","rlit 45"],["eng 20/25","geo 54","fiz 48/50","prf 48/50","geom 58/22","kaz 42/21"]],"9А":[["alg 36/59","alg 36/59","istk 41","fiz 73/72","kl 40","kaz 44/43","rus 45","prog 56/57"],["fk с/з","inf 56/57","geom 36/59","fiz 73/72","fiz 73/72","rus 45","prav 41","eng 47/28"],["geo 54","him 40","kaz 44/43","alg 36/59","alg 36/59","fk с/з","bio 25"],["vist 41","rlit 45","kaz 44/43","eng 47/1","fiz 73/72","prf 73/72","mat 36/59"],["rlit 45","eng 47/40","fk с/з","hud 11/1","geom 36/59","geom 36/59"]],"9Б":[["kl 46","istk 41","fiz 73/72","rus 45","kaz 44/43","alg 36/59","prog 56/57"],["inf 56/57","fiz 73/72","fiz 73/72","fk с/з","eng 47/46","geom 36/59","geom 36/59","hud 11/1"],["kaz 44/43","alg 36/59","mat 36/59","him 40","geo 54","bio 25","fk с/з"],["alg 36/59","alg 36/59","eng 47/1","fiz 73/72","vist 41","prav 53","rlit 45"],["eng 47/40","rlit 45","kaz 44/43","geom 36/59","rus 45","fk с/з","prf 73/72"]],"9В":[["istk 41","kaz 44/43","alg 36/59","mat 36/59","fiz 73/72","fiz 73/72","prog 56/57","kl 46"],["fiz 73/72","fk с/з","inf 56/57","hud 11/1","geom 36/59","eng 47/46","rlit 46"],["alg 36/59","geo 54","him 40","kaz 44/43","bio 25","prav 28","rus 46","fk с/з"],["eng 47/35","fiz 73/72","prf 73/72","kaz 44/43","alg 36/59","alg 36/59","rlit 46"],["geom 36/59","geom 36/59","rus 46","vist 41","fk с/з","eng 47/28"]],"9Г":[["fiz 73/72","fiz 73/72","kaz 44/43","istk 41","alg 36/59","prog 56/57","kl 40"],["geom 36/59","geom 36/59","fk с/з","inf 56/57","hud 11/1","fiz 73/72","eng 47/28","rlit 46"],["him 40","kaz 44/43","geo 54","rus 46","fk с/з","alg 36/59","mat 36/59","bio 25"],["fiz 73/72","eng 47/1","alg 36/59","alg 36/59","kaz 44/43","vist 41","prav 41"],["rus 46","rlit 46","geom 36/59","fk с/з","eng 47/73","prf 73/72"]],"10А":[["inf 56/57","geo 54","alg 28/34","eng 47/20","bio 25","rlit 55","kl 28","prog 57"],["fk с/з","geom 28/34","geom 28/34","istk 41","kaz 42/43","rus 55","prf 50/72"],["fiz 73/72","fiz 73/72","nvp 1","alg 28/34","alg 28/34","prav 41","avto 71","avto 71"],["rlit 55","him 40","kaz 42/21","kaz 42/21","alg 28/34","mat 28/34","eng 20/50","fk с/з","prog 56"],["fk с/з","istk 41","fiz 73/72","fiz 73/72","geom 28/34","vist 41","inf 56/57"]],"10Б":[["rlit 55","eng 47/20","kl 25","bio 25","geo 54","alg 58/34","alg 58/34"],["istk 41","prav 54","fk с/з","rus 55","geom 58/34","geom 58/34","kaz 42/43","prf 50/72"],["kaz 42/21","kaz 42/21","fiz 73/72","fiz 73/72","him 40","alg 58/34","mat 58/34","nvp 1"],["alg 58/34","rlit 55","istk 41","vist 41","fk с/з","inf 56/57","prog 56/57"],["fiz 73/72","fiz 73/72","inf 56/57","eng 20/40","fk с/з","geom 58/34","avto 71","avto 71"]],"10В":[["alg 28/34","alg 28/34","eng 47/20","geo 54","rlit 55","kl 40","bio 25","prf 53/50"],["geom 28/34","istk 41","fiz 53/50","fiz 53/50","rus 55","kaz 42/43","fk с/з","inf 56/57"],["alg 28/34","vist 41","rlit 55","nvp 1","prav 41","him 40"],["fiz 53/50","fiz 53/50","alg 28/34","mat 28/34","kaz 42/21","kaz 42/21","fk с/з","prog 56/57"],["geom 28/34","geom 28/34","eng 20/40","inf 56/57","istk 41","fk с/з","avto 71","avto 71"]],"10Г":[["eng 47/20","rlit 55","geo 54","alg 28/34","mat 28/34","bio 25","prf 53/50","kl 54"],["fiz 53/50","fiz 53/50","istk 41","geom 28/34","fk с/з","fk с/з","rus 55","kaz 42/43"],["vist 41","alg 28/34","alg 28/34","kaz 42/21","kaz 42/21","nvp 1","avto 71","avto 71"],["him 40","alg 28/34","fiz 53/50","fiz 53/50","inf 56/57","eng 20/50","rlit 55","prog 56/57"],["istk 41","fk с/з","geom 28/34","geom 28/34","inf 56/57","prav 55"]],"11А":[["kl 43","inf 57/56","fiz 53/49","fiz 53/49","alg 30/27","mat 30/27","prav 46","kaz 44/43"],["istk 54","rus 45","geom 30/27","geom 30/27","fk с/з","fk с/з","prf 53/49","avto 71","avto 71"],["alg 30/27","alg 30/27","fiz 53/49","inf 57/56","nvp 1","geo 54","him 40"],["kaz 44/43","vist 54","eng 20/40","bio 25","rlit 45","alg 30/27"],["istk 55","fiz 53/49","geom 30/27","rlit 45","eng 20/25","kaz 44/43","fk с/з","prog 57/56"]],"11Б":[["kl 54","rlit 45","alg 30/27","alg 30/27","inf 57/56","fiz 53/49","kaz 44/43"],["him 40","fk с/з","rus 45","istk 54","geom 30/27","geom 30/27","prav 54","prf 53/49"],["nvp 1","inf 57/56","alg 30/27","mat 30/27","fiz 53/49","fiz 53/49","geo 54"],["alg 30/27","kaz 44/43","vist 54","eng 20/40","bio 25","fk с/з","avto 71","avto 71"],["fiz 53/49","kaz 44/43","fk с/з","geom 30/27","istk 55","eng 20/25","rlit 45","prog 57/56"]],"11В":[["fiz 53/49","fiz 53/49","inf 57/56","kaz 44/43","rlit 45","prav 46","alg 30/27","kl 28"],["rus 45","geom 30/27","him 40","fk с/з","istk 54","prf 53/49","avto 71","avto 71"],["inf 57/56","nvp 1","eng 25/20","fiz 53/49","kaz 44/43","alg 30/27","mat 30/27"],["eng 25/20","alg 30/27","alg 30/27","rlit 45","vist 54","bio 25"],["geom 30/27","geom 30/27","fiz 53/49","istk 55","kaz 44/43","geo 54","fk с/з","fk с/з","prog 57/56"]],"11Г":[["alg 30/27","alg 30/27","rlit 45","inf 57/56","fiz 53/49","kl 28","avto 71","avto 71"],["geom 30/27","him 40","istk 54","rus 45","prf 53/49","prav 54","fk с/з","fk с/з"],["fiz 53/49","fiz 53/49","inf 57/56","eng 25/20","alg 30/27","kaz 44/43","nvp 1"],["vist 54","eng 25/20","bio 25","alg 30/27","mat 30/27","kaz 44/43"],["kaz 44/43","istk 55","rlit 45","fiz 53/49","geom 30/27","geom 30/27","geo 54","fk с/з","prog 57/56"]]}};
-let CHANGES = cleanChanges({"updated":"2026-11-02","format":"Замены и сокращённые уроки. Ключ: дата ГГГГ-ММ-ДД. note: пометка для всех. off: уроков нет ни у кого (например «Актированный день»). bells: свои звонки на этот день, как в schedule.json. classes: класс → номер урока → {\"subject\": код или название, \"room\": кабинет} или \"нет урока\". После правки: py tools/build_site.py","days":{}} || {days: {}}); // cleanChanges в rules.js
+let CHANGES = cleanChanges({"updated":"2026-11-02","format":"Замены и сокращённые уроки. Ключ: дата ГГГГ-ММ-ДД. note: пометка для всех. off: уроков нет ни у кого (например «Актированный день»). bells: свои звонки на этот день, как в schedule.json. classes: класс → номер урока → {\"subject\": код или название, \"room\": кабинет} или \"нет урока\". После правки: py tools/build_site.py","days":{}} || {days: {}});
 const BELLS = DATA.bells.map(b => [toMin(b[0]), toMin(b[1])]);
 const CLASSES = Object.keys(DATA.classes).sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b, "ru"));
 const roomName = r => r === "с/з" ? "спортзал" : r;
-/* у каждого предмета свой цвет: название → оттенок (сборка берёт из tools/build_site.py) */
 const SUBJ_HUE = {"Алгебра":"blue","Геометрия":"blue","Математика":"blue","Физика":"purple","Практ. физика":"purple","Казахский яз. и лит.":"yellow","Русский язык":"red","Русская литература":"red","Английский язык":"cyan","История Казахстана":"brown","Всемирная история":"brown","География":"mint","Биология":"green","Химия":"teal","Информатика":"indigo","Программирование":"indigo","Физкультура":"orange","Худ. труд":"pink","Классный час":"gray","Основы права":"brown","НВП":"green","Автодело":"orange"} || {};
 const HUE_IDS = ["blue", "purple", "yellow", "red", "cyan", "brown", "mint", "green", "teal", "indigo", "orange", "pink"];
-/** Оттенок предмета. Для своих предметов из конструктора подбираем по похожему названию или по буквам. */
 function hueOf(subject) {
-  const s = String(subject || "").trim();
-  if (!s) return "none";
-  if (SUBJ_HUE[s]) return SUBJ_HUE[s];
-  const low = s.toLowerCase().slice(0, 5);
-  for (const name in SUBJ_HUE) if (name.toLowerCase().startsWith(low)) return SUBJ_HUE[name];
-  let x = 0;
-  for (const ch of s.toLowerCase()) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
-  return HUE_IDS[x % HUE_IDS.length];
+const s = String(subject || "").trim();
+if (!s) return "none";
+if (SUBJ_HUE[s]) return SUBJ_HUE[s];
+const low = s.toLowerCase().slice(0, 5);
+for (const name in SUBJ_HUE) if (name.toLowerCase().startsWith(low)) return SUBJ_HUE[name];
+let x = 0;
+for (const ch of s.toLowerCase()) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
+return HUE_IDS[x % HUE_IDS.length];
 }
 const LAT = {"А": "a", "Б": "b", "В": "v", "Г": "g"};
 const slugOf = c => c.replace(/[АБВГ]/g, x => LAT[x]).toLowerCase();
-
-/** Обычная неделя класса: 7 дней, в каждом уроки {num, start, end, subject, room}. */
 const CW = {};
 function classWeek(cls) {
-  if (CW[cls]) return CW[cls];
-  const days = DATA.classes[cls] || [];
-  return CW[cls] = Array.from({length: 7}, (_, d) => (days[d] || []).map((raw, i) => {
-    if (!raw || !BELLS[i]) return null;
-    const sp = raw.indexOf(" "), code = sp < 0 ? raw : raw.slice(0, sp), room = sp < 0 ? "" : raw.slice(sp + 1);
-    return {num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: DATA.subjects[code] || code, room: roomName(room)};
-  }).filter(Boolean));
+if (CW[cls]) return CW[cls];
+const days = DATA.classes[cls] || [];
+return CW[cls] = Array.from({length: 7}, (_, d) => (days[d] || []).map((raw, i) => {
+if (!raw || !BELLS[i]) return null;
+const sp = raw.indexOf(" "), code = sp < 0 ? raw : raw.slice(0, sp), room = sp < 0 ? "" : raw.slice(sp + 1);
+return {num: i + 1, start: BELLS[i][0], end: BELLS[i][1], subject: DATA.subjects[code] || code, room: roomName(room)};
+}).filter(Boolean));
 }
-/** Своё расписание из конструктора: {bells: [[с, по]], days: [[[предмет, кабинет]]]}. */
 function customWeek(c) {
-  const bells = (c.bells || DATA.bells).map(b => [toMin(b && b[0]), toMin(b && b[1])]);
-  return Array.from({length: 7}, (_, d) => ((c.days || [])[d] || []).map((l, i) => {
-    if (!l || !clean(l[0]) || !bells[i] || bells[i][0] < 0 || bells[i][1] <= bells[i][0]) return null;
-    return {num: i + 1, start: bells[i][0], end: bells[i][1], subject: clean(l[0]), room: roomName(clean(l[1]))};
-  }).filter(Boolean));
+const bells = (c.bells || DATA.bells).map(b => [toMin(b && b[0]), toMin(b && b[1])]);
+return Array.from({length: 7}, (_, d) => ((c.days || [])[d] || []).map((l, i) => {
+if (!l || !clean(l[0]) || !bells[i] || bells[i][0] < 0 || bells[i][1] <= bells[i][0]) return null;
+return {num: i + 1, start: bells[i][0], end: bells[i][1], subject: clean(l[0]), room: roomName(clean(l[1]))};
+}).filter(Boolean));
 }
-
-/* Каникулы, замены, звонки на дату, уроки на дату и что происходит сейчас: rules.js (общий с виджетом iPhone). */
-/** Номера отменённых уроков класса на дату. */
 const cancelled = (c, d) => { const ch = chDay(d), fix = ch && (ch.classes || {})[c] || {}; return Object.keys(fix).filter(n => noLesson(fix[n])).map(Number); };
-
-/** 24:16 или 1:02:03. Округляем вверх: 0:00 должен совпасть со звонком, а не наступить на секунду раньше. */
 function fmtTimer(ms) {
-  const t = Math.max(0, Math.ceil(ms / 1000)), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), S = t % 60;
-  return (H ? H + ":" + two(M) : M) + ":" + two(S);
+const t = Math.max(0, Math.ceil(ms / 1000)), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), S = t % 60;
+return (H ? H + ":" + two(M) : M) + ":" + two(S);
 }
-
-/* ---------- кабинеты ---------- */
-/** "42/21" это две группы в двух кабинетах. */
 const splitRooms = r => (r || "").split("/").map(x => x.trim()).filter(Boolean);
 const ROOM_SET = new Set();
 CLASSES.forEach(c => classWeek(c).forEach(list => list.forEach(l => splitRooms(l.room).forEach(r => ROOM_SET.add(r)))));
 const ROOMS = [...ROOM_SET].sort((a, b) => (parseInt(a) || 999) - (parseInt(b) || 999) || a.localeCompare(b, "ru"));
-/** Кто где сидит в эту дату (с заменами). В каникулы показываем обычный день недели. */
 function roomDay(date) {
-  const off = dayOff(date), d = dow(date), use = {};
-  CLASSES.forEach(c => (off ? classWeek(c)[d] : dayLessons(c, date)).forEach(l => splitRooms(l.room)
-    .forEach(r => (use[r] = use[r] || []).push({num: l.num, cls: c, subject: l.subject, start: l.start, end: l.end}))));
-  return use;
+const off = dayOff(date), d = dow(date), use = {};
+CLASSES.forEach(c => (off ? classWeek(c)[d] : dayLessons(c, date)).forEach(l => splitRooms(l.room)
+.forEach(r => (use[r] = use[r] || []).push({num: l.num, cls: c, subject: l.subject, start: l.start, end: l.end}))));
+return use;
 }
 const lowFirst = t => /^[А-ЯЁ][а-яё]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t;
-/** Короткий ответ: кто сейчас в кабинете и когда он освободится. */
 function roomNow(room, use, nowMin) {
-  const u = (use[room] || []).slice().sort((a, b) => a.num - b.num), cur = u.filter(x => nowMin >= x.start && nowMin < x.end);
-  const who = list => [...new Set(list.map(x => x.cls))].join(", ") + ", " + lowFirst(list[0].subject);
-  if (cur.length) {
-    let n = cur[0].num, end = cur[0].end;
-    for (let x; (x = u.find(y => y.num === n + 1)); n++) end = x.end; // уроки подряд: занят до конца цепочки
-    return {busy: true, text: "Сейчас " + who(cur) + ". Освободится в " + hm(end)};
-  }
-  const nx = u.find(x => x.start >= nowMin);
-  return {busy: false, text: nx ? "Сейчас свободен. Дальше " + who(u.filter(x => x.num === nx.num)) + " в " + hm(nx.start) : "Свободен до конца дня"};
+const u = (use[room] || []).slice().sort((a, b) => a.num - b.num), cur = u.filter(x => nowMin >= x.start && nowMin < x.end);
+const who = list => [...new Set(list.map(x => x.cls))].join(", ") + ", " + lowFirst(list[0].subject);
+if (cur.length) {
+let n = cur[0].num, end = cur[0].end;
+for (let x; (x = u.find(y => y.num === n + 1)); n++) end = x.end;
+return {busy: true, text: "Сейчас " + who(cur) + ". Освободится в " + hm(end)};
 }
-
-/* Звонок · правила дня: каникулы, замены, сокращённые звонки и что происходит в момент now.
-   Один файл на сайт и на виджет iPhone. Сборка (tools/build_site.py) вставляет его в скрипт Scriptable
-   между метками, поэтому правила у сайта и виджета не расходятся. Править только здесь.
-   Только объявления функций: виджет передаёт их в свой экран через toString().
-   Снаружи нужны: DATA {holidays, subjects, term_end}, CHANGES, BELLS, classWeek(c), iso, dow, toMin, clean,
-   roomName, hm, dm, at, word, DAYN и WHEN (с понедельника). */
-
-/** Замены с сайта: оставляем только то, что правила умеют читать. Кривое поле в changes.json выпадает,
- *  а не роняет расписание у всех (на сайте и в виджете одинаково). */
+const nx = u.find(x => x.start >= nowMin);
+return {busy: false, text: nx ? "Сейчас свободен. Дальше " + who(u.filter(x => x.num === nx.num)) + " в " + hm(nx.start) : "Свободен до конца дня"};
+}
 function cleanChanges(j) {
-  const out = {days: {}}, str = v => typeof v === "string", obj = v => !!v && typeof v === "object" && !Array.isArray(v);
-  if (!obj(j)) return out;
-  if (str(j.updated)) out.updated = j.updated;
-  const days = obj(j.days) ? j.days : {};
-  for (const date of Object.keys(days)) {
-    const c = days[date];
-    if (!/^\d{4}-\d\d-\d\d$/.test(date) || !obj(c)) continue;
-    const day = {};
-    if (str(c.note)) day.note = c.note;
-    if (str(c.off) && c.off.trim()) day.off = c.off;
-    else if (c.off === true) day.off = "Уроков нет"; // off: true тоже значит «уроков нет», пустая строка нет
-    // пустой список звонков считаем ошибкой правки: звонки в этот день обычные
-    if (Array.isArray(c.bells) && c.bells.length) day.bells = c.bells.map(b => Array.isArray(b) && str(b[0]) && str(b[1]) ? [b[0], b[1]] : null);
-    if (obj(c.classes)) {
-      day.classes = {};
-      for (const cls of Object.keys(c.classes)) {
-        const fix = c.classes[cls], f = {};
-        if (!obj(fix)) continue;
-        for (const n of Object.keys(fix)) {
-          const v = fix[n];
-          if (!/^\d{1,2}$/.test(n)) continue;
-          if (v === null || str(v)) f[n] = v;
-          else if (obj(v)) f[n] = {subject: str(v.subject) ? v.subject : undefined, room: str(v.room) || typeof v.room === "number" ? String(v.room) : undefined};
-        }
-        day.classes[cls] = f;
-      }
-    }
-    out.days[date] = day;
-  }
-  return out;
+const out = {days: {}}, str = v => typeof v === "string", obj = v => !!v && typeof v === "object" && !Array.isArray(v);
+if (!obj(j)) return out;
+if (str(j.updated)) out.updated = j.updated;
+const days = obj(j.days) ? j.days : {};
+for (const date of Object.keys(days)) {
+const c = days[date];
+if (!/^\d{4}-\d\d-\d\d$/.test(date) || !obj(c)) continue;
+const day = {};
+if (str(c.note)) day.note = c.note;
+if (str(c.off) && c.off.trim()) day.off = c.off;
+else if (c.off === true) day.off = "Уроков нет";
+if (Array.isArray(c.bells) && c.bells.length) day.bells = c.bells.map(b => Array.isArray(b) && str(b[0]) && str(b[1]) ? [b[0], b[1]] : null);
+if (obj(c.classes)) {
+day.classes = {};
+for (const cls of Object.keys(c.classes)) {
+const fix = c.classes[cls], f = {};
+if (!obj(fix)) continue;
+for (const n of Object.keys(fix)) {
+const v = fix[n];
+if (!/^\d{1,2}$/.test(n)) continue;
+if (v === null || str(v)) f[n] = v;
+else if (obj(v)) f[n] = {subject: str(v.subject) ? v.subject : undefined, room: str(v.room) || typeof v.room === "number" ? String(v.room) : undefined};
 }
-/** Каникулы и праздники: [с, по, название]. */
+day.classes[cls] = f;
+}
+}
+out.days[date] = day;
+}
+return out;
+}
 function holiday(d) { const t = iso(d); return (DATA.holidays || []).find(x => t >= x[0] && t <= x[1]) || null; }
-/** Замены на дату: data/changes.json (копия на момент сборки, свежая подтягивается с сайта). */
 function chDay(d) { return (CHANGES.days || {})[iso(d)] || null; }
-/** null, «нет» или «нет урока» в заменах: урока нет. */
 function noLesson(v) { return v === null || (typeof v === "string" && /^нет/i.test(v.trim())); }
-/** День без уроков у всех: каникулы, праздник или «off» в заменах. [с, по, название] */
 function dayOff(d) { const x = holiday(d), c = chDay(d); return x || (c && c.off ? [iso(d), iso(d), clean(c.off)] : null); }
-/** Звонки на дату: свои на день целиком из замен или обычные. Урока без звонка в этот день нет. */
 function dayBells(d) {
-  const c = chDay(d);
-  if (!c || !Array.isArray(c.bells)) return BELLS;
-  return c.bells.map((x, i) => { const s = x ? toMin(x[0]) : -1, e = x ? toMin(x[1]) : -1; return s >= 0 && e > s ? [s, e] : BELLS[i] || null; });
+const c = chDay(d);
+if (!c || !Array.isArray(c.bells)) return BELLS;
+return c.bells.map((x, i) => { const s = x ? toMin(x[0]) : -1, e = x ? toMin(x[1]) : -1; return s >= 0 && e > s ? [s, e] : BELLS[i] || null; });
 }
-/** Уроки класса на конкретную дату: с каникулами, заменами и сокращёнными звонками. */
 function dayLessons(c, d) {
-  if (dayOff(d)) return [];
-  const base = classWeek(c)[dow(d)], ch = chDay(d);
-  if (!ch) return base;
-  const bells = dayBells(d), fix = (ch.classes || {})[c] || {}, short = bells !== BELLS;
-  const nums = [...new Set(base.map(l => l.num).concat(Object.keys(fix).map(Number).filter(n => n > 0)))].sort((a, b) => a - b);
-  return nums.map(n => {
-    let l = base.find(x => x.num === n);
-    const f = fix[n];
-    if (f !== undefined && noLesson(f)) return null;
-    if (f && typeof f === "object") l = {num: n, changed: true,
-      subject: f.subject ? DATA.subjects[f.subject] || clean(f.subject) : l ? l.subject : "",
-      room: f.room != null ? roomName(clean(f.room)) : l ? l.room : ""};
-    if (!l || !l.subject || !bells[n - 1]) return null;
-    return Object.assign({}, l, {start: bells[n - 1][0], end: bells[n - 1][1], short});
-  }).filter(Boolean);
+if (dayOff(d)) return [];
+const base = classWeek(c)[dow(d)], ch = chDay(d);
+if (!ch) return base;
+const bells = dayBells(d), fix = (ch.classes || {})[c] || {}, short = bells !== BELLS;
+const nums = [...new Set(base.map(l => l.num).concat(Object.keys(fix).map(Number).filter(n => n > 0)))].sort((a, b) => a - b);
+return nums.map(n => {
+let l = base.find(x => x.num === n);
+const f = fix[n];
+if (f !== undefined && noLesson(f)) return null;
+if (f && typeof f === "object") l = {num: n, changed: true,
+subject: f.subject ? DATA.subjects[f.subject] || clean(f.subject) : l ? l.subject : "",
+room: f.room != null ? roomName(clean(f.room)) : l ? l.room : ""};
+if (!l || !l.subject || !bells[n - 1]) return null;
+return Object.assign({}, l, {start: bells[n - 1][0], end: bells[n - 1][1], short});
+}).filter(Boolean);
 }
-
-/**
- * Что происходит в момент now. src = {at(date) → уроки на дату, real: учитывать каникулы}.
- * kind: LESSON (идёт урок), BREAK (перемена), BEFORE (до первого урока), AFTER (уроки кончились), OFF (уроков нет).
- */
 function compute(now, src) {
-  const s = {}, list = src.at(now), sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-  if (list.length) {
-    const first = list[0], last = list[list.length - 1];
-    s.count = list.length; s.end = hm(last.end); s.list = list;
-    if (sec < first.start * 60) {
-      return Object.assign(s, {kind: "BEFORE", next: first, start: at(now, first.start - 60), target: at(now, first.start), soon: sec >= (first.start - 60) * 60});
-    }
-    for (let i = 0; i < list.length; i++) {
-      const l = list[i];
-      if (sec < l.end * 60) {
-        if (sec >= l.start * 60) Object.assign(s, {kind: "LESSON", cur: l, idx: i, next: list[i + 1] || null, start: at(now, l.start), target: at(now, l.end)});
-        else Object.assign(s, {kind: "BREAK", cur: list[i - 1], idx: i - 1, next: l, start: at(now, list[i - 1].end), target: at(now, l.start)});
-        return s;
-      }
-    }
-    s.kind = "AFTER";
-  } else { s.kind = "OFF"; s.holiday = src.real ? dayOff(now) : null; }
-  for (let d = 1; d <= 120; d++) {
-    const date = new Date(now); date.setDate(date.getDate() + d);
-    const l = src.at(date);
-    if (!l.length) continue;
-    const far = d > 6;
-    Object.assign(s, {next: l[0], nList: l, nDate: date, nDays: d, nCount: l.length, nEnd: hm(l[l.length - 1].end),
-      nLabel: d === 1 ? "Завтра" : far ? dm(date) : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : far ? dm(date) : WHEN[dow(date)], target: at(date, l[0].start)});
-    break;
-  }
-  return s;
+const s = {}, list = src.at(now), sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+if (list.length) {
+const first = list[0], last = list[list.length - 1];
+s.count = list.length; s.end = hm(last.end); s.list = list;
+if (sec < first.start * 60) {
+return Object.assign(s, {kind: "BEFORE", next: first, start: at(now, first.start - 60), target: at(now, first.start), soon: sec >= (first.start - 60) * 60});
 }
-/** Сколько учебных дней до ближайших каникул (сегодня считается, если уроки ещё не кончились). */
+for (let i = 0; i < list.length; i++) {
+const l = list[i];
+if (sec < l.end * 60) {
+if (sec >= l.start * 60) Object.assign(s, {kind: "LESSON", cur: l, idx: i, next: list[i + 1] || null, start: at(now, l.start), target: at(now, l.end)});
+else Object.assign(s, {kind: "BREAK", cur: list[i - 1], idx: i - 1, next: l, start: at(now, list[i - 1].end), target: at(now, l.start)});
+return s;
+}
+}
+s.kind = "AFTER";
+} else { s.kind = "OFF"; s.holiday = src.real ? dayOff(now) : null; }
+for (let d = 1; d <= 120; d++) {
+const date = new Date(now); date.setDate(date.getDate() + d);
+const l = src.at(date);
+if (!l.length) continue;
+const far = d > 6;
+Object.assign(s, {next: l[0], nList: l, nDate: date, nDays: d, nCount: l.length, nEnd: hm(l[l.length - 1].end),
+nLabel: d === 1 ? "Завтра" : far ? dm(date) : DAYN[dow(date)], nWhen: d === 1 ? "завтра" : far ? dm(date) : WHEN[dow(date)], target: at(date, l[0].start)});
+break;
+}
+return s;
+}
 function vacation(now, src) {
-  if (!src.real || holiday(now) || (DATA.term_end && iso(now) > DATA.term_end)) return null;
-  const t = iso(now), v = (DATA.holidays || []).filter(x => /каникул/i.test(x[2]) && x[0] > t).sort((a, b) => a[0] < b[0] ? -1 : 1)[0];
-  if (!v) return null;
-  const d = new Date(now), nowMin = now.getHours() * 60 + now.getMinutes();
-  let n = 0, today = false;
-  for (let i = 0; i < 400 && iso(d) < v[0]; i++, d.setDate(d.getDate() + 1)) {
-    const l = src.at(d);
-    if (!l.length || (i === 0 && nowMin >= l[l.length - 1].end)) continue;
-    n++; if (i === 0) today = true;
-  }
-  return n > 60 ? null : {n, today, name: v[2], from: v[0]}; // больше 60 дней: рано считать
+if (!src.real || holiday(now) || (DATA.term_end && iso(now) > DATA.term_end)) return null;
+const t = iso(now), v = (DATA.holidays || []).filter(x => /каникул/i.test(x[2]) && x[0] > t).sort((a, b) => a[0] < b[0] ? -1 : 1)[0];
+if (!v) return null;
+const d = new Date(now), nowMin = now.getHours() * 60 + now.getMinutes();
+let n = 0, today = false;
+for (let i = 0; i < 400 && iso(d) < v[0]; i++, d.setDate(d.getDate() + 1)) {
+const l = src.at(d);
+if (!l.length || (i === 0 && nowMin >= l[l.length - 1].end)) continue;
+n++; if (i === 0) today = true;
+}
+return n > 60 ? null : {n, today, name: v[2], from: v[0]};
 }
 function vacationText(v) {
-  if (!v) return "";
-  if (!v.n) return "Дальше " + v.name.toLowerCase();
-  if (v.n === 1 && v.today) return "Сегодня последний учебный день, потом " + v.name.toLowerCase();
-  return "До каникул " + word(v.n, "учебный день", "учебных дня", "учебных дней");
+if (!v) return "";
+if (!v.n) return "Дальше " + v.name.toLowerCase();
+if (v.n === 1 && v.today) return "Сегодня последний учебный день, потом " + v.name.toLowerCase();
+return "До каникул " + word(v.n, "учебный день", "учебных дня", "учебных дней");
 }
-
-/* ---------- СОР и СОЧ: DATA.sor {класс: {предмет: [даты]}}, DATA.soch {класс: {предмет: дата}} ---------- */
-/** Все СОР и СОЧ класса по порядку: [{date, type: "СОР" | "СОЧ", subject}]. В один день сначала СОЧ, внутри по названию предмета. */
 function examList(c) {
-  const out = [], name = k => DATA.subjects[k] || clean(k), r = (DATA.sor || {})[c] || {}, q = (DATA.soch || {})[c] || {};
-  for (const k in r) (Array.isArray(r[k]) ? r[k] : []).forEach(date => out.push({date, type: "СОР", subject: name(k)}));
-  for (const k in q) if (typeof q[k] === "string") out.push({date: q[k], type: "СОЧ", subject: name(k)});
-  const key = x => x.date + (x.type === "СОЧ" ? "0" : "1") + x.subject;
-  return out.sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
+const out = [], name = k => DATA.subjects[k] || clean(k), r = (DATA.sor || {})[c] || {}, q = (DATA.soch || {})[c] || {};
+for (const k in r) (Array.isArray(r[k]) ? r[k] : []).forEach(date => out.push({date, type: "СОР", subject: name(k)}));
+for (const k in q) if (typeof q[k] === "string") out.push({date: q[k], type: "СОЧ", subject: name(k)});
+const key = x => x.date + (x.type === "СОЧ" ? "0" : "1") + x.subject;
+return out.sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
 }
-/** СОР и СОЧ класса на дату. */
 function examsOn(c, d) { const t = iso(d); return examList(c).filter(x => x.date === t); }
-/** «СОЧ: алгебра, физика. СОР: химия» */
 function examText(list) {
-  return ["СОЧ", "СОР"].map(t => { const s = list.filter(x => x.type === t).map(x => x.subject.toLowerCase()); return s.length ? t + ": " + s.join(", ") : ""; }).filter(Boolean).join(". ");
+return ["СОЧ", "СОР"].map(t => { const s = list.filter(x => x.type === t).map(x => x.subject.toLowerCase()); return s.length ? t + ": " + s.join(", ") : ""; }).filter(Boolean).join(". ");
 }
-/** Последний день, когда в лицее у кого-то есть СОР или СОЧ; "" если графика нет. После него вкладка «СОР/СОЧ» прячется. */
 function examsEnd() {
-  let last = "";
-  for (const c in DATA.classes) examList(c).forEach(x => { if (x.date > last) last = x.date; });
-  return last;
+let last = "";
+for (const c in DATA.classes) examList(c).forEach(x => { if (x.date > last) last = x.date; });
+return last;
 }
-
-/* ---------- кружки и ШОР: set = {shor: [id групп из DATA.shor], clubs: [{name, place, times: [[день 0–6, "с", "по"]]}]} ---------- */
-/** Занятия после уроков на дату, по времени. В каникулы и праздники их нет. */
 function extrasOn(d, set) {
-  if (!set || holiday(d)) return [];
-  const w = dow(d), out = [];
-  const add = (name, place, times) => (Array.isArray(times) ? times : []).forEach(t => {
-    const s = toMin(t && t[1]), e = toMin(t && t[2]);
-    if (t && t[0] === w && s >= 0 && e > s && name) out.push({name, place: place || "", start: s, end: e});
-  });
-  (DATA.shor || []).forEach(g => { if ((set.shor || []).includes(g.id)) add("ШОР · " + g.subject, g.place, g.times); });
-  (set.clubs || []).forEach(c => { if (c) add(clean(c.name), clean(c.place), c.times); });
-  return out.sort((a, b) => a.start - b.start);
+if (!set || holiday(d)) return [];
+const w = dow(d), out = [];
+const add = (name, place, times) => (Array.isArray(times) ? times : []).forEach(t => {
+const s = toMin(t && t[1]), e = toMin(t && t[2]);
+if (t && t[0] === w && s >= 0 && e > s && name) out.push({name, place: place || "", start: s, end: e});
+});
+(DATA.shor || []).forEach(g => { if ((set.shor || []).includes(g.id)) add("ШОР · " + g.subject, g.place, g.times); });
+(set.clubs || []).forEach(c => { if (c) add(clean(c.name), clean(c.place), c.times); });
+return out.sort((a, b) => a.start - b.start);
 }
-/** Ближайшее занятие сегодня: on = уже идёт (target это конец), иначе впереди (target это начало). null: на сегодня всё. */
 function extraNow(now, set) {
-  const m = now.getHours() * 60 + now.getMinutes(), x = extrasOn(now, set).find(e => m < e.end);
-  return x ? Object.assign({on: m >= x.start, target: at(now, m >= x.start ? x.end : x.start)}, x) : null;
+const m = now.getHours() * 60 + now.getMinutes(), x = extrasOn(now, set).find(e => m < e.end);
+return x ? Object.assign({on: m >= x.start, target: at(now, m >= x.start ? x.end : x.start)}, x) : null;
 }
-/** «ШОР · Физика: до конца 1 ч 5 мин» или «…: до начала 20 мин». */
 function extraText(x, now) {
-  const left = Math.max(1, Math.ceil((x.target - now) / 60000)), H = Math.floor(left / 60), M = left % 60;
-  return x.name + ": до " + (x.on ? "конца " : "начала ") + ((H ? H + " ч " : "") + (M || !H ? M + " мин" : "")).trim();
+const left = Math.max(1, Math.ceil((x.target - now) / 60000)), H = Math.floor(left / 60), M = left % 60;
+return x.name + ": до " + (x.on ? "конца " : "начала ") + ((H ? H + " ч " : "") + (M || !H ? M + " мин" : "")).trim();
 }
-
-/* ---------- праздники ---------- */
-/** Ближайший учебный день (завтра, а в пятницу понедельник) выпал на праздник: «Завтра День Независимости, в школу не идём».
- *  Про каникулы отдельно говорит vacationText. */
 function offSoon(now, src) {
-  if (!src.real || holiday(now)) return "";
-  const d = new Date(now), w = dow(now);
-  if (w > 4) return "";
-  d.setDate(d.getDate() + (w === 4 ? 3 : 1));
-  const x = holiday(d);
-  return x && !/каникул/i.test(x[2]) ? (w === 4 ? "В понедельник " : "Завтра ") + x[2] + ", в школу не идём" : "";
+if (!src.real || holiday(now)) return "";
+const d = new Date(now), w = dow(now);
+if (w > 4) return "";
+d.setDate(d.getDate() + (w === 4 ? 3 : 1));
+const x = holiday(d);
+return x && !/каникул/i.test(x[2]) ? (w === 4 ? "В понедельник " : "Завтра ") + x[2] + ", в школу не идём" : "";
 }
-/** Праздничная тема на дату из DATA.themes: [с "ММ-ДД", по "ММ-ДД", значок, цвет RRGGBB, название, фраза] или null.
- *  Каждый год в те же дни; отрезок может переходить через Новый год (12-20 … 01-08). */
 function festive(d) {
-  const t = iso(d).slice(5);
-  return (DATA.themes || []).find(x => Array.isArray(x) && (x[0] <= x[1] ? t >= x[0] && t <= x[1] : t >= x[0] || t <= x[1])) || null;
+const t = iso(d).slice(5);
+return (DATA.themes || []).find(x => Array.isArray(x) && (x[0] <= x[1] ? t >= x[0] && t <= x[1] : t >= x[0] || t <= x[1])) || null;
 }
-
-/* Звонок · iPhone: скрипт для Scriptable (виджеты и приложение «Звонок»), календарь класса */
-const IOS_VERSIONS = {"7A":"cdd754cfd5","7B":"cbf2301931","7V":"24ff16bd5b","8A":"359e501c16","8B":"7ab0f5ad81","8V":"0b24f4506f","8G":"0364904555","9A":"f98ef711a4","9B":"81e1db22f7","9V":"0639733957","9G":"250a2a5fac","10A":"c1a7420610","10B":"144f12e784","10V":"057f2ea357","10G":"acb1d1013b","11A":"a5c264deff","11B":"55fce9161a","11V":"1007177a05","11G":"5847c17b25"} || {}; // версии скриптов классов: виджет сам скачает новую
+const IOS_VERSIONS = {"7A":"cdd754cfd5","7B":"cbf2301931","7V":"24ff16bd5b","8A":"359e501c16","8B":"7ab0f5ad81","8V":"0b24f4506f","8G":"0364904555","9A":"f98ef711a4","9B":"81e1db22f7","9V":"0639733957","9G":"250a2a5fac","10A":"c1a7420610","10B":"144f12e784","10V":"057f2ea357","10G":"acb1d1013b","11A":"a5c264deff","11B":"55fce9161a","11V":"1007177a05","11G":"5847c17b25"} || {};
 const SITE_URL = "https://danick-dack.github.io/Zvonok/";
 const OWN = "__own__";
 const upSlug = c => c.replace(/[АБВГ]/g, x => LAT[x].toUpperCase());
-
-/* код темы из конструктора: те же цвета у виджета iPhone, что у виджетов Android */
 function themeCode() {
-  const t = cleanTheme(store.get("theme", {})); // только проверенные поля: код встаёт внутрь кавычек в скрипте
-  if (Object.keys(t).every(k => t[k] === TH_DEFAULT[k])) return ""; // ничего не меняли: скрипт и так в фирменных цветах
-  return themeString(t);
+const t = cleanTheme(store.get("theme", {}));
+if (Object.keys(t).every(k => t[k] === TH_DEFAULT[k])) return "";
+return themeString(t);
 }
-/** Скрипт класса с сайта (ios/<класс>.js) с темой и, для своего расписания, с ним внутри (дальше оно живёт в настройках). */
 function personalize(code, own) {
-  const t = themeCode();
-  if (t) code = code.replace('const THEME = "";', "const THEME = " + JSON.stringify(t) + ";");
-  if (own) code = code.replace("const START = null;", "const START = " + JSON.stringify(own) + ";");
-  return code;
+const t = themeCode();
+if (t) code = code.replace('const THEME = "";', "const THEME = " + JSON.stringify(t) + ";");
+if (own) code = code.replace("const START = null;", "const START = " + JSON.stringify(own) + ";");
+return code;
 }
 const calUrl = c => SITE_URL.replace(/^https?:/, "webcal:") + "cal/" + upSlug(c) + ".ics";
-
 (function initKit() {
-  const sel = $("kCls");
-  if (!sel) return;
-  CLASSES.forEach(c => sel.append(h("option", {value: c, text: "Класс " + c})));
-  if (store.get("custom", null)) sel.append(h("option", {value: OWN, text: "Своё расписание"}));
-  const saved = store.get("class", null);
-  sel.value = store.get("useCustom", false) && store.get("custom", null) ? OWN : DATA.classes[saved] ? saved : CLASSES[0];
-  let code = "", want = "";
-  // скрипт скачиваем заранее, при выборе класса: копировать на iPhone можно только сразу по нажатию
-  const sync = () => {
-    const own = sel.value === OWN, base = own ? (DATA.classes[saved] ? saved : CLASSES[0]) : sel.value;
-    $("kCal").hidden = own;
-    if (!own) { $("kCal").href = calUrl(sel.value); $("kCal").textContent = "Подписаться: " + sel.value; }
-    code = "";
-    const key = want = sel.value;
-    fetch("ios/" + upSlug(base) + ".js").then(r => r.ok ? r.text() : Promise.reject(r.status))
-      .then(t => { if (want === key) code = personalize(t, own ? store.get("custom", null) : null); })
-      .catch(() => {});
-  };
-  sel.onchange = sync; sync();
-  const ready = () => { if (!code) toast(navigator.onLine === false ? "Нужен интернет, чтобы взять скрипт" : "Скрипт ещё загружается, нажми через секунду"); return !!code; };
-  $("kCopy").onclick = () => { if (ready()) copyText(code, "Скрипт скопирован. Теперь открой Scriptable"); };
-  $("kFile").onclick = () => {
-    if (!ready()) return;
-    const a = h("a", {href: URL.createObjectURL(new Blob([code], {type: "text/javascript"})), download: "Звонок.js"});
-    document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-  };
+const sel = $("kCls");
+if (!sel) return;
+CLASSES.forEach(c => sel.append(h("option", {value: c, text: "Класс " + c})));
+if (store.get("custom", null)) sel.append(h("option", {value: OWN, text: "Своё расписание"}));
+const saved = store.get("class", null);
+sel.value = store.get("useCustom", false) && store.get("custom", null) ? OWN : DATA.classes[saved] ? saved : CLASSES[0];
+let code = "", want = "";
+const sync = () => {
+const own = sel.value === OWN, base = own ? (DATA.classes[saved] ? saved : CLASSES[0]) : sel.value;
+$("kCal").hidden = own;
+if (!own) { $("kCal").href = calUrl(sel.value); $("kCal").textContent = "Подписаться: " + sel.value; }
+code = "";
+const key = want = sel.value;
+fetch("ios/" + upSlug(base) + ".js").then(r => r.ok ? r.text() : Promise.reject(r.status))
+.then(t => { if (want === key) code = personalize(t, own ? store.get("custom", null) : null); })
+.catch(() => {});
+};
+sel.onchange = sync; sync();
+const ready = () => { if (!code) toast(navigator.onLine === false ? "Нужен интернет, чтобы взять скрипт" : "Скрипт ещё загружается, нажми через секунду"); return !!code; };
+$("kCopy").onclick = () => { if (ready()) copyText(code, "Скрипт скопирован. Теперь открой Scriptable"); };
+$("kFile").onclick = () => {
+if (!ready()) return;
+const a = h("a", {href: URL.createObjectURL(new Blob([code], {type: "text/javascript"})), download: "Звонок.js"});
+document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+};
 })();
 registerSW();
-
-/* Звонок · iPhone: анимация гайда. Шаги, «палец» и экраны телефона; на reduced-motion без движения */
 (() => {
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const D = $('#display'), phone = $('#phone'), pwrap = $('#pwrap'), finger = $('#finger');
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let S = 1;
-
-/* ---------- sizing ---------- */
 function fit(){
-  const col = pwrap.parentElement.getBoundingClientRect().width || 330;
-  const availH = Math.max(480, innerHeight - 190);
-  S = Math.min(1, (col - 4) / 316, availH / 666);
-  phone.style.transform = `scale(${S})`;
-  pwrap.style.width = 316 * S + 'px';
-  pwrap.style.height = 666 * S + 'px';
+const col = pwrap.parentElement.getBoundingClientRect().width || 330;
+const availH = Math.max(480, innerHeight - 190);
+S = Math.min(1, (col - 4) / 316, availH / 666);
+phone.style.transform = `scale(${S})`;
+pwrap.style.width = 316 * S + 'px';
+pwrap.style.height = 666 * S + 'px';
 }
 addEventListener('resize', fit);
-
-/* ---------- clones of the lock face ---------- */
 const face = $('#s-lock .lockface');
 $$('[data-clone="lock"]').forEach(el => { const c = face.cloneNode(true); c.querySelectorAll('[id]').forEach(n => n.removeAttribute('id')); el.appendChild(c); });
 const live = $('[data-clone="lock-live"]');
@@ -964,34 +862,28 @@ live.replaceWith(lc);
 lc.id = 'le-face';
 lc.querySelector('.l-wrow').id = 'le-slot';
 lc.querySelector('.lw').id = 'le-lw';
-
-/* ---------- fake clock: Tuesday 11:12, lesson 4 ends 11:35 ---------- */
 const T0 = Date.now(), START = 11 * 3600 + 12 * 60 + 8, END = 11 * 3600 + 35 * 60, LSTART = 10 * 3600 + 50 * 60;
 function tick(){
-  const now = START + Math.floor((Date.now() - T0) / 1000) % 900;
-  const rem = END - now;
-  const t = Math.floor(rem / 60) + ':' + String(rem % 60).padStart(2, '0');
-  const hm = Math.floor(now / 3600) + ':' + String(Math.floor(now / 60) % 60).padStart(2, '0');
-  $$('[data-timer]').forEach(e => e.textContent = t);
-  $$('[data-clock],[data-sbclock]').forEach(e => e.textContent = hm);
-  $$('[data-prog]').forEach(e => e.style.width = ((now - LSTART) / (END - LSTART) * 100).toFixed(1) + '%');
+const now = START + Math.floor((Date.now() - T0) / 1000) % 900;
+const rem = END - now;
+const t = Math.floor(rem / 60) + ':' + String(rem % 60).padStart(2, '0');
+const hm = Math.floor(now / 3600) + ':' + String(Math.floor(now / 60) % 60).padStart(2, '0');
+$$('[data-timer]').forEach(e => e.textContent = t);
+$$('[data-clock],[data-sbclock]').forEach(e => e.textContent = hm);
+$$('[data-prog]').forEach(e => e.style.width = ((now - LSTART) / (END - LSTART) * 100).toFixed(1) + '%');
 }
 tick();
 let clockT = 0;
-// часы в макете идут, только пока телефон на экране
-// уже идут и нужно идти (или стоят и нужно стоять): ничего не трогаем, интервал не пересоздаётся
 function clock(on){ if (!!clockT === on) return; clearInterval(clockT); clockT = 0; if (on) { tick(); clockT = setInterval(tick, 1000); } }
-
-/* ---------- keyboard ---------- */
 const KB = { en: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], ru: ['йцукенгшщзх', 'фывапролджэ', 'ячсмитьбю'] };
 const kb = $('#kb');
 const shiftSvg = '<svg viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M9 2.5 2.5 9.5H6v6h6v-6h3.5z"/></svg>';
 const delSvg = '<svg viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M6 3.5h9.5v11H6L1.5 9z"/><path d="M8.5 6.5l4 5M12.5 6.5l-4 5" stroke-linecap="round"/></svg>';
 const globeSvg = '<svg viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.3"><circle cx="9" cy="9" r="6.5"/><path d="M2.5 9h13M9 2.5c-2.5 3-2.5 10 0 13M9 2.5c2.5 3 2.5 10 0 13"/></svg>';
 for (const l of ['en', 'ru']) {
-  const r = KB[l];
-  const keys = s => [...s].map(c => `<span class="k" data-k="${c}">${c}</span>`).join('');
-  kb.insertAdjacentHTML('beforeend', `<div class="kb-l" data-l="${l}">
+const r = KB[l];
+const keys = s => [...s].map(c => `<span class="k" data-k="${c}">${c}</span>`).join('');
+kb.insertAdjacentHTML('beforeend', `<div class="kb-l" data-l="${l}">
     <div class="kr">${keys(r[0])}</div>
     <div class="kr">${keys(r[1])}</div>
     <div class="kr"><span class="k sp" data-k="shift">${shiftSvg}</span>${keys(r[2])}<span class="k sp" data-k="del">${delSvg}</span></div>
@@ -1002,8 +894,6 @@ function kbShow(lang, ret, blue){ kb.dataset.l = lang; const r = $(`.kb-l[data-l
 function kbHide(){ kb.classList.remove('x-on'); }
 const kbRet = () => $(`.kb-l[data-l="${kb.dataset.l}"] .ret`, kb);
 async function hit(k){ const el = $(`.kb-l[data-l="${kb.dataset.l}"] [data-k="${CSS.escape(k)}"]`, kb); if (!el) return; el.classList.add('x-hit'); await wait(90); el.classList.remove('x-hit'); }
-
-/* ---------- code for the editor ---------- */
 const CODE = [
 'function describe(s, now) {',
 '  const d = { timer: false, progress: -1 };',
@@ -1037,414 +927,391 @@ const CODE = [
 ];
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 function hl(line){
-  return esc(line).replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*")|\b(function|const|let|if|else|return|new|true|false)\b|\b(\d+)\b|\b([a-zA-Z]+)(?=\()/g,
-    (m, c, s, k, n, f) => c ? `<span class="tc">${c}</span>` : s ? `<span class="ts">${s}</span>` : k ? `<span class="tk">${k}</span>` : n ? `<span class="tn">${n}</span>` : `<span class="tf">${f}</span>`);
+return esc(line).replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*")|\b(function|const|let|if|else|return|new|true|false)\b|\b(\d+)\b|\b([a-zA-Z]+)(?=\()/g,
+(m, c, s, k, n, f) => c ? `<span class="tc">${c}</span>` : s ? `<span class="ts">${s}</span>` : k ? `<span class="tk">${k}</span>` : n ? `<span class="tn">${n}</span>` : `<span class="tf">${f}</span>`);
 }
 function fillCode(anim){
-  const el = $('#ed-code');
-  el.classList.toggle('x-paste', !!anim);
-  el.innerHTML = CODE.map((l, i) => `<div class="ln" style="animation-delay:${i * 18}ms"><span class="no">${i + 1}</span><span>${hl(l) || ' '}</span></div>`).join('');
+const el = $('#ed-code');
+el.classList.toggle('x-paste', !!anim);
+el.innerHTML = CODE.map((l, i) => `<div class="ln" style="animation-delay:${i * 18}ms"><span class="no">${i + 1}</span><span>${hl(l) || ' '}</span></div>`).join('');
 }
-
-/* ---------- timeline engine ---------- */
 const CANCEL = Symbol('cancel');
 let runId = 0, paused = false, cur = null, z = 10;
-// Сон без опроса: один таймер на всё оставшееся время. Пауза, «дальше» и «назад» будят спящих сразу,
-// а на паузе спим, пока не разбудят (раньше тут проверка шла 25 раз в секунду, даже на паузе).
 const wakers = new Set();
 function nap(ms){
-  return new Promise(r => {
-    const w = () => { clearTimeout(t); wakers.delete(w); r(); };
-    const t = setTimeout(w, ms);
-    wakers.add(w);
-  });
+return new Promise(r => {
+const w = () => { clearTimeout(t); wakers.delete(w); r(); };
+const t = setTimeout(w, ms);
+wakers.add(w);
+});
 }
 const wakeAll = () => [...wakers].forEach(w => w());
 async function wait(ms){
-  const id = runId; let left = RM ? ms * .75 : ms;
-  while (left > 0) {
-    if (id !== runId) throw CANCEL;
-    if (paused) { await nap(864e5); continue; }
-    const t0 = performance.now();
-    await nap(left);
-    left -= performance.now() - t0;
-  }
-  if (id !== runId) throw CANCEL;
+const id = runId; let left = RM ? ms * .75 : ms;
+while (left > 0) {
+if (id !== runId) throw CANCEL;
+if (paused) { await nap(864e5); continue; }
+const t0 = performance.now();
+await nap(left);
+left -= performance.now() - t0;
+}
+if (id !== runId) throw CANCEL;
 }
 function pt(el){
-  const d = D.getBoundingClientRect(), r = el.getBoundingClientRect();
-  return { x: (r.left + r.width / 2 - d.left) / S, y: (r.top + r.height / 2 - d.top) / S };
+const d = D.getBoundingClientRect(), r = el.getBoundingClientRect();
+return { x: (r.left + r.width / 2 - d.left) / S, y: (r.top + r.height / 2 - d.top) / S };
 }
 let fx = 150, fy = 700;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const place = (x, y) => { finger.style.transform = `translate(${x}px, ${y}px)`; };
-// A real thumb never travels in a ruler-straight line: move along a gently bent curve, ease in and out.
-// Путь считаем заранее (кадр на каждые ~16 мс) и отдаём браузеру одной анимацией transform: её крутит
-// поток компоновки, а скрипт и стили страницы не просыпаются 60 раз в секунду, как было с requestAnimationFrame.
 function glide(x, y, dur){
-  const id = runId, x0 = fx, y0 = fy;
-  const dx = x - x0, dy = y - y0, len = Math.hypot(dx, dy) || 1;
-  const bend = rnd(.06, .2) * len * (Math.random() < .5 ? -1 : 1);
-  const cx = (x0 + x) / 2 - dy / len * bend, cy = (y0 + y) / 2 + dx / len * bend;
-  const at = k => { const e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, u = 1 - e;
-    return [u * u * x0 + 2 * u * e * cx + e * e * x, u * u * y0 + 2 * u * e * cy + e * e * y]; };
-  const n = Math.max(12, Math.round(dur / 16)), frames = [];
-  for (let i = 0; i <= n; i++) { const p = at(i / n); frames.push({transform: `translate(${p[0].toFixed(2)}px, ${p[1].toFixed(2)}px)`}); }
-  place(x, y); // под анимацией уже стоит конечная точка: когда она кончится, палец не прыгнет назад
-  const a = finger.animate(frames, {duration: dur, easing: 'linear'});
-  if (paused) a.pause();
-  return new Promise((res, rej) => {
-    // пауза, «дальше» и «назад» будят всех ждущих (wakeAll): тут ставим анимацию на паузу или снимаем
-    const check = () => {
-      wakers.delete(check);
-      if (id !== runId) {
-        const p = at(Math.min(1, (a.currentTime || 0) / dur));
-        a.cancel(); fx = p[0]; fy = p[1]; place(fx, fy);
-        return rej(CANCEL);
-      }
-      if (paused) a.pause(); else if (a.playState === 'paused') a.play();
-      wakers.add(check);
-    };
-    wakers.add(check);
-    a.onfinish = () => { wakers.delete(check); fx = x; fy = y; a.cancel(); res(); };
-  });
+const id = runId, x0 = fx, y0 = fy;
+const dx = x - x0, dy = y - y0, len = Math.hypot(dx, dy) || 1;
+const bend = rnd(.06, .2) * len * (Math.random() < .5 ? -1 : 1);
+const cx = (x0 + x) / 2 - dy / len * bend, cy = (y0 + y) / 2 + dx / len * bend;
+const at = k => { const e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2, u = 1 - e;
+return [u * u * x0 + 2 * u * e * cx + e * e * x, u * u * y0 + 2 * u * e * cy + e * e * y]; };
+const n = Math.max(12, Math.round(dur / 16)), frames = [];
+for (let i = 0; i <= n; i++) { const p = at(i / n); frames.push({transform: `translate(${p[0].toFixed(2)}px, ${p[1].toFixed(2)}px)`}); }
+place(x, y);
+const a = finger.animate(frames, {duration: dur, easing: 'linear'});
+if (paused) a.pause();
+return new Promise((res, rej) => {
+const check = () => {
+wakers.delete(check);
+if (id !== runId) {
+const p = at(Math.min(1, (a.currentTime || 0) / dur));
+a.cancel(); fx = p[0]; fy = p[1]; place(fx, fy);
+return rej(CANCEL);
+}
+if (paused) a.pause(); else if (a.playState === 'paused') a.play();
+wakers.add(check);
+};
+wakers.add(check);
+a.onfinish = () => { wakers.delete(check); fx = x; fy = y; a.cancel(); res(); };
+});
 }
 async function go(sel, o = {}){
-  const el = typeof sel === 'string' ? $(sel, D) : sel;
-  const p = pt(el);
-  // people rarely hit the exact centre of a button
-  const x = p.x + (o.dx || 0) + rnd(-3, 3), y = p.y + (o.dy || 0) + rnd(-2.5, 2.5);
-  if (!finger.classList.contains('x-show')) { fx = x + rnd(20, 50); fy = y + rnd(70, 110); place(fx, fy); void finger.offsetWidth; finger.classList.add('x-show'); }
-  const dist = Math.hypot(x - fx, y - fy);
-  const dur = o.dur || Math.round(Math.min(950, Math.max(360, dist * rnd(1.4, 1.9))));
-  await glide(x, y, RM ? dur * .6 : dur);
-  await wait(rnd(110, 300));
+const el = typeof sel === 'string' ? $(sel, D) : sel;
+const p = pt(el);
+const x = p.x + (o.dx || 0) + rnd(-3, 3), y = p.y + (o.dy || 0) + rnd(-2.5, 2.5);
+if (!finger.classList.contains('x-show')) { fx = x + rnd(20, 50); fy = y + rnd(70, 110); place(fx, fy); void finger.offsetWidth; finger.classList.add('x-show'); }
+const dist = Math.hypot(x - fx, y - fy);
+const dur = o.dur || Math.round(Math.min(950, Math.max(360, dist * rnd(1.4, 1.9))));
+await glide(x, y, RM ? dur * .6 : dur);
+await wait(rnd(110, 300));
 }
 function ripple(){
-  if (RM) return;
-  const r = document.createElement('div'); r.className = 'rip';
-  r.style.left = fx + 'px'; r.style.top = fy + 'px';
-  D.appendChild(r); setTimeout(() => r.remove(), 600);
+if (RM) return;
+const r = document.createElement('div'); r.className = 'rip';
+r.style.left = fx + 'px'; r.style.top = fy + 'px';
+D.appendChild(r); setTimeout(() => r.remove(), 600);
 }
 async function tap(){
-  finger.classList.add('x-press'); ripple();
-  await wait(170);
-  finger.classList.remove('x-press');
-  await wait(160);
+finger.classList.add('x-press'); ripple();
+await wait(170);
+finger.classList.remove('x-press');
+await wait(160);
 }
 async function hold(ms, onPress){
-  finger.style.setProperty('--hold', ms + 'ms');
-  finger.classList.add('x-press', 'x-hold');
-  onPress && onPress(true);
-  await wait(ms);
-  finger.classList.remove('x-press', 'x-hold');
-  onPress && onPress(false);
-  ripple();
-  await wait(120);
+finger.style.setProperty('--hold', ms + 'ms');
+finger.classList.add('x-press', 'x-hold');
+onPress && onPress(true);
+await wait(ms);
+finger.classList.remove('x-press', 'x-hold');
+onPress && onPress(false);
+ripple();
+await wait(120);
 }
 async function drag(dx, ms = 520){
-  finger.classList.add('x-press');
-  await wait(140);
-  await glide(fx + dx, fy + rnd(-6, 6), ms);
+finger.classList.add('x-press');
+await wait(140);
+await glide(fx + dx, fy + rnd(-6, 6), ms);
 }
 function hideFinger(){ finger.classList.remove('x-show', 'x-press', 'x-hold'); }
 async function type(sel, str, first){
-  const el = $(sel, D);
-  for (let i = 0; i < str.length; i++) {
-    const ch = str[i];
-    if (ch !== ch.toLowerCase()) { await hit('shift'); }
-    hit(ch.toLowerCase()).catch(() => {});
-    if (i === 0 && first) first();
-    el.textContent += ch;
-    // uneven rhythm, with the odd short think
-    await wait(rnd(85, 210) + (Math.random() < .15 ? rnd(150, 320) : 0));
-  }
+const el = $(sel, D);
+for (let i = 0; i < str.length; i++) {
+const ch = str[i];
+if (ch !== ch.toLowerCase()) { await hit('shift'); }
+hit(ch.toLowerCase()).catch(() => {});
+if (i === 0 && first) first();
+el.textContent += ch;
+await wait(rnd(85, 210) + (Math.random() < .15 ? rnd(150, 320) : 0));
+}
 }
 const add = (sel, ...c) => $(sel, D).classList.add(...c);
 const rem = (sel, ...c) => $(sel, D).classList.remove(...c);
-
 function syncSB(){ D.classList.toggle('x-lockmode', !!cur && cur.hasAttribute('data-nosbtime')); }
 function show(id, enter){
-  const s = $(id, D); s.dataset.enter = enter || 'fade';
-  s.style.zIndex = ++z; s.classList.add('x-on'); cur = s; syncSB();
+const s = $(id, D); s.dataset.enter = enter || 'fade';
+s.style.zIndex = ++z; s.classList.add('x-on'); cur = s; syncSB();
 }
 async function open(id, enter, originSel){
-  const inc = $(id, D), out = cur;
-  inc.dataset.enter = enter;
-  if (originSel) { const p = pt($(originSel, D)); inc.style.transformOrigin = `${p.x}px ${p.y}px`; }
-  else inc.style.transformOrigin = '50% 50%';
-  D.classList.add('noanim'); inc.classList.remove('x-on'); void inc.offsetWidth; D.classList.remove('noanim'); void inc.offsetWidth;
-  inc.style.zIndex = ++z;
-  inc.classList.add('x-on'); cur = inc; syncSB();
-  await wait(520);
-  if (out && out !== inc) { out.dataset.enter = 'fade'; out.classList.remove('x-on'); }
+const inc = $(id, D), out = cur;
+inc.dataset.enter = enter;
+if (originSel) { const p = pt($(originSel, D)); inc.style.transformOrigin = `${p.x}px ${p.y}px`; }
+else inc.style.transformOrigin = '50% 50%';
+D.classList.add('noanim'); inc.classList.remove('x-on'); void inc.offsetWidth; D.classList.remove('noanim'); void inc.offsetWidth;
+inc.style.zIndex = ++z;
+inc.classList.add('x-on'); cur = inc; syncSB();
+await wait(520);
+if (out && out !== inc) { out.dataset.enter = 'fade'; out.classList.remove('x-on'); }
 }
 async function back(id){
-  const to = $(id, D), out = cur;
-  to.dataset.enter = 'fade';
-  to.style.zIndex = z - 1; to.classList.add('x-on');
-  cur = to; syncSB();
-  out.classList.remove('x-on');
-  await wait(520);
-  to.style.zIndex = ++z;
+const to = $(id, D), out = cur;
+to.dataset.enter = 'fade';
+to.style.zIndex = z - 1; to.classList.add('x-on');
+cur = to; syncSB();
+out.classList.remove('x-on');
+await wait(520);
+to.style.zIndex = ++z;
 }
-
 function hardReset(){
-  D.classList.add('noanim');
-  [D, ...$$('*', D)].forEach(el => {
-    if (el.classList) [...el.classList].forEach(c => c.startsWith('x-') && el.classList.remove(c));
-  });
-  $$('.scr', D).forEach(s => { s.style.zIndex = ''; s.style.transformOrigin = ''; s.dataset.enter = 'fade'; });
-  $('#as-q').textContent = '';
-  $('#ed-title').textContent = 'Untitled Script';
-  $('#ed-code').innerHTML = '';
-  $('#sf-sel-v').textContent = 'Класс 7А';
-  $('#sf-copy').textContent = 'Скопировать скрипт';
-  $('#cfg-choose').textContent = 'Choose'; rem('#cfg-choose', 'set');
-  D.dataset.lw = 'none'; D.dataset.hw = 'none';
-  hideFinger(); fx = 150; fy = 700;
-  $$('.rip', D).forEach(r => r.remove());
-  cur = null; z = 10;
+D.classList.add('noanim');
+[D, ...$$('*', D)].forEach(el => {
+if (el.classList) [...el.classList].forEach(c => c.startsWith('x-') && el.classList.remove(c));
+});
+$$('.scr', D).forEach(s => { s.style.zIndex = ''; s.style.transformOrigin = ''; s.dataset.enter = 'fade'; });
+$('#as-q').textContent = '';
+$('#ed-title').textContent = 'Untitled Script';
+$('#ed-code').innerHTML = '';
+$('#sf-sel-v').textContent = 'Класс 7А';
+$('#sf-copy').textContent = 'Скопировать скрипт';
+$('#cfg-choose').textContent = 'Choose'; rem('#cfg-choose', 'set');
+D.dataset.lw = 'none'; D.dataset.hw = 'none';
+hideFinger(); fx = 150; fy = 700;
+$$('.rip', D).forEach(r => r.remove());
+cur = null; z = 10;
 }
 function settle(){ void D.offsetWidth; requestAnimationFrame(() => requestAnimationFrame(() => D.classList.remove('noanim'))); }
-
-/* ---------- steps ---------- */
 const STEPS = [
 {
-  chip: 'Scriptable',
-  title: 'Установи Scriptable',
-  txt: 'Это бесплатное приложение для виджетов. В App Store найди <q>Scriptable</q> от Simon B. Støvring, установи и <b>открой один раз</b>. Без этого его не будет в списке виджетов.',
-  beats: ['Открой App Store', 'В поиске набери Scriptable', 'Нажми «Загрузить»', 'Нажми «Открыть»'],
-  tip: 'Если App Store попросит подтвердить, подтверди через Face ID или пароль Apple ID. <b>Приложение бесплатное.</b>',
-  setup(){ show('#s-home'); },
-  async run(B){
-    B(0); await go('#a-appstore .ic'); await tap(); await open('#s-appstore', 'zoom', '#a-appstore .ic');
-    B(1); await go('#as-field'); await tap(); add('#as-field', 'x-focus'); kbShow('en', 'search', true); await wait(450);
-    await type('#as-q', 'Scriptable'); await wait(250);
-    await go(kbRet()); await tap(); kbHide(); rem('#as-field', 'x-focus'); add('#s-appstore', 'x-results'); await wait(700);
-    B(2); await go('#as-get'); await tap(); add('#as-get', 'x-loading'); await wait(2300); add('#as-get', 'x-done'); await wait(500);
-    B(3); await go('#as-get'); await tap(); hideFinger(); await open('#s-scr', 'zoom', '#as-get'); add('#s-home', 'x-has'); await wait(1000);
-  }
+chip: 'Scriptable',
+title: 'Установи Scriptable',
+txt: 'Это бесплатное приложение для виджетов. В App Store найди <q>Scriptable</q> от Simon B. Støvring, установи и <b>открой один раз</b>. Без этого его не будет в списке виджетов.',
+beats: ['Открой App Store', 'В поиске набери Scriptable', 'Нажми «Загрузить»', 'Нажми «Открыть»'],
+tip: 'Если App Store попросит подтвердить, подтверди через Face ID или пароль Apple ID. <b>Приложение бесплатное.</b>',
+setup(){ show('#s-home'); },
+async run(B){
+B(0); await go('#a-appstore .ic'); await tap(); await open('#s-appstore', 'zoom', '#a-appstore .ic');
+B(1); await go('#as-field'); await tap(); add('#as-field', 'x-focus'); kbShow('en', 'search', true); await wait(450);
+await type('#as-q', 'Scriptable'); await wait(250);
+await go(kbRet()); await tap(); kbHide(); rem('#as-field', 'x-focus'); add('#s-appstore', 'x-results'); await wait(700);
+B(2); await go('#as-get'); await tap(); add('#as-get', 'x-loading'); await wait(2300); add('#as-get', 'x-done'); await wait(500);
+B(3); await go('#as-get'); await tap(); hideFinger(); await open('#s-scr', 'zoom', '#as-get'); add('#s-home', 'x-has'); await wait(1000);
+}
 },
 {
-  chip: 'Скрипт',
-  title: 'Скопируй скрипт своего класса',
-  txt: 'Открой эту страницу в Safari. Вверху, в блоке <q>Скрипт виджета</q>, выбери свой класс и нажми <q>Скопировать скрипт</q>.',
-  beats: ['Открой эту страницу в Safari', 'Выбери свой класс', 'Нажми «Скопировать скрипт»'],
-  tip: 'Расписание твоего класса уже внутри скрипта, поэтому виджет работает и офлайн. Если интернет есть, он сам подтянет замены.',
-  setup(){ show('#s-home'); add('#s-home', 'x-has'); },
-  async run(B){
-    B(0); await go('#d-safari'); await tap(); await open('#s-safari', 'zoom', '#d-safari'); await wait(500);
-    B(1); await go('#sf-sel'); await tap(); add('#sf-menu', 'x-on'); await wait(600);
-    await go('#sf-opt'); await tap(); rem('#sf-menu', 'x-on'); $('#sf-sel-v').textContent = 'Класс 7Б'; await wait(600);
-    B(2); await go('#sf-copy'); await tap(); $('#sf-copy').textContent = 'Скопировано'; add('#sf-copy', 'x-ok'); add('#toast', 'x-on'); hideFinger(); await wait(1800); rem('#toast', 'x-on'); await wait(400);
-  }
+chip: 'Скрипт',
+title: 'Скопируй скрипт своего класса',
+txt: 'Открой эту страницу в Safari. Вверху, в блоке <q>Скрипт виджета</q>, выбери свой класс и нажми <q>Скопировать скрипт</q>.',
+beats: ['Открой эту страницу в Safari', 'Выбери свой класс', 'Нажми «Скопировать скрипт»'],
+tip: 'Расписание твоего класса уже внутри скрипта, поэтому виджет работает и офлайн. Если интернет есть, он сам подтянет замены.',
+setup(){ show('#s-home'); add('#s-home', 'x-has'); },
+async run(B){
+B(0); await go('#d-safari'); await tap(); await open('#s-safari', 'zoom', '#d-safari'); await wait(500);
+B(1); await go('#sf-sel'); await tap(); add('#sf-menu', 'x-on'); await wait(600);
+await go('#sf-opt'); await tap(); rem('#sf-menu', 'x-on'); $('#sf-sel-v').textContent = 'Класс 7Б'; await wait(600);
+B(2); await go('#sf-copy'); await tap(); $('#sf-copy').textContent = 'Скопировано'; add('#sf-copy', 'x-ok'); add('#toast', 'x-on'); hideFinger(); await wait(1800); rem('#toast', 'x-on'); await wait(400);
+}
 },
 {
-  chip: 'Вставка',
-  title: 'Вставь скрипт в Scriptable',
-  txt: 'Открой Scriptable и нажми <q>+</q> справа сверху. Откроется пустой скрипт: нажми в поле и выбери <q>Вставить</q>.',
-  beats: ['Нажми «+» справа сверху', 'Нажми в пустое поле', 'Выбери «Вставить»', 'Скрипт на месте'],
-  tip: 'Скрипт длинный, так и должно быть. Ничего в нём не меняй.',
-  setup(){ show('#s-scr'); add('#s-home', 'x-has'); },
-  async run(B){
-    B(0); await go('#sc-plus'); await tap(); await open('#s-editor', 'up'); await wait(300);
-    B(1); await go('#ed-area', { dy: -170, dx: -40 }); await tap(); add('#s-editor', 'x-focus'); kbShow('en', 'return'); await wait(450); add('#callout', 'x-on'); await wait(500);
-    B(2); await go('#callout-paste'); await tap(); rem('#callout', 'x-on'); fillCode(true); hideFinger(); await wait(1100);
-    B(3); kbHide(); rem('#s-editor', 'x-focus'); await wait(500); add('#ed-code', 'x-scrolled'); await wait(1400); rem('#ed-code', 'x-scrolled'); await wait(1300);
-  }
+chip: 'Вставка',
+title: 'Вставь скрипт в Scriptable',
+txt: 'Открой Scriptable и нажми <q>+</q> справа сверху. Откроется пустой скрипт: нажми в поле и выбери <q>Вставить</q>.',
+beats: ['Нажми «+» справа сверху', 'Нажми в пустое поле', 'Выбери «Вставить»', 'Скрипт на месте'],
+tip: 'Скрипт длинный, так и должно быть. Ничего в нём не меняй.',
+setup(){ show('#s-scr'); add('#s-home', 'x-has'); },
+async run(B){
+B(0); await go('#sc-plus'); await tap(); await open('#s-editor', 'up'); await wait(300);
+B(1); await go('#ed-area', { dy: -170, dx: -40 }); await tap(); add('#s-editor', 'x-focus'); kbShow('en', 'return'); await wait(450); add('#callout', 'x-on'); await wait(500);
+B(2); await go('#callout-paste'); await tap(); rem('#callout', 'x-on'); fillCode(true); hideFinger(); await wait(1100);
+B(3); kbHide(); rem('#s-editor', 'x-focus'); await wait(500); add('#ed-code', 'x-scrolled'); await wait(1400); rem('#ed-code', 'x-scrolled'); await wait(1300);
+}
 },
 {
-  chip: 'Название',
-  title: 'Назови его «Звонок»',
-  txt: 'Нажми на <q>Untitled Script</q> сверху и введи <q>Звонок</q>. Потом нажми <q>Done</q> слева сверху. Scriptable на английском: Done значит «Готово».',
-  beats: ['Нажми на «Untitled Script»', 'Введи «Звонок»', 'Нажми «Done»', 'Скрипт сохранён'],
-  tip: 'Название нужно, чтобы потом быстро найти скрипт, когда будешь настраивать виджет.',
-  setup(){ show('#s-editor', 'up'); fillCode(false); add('#s-home', 'x-has'); },
-  async run(B){
-    B(0); await go('#ed-title'); await tap(); add('#s-editor', 'x-rename'); kbShow('ru', 'Готово', true); await wait(650);
-    B(1); await type('#ed-title', 'Звонок', () => { $('#ed-title').textContent = ''; add('#s-editor', 'x-typing'); }); await wait(500);
-    B(2); await go('#ed-done'); await tap(); kbHide(); rem('#s-editor', 'x-rename', 'x-typing'); hideFinger(); await wait(250); await back('#s-scr');
-    B(3); add('#s-scr', 'x-tile'); await wait(1500);
-  }
+chip: 'Название',
+title: 'Назови его «Звонок»',
+txt: 'Нажми на <q>Untitled Script</q> сверху и введи <q>Звонок</q>. Потом нажми <q>Done</q> слева сверху. Scriptable на английском: Done значит «Готово».',
+beats: ['Нажми на «Untitled Script»', 'Введи «Звонок»', 'Нажми «Done»', 'Скрипт сохранён'],
+tip: 'Название нужно, чтобы потом быстро найти скрипт, когда будешь настраивать виджет.',
+setup(){ show('#s-editor', 'up'); fillCode(false); add('#s-home', 'x-has'); },
+async run(B){
+B(0); await go('#ed-title'); await tap(); add('#s-editor', 'x-rename'); kbShow('ru', 'Готово', true); await wait(650);
+B(1); await type('#ed-title', 'Звонок', () => { $('#ed-title').textContent = ''; add('#s-editor', 'x-typing'); }); await wait(500);
+B(2); await go('#ed-done'); await tap(); kbHide(); rem('#s-editor', 'x-rename', 'x-typing'); hideFinger(); await wait(250); await back('#s-scr');
+B(3); add('#s-scr', 'x-tile'); await wait(1500);
+}
 },
 {
-  chip: 'Настройка',
-  title: 'Открой настройку экрана блокировки',
-  txt: 'Разблокируй телефон через Face ID или Touch ID, но <b>не смахивай вверх</b>. Зажми экран, нажми <q>Настроить</q> и выбери <q>Экран блокировки</q>.',
-  beats: ['Разблокируй, не смахивая', 'Зажми экран на секунду', 'Нажми «Настроить»', 'Выбери «Экран блокировки»'],
-  tip: 'Если «Настроить» не появилось, значит телефон ещё заблокирован. Замок вверху должен быть открыт.',
-  setup(){ show('#s-lock'); add('#s-home', 'x-has'); },
-  async run(B){
-    B(0); await wait(400); add('#s-lock', 'x-faceid'); await wait(1300); add('#s-lock', 'x-unlocked'); await wait(300); rem('#s-lock', 'x-faceid'); await wait(900);
-    B(1); await go('#l-center'); await hold(1100, on => $('#s-lock').classList.toggle('x-press', on)); await open('#s-gallery', 'shrink'); await wait(300);
-    B(2); await go('#g-custom'); await tap(); await open('#s-choose', 'fade'); await wait(400);
-    B(3); await go('#ch-lock .mini'); await tap(); await open('#s-ledit', 'grow', '#ch-lock .mini'); hideFinger(); await wait(900);
-  }
+chip: 'Настройка',
+title: 'Открой настройку экрана блокировки',
+txt: 'Разблокируй телефон через Face ID или Touch ID, но <b>не смахивай вверх</b>. Зажми экран, нажми <q>Настроить</q> и выбери <q>Экран блокировки</q>.',
+beats: ['Разблокируй, не смахивая', 'Зажми экран на секунду', 'Нажми «Настроить»', 'Выбери «Экран блокировки»'],
+tip: 'Если «Настроить» не появилось, значит телефон ещё заблокирован. Замок вверху должен быть открыт.',
+setup(){ show('#s-lock'); add('#s-home', 'x-has'); },
+async run(B){
+B(0); await wait(400); add('#s-lock', 'x-faceid'); await wait(1300); add('#s-lock', 'x-unlocked'); await wait(300); rem('#s-lock', 'x-faceid'); await wait(900);
+B(1); await go('#l-center'); await hold(1100, on => $('#s-lock').classList.toggle('x-press', on)); await open('#s-gallery', 'shrink'); await wait(300);
+B(2); await go('#g-custom'); await tap(); await open('#s-choose', 'fade'); await wait(400);
+B(3); await go('#ch-lock .mini'); await tap(); await open('#s-ledit', 'grow', '#ch-lock .mini'); hideFinger(); await wait(900);
+}
 },
 {
-  chip: 'Виджет',
-  title: 'Добавь виджет Scriptable',
-  txt: 'Нажми на поле под часами. В списке найди <q>Scriptable</q> и выбери <b>прямоугольный</b> виджет. Потом закрой список крестиком.',
-  beats: ['Нажми на поле под часами', 'Найди Scriptable', 'Выбери прямоугольный виджет', 'Закрой список'],
-  tip: 'Пока скрипт не выбран, виджет пишет «Select script in widget configurator». Это нормально, исправим на следующем шаге.',
-  setup(){ show('#s-ledit'); add('#s-home', 'x-has'); },
-  async run(B){
-    B(0); await go('#le-slot'); await tap(); add('#wsheet', 'x-on'); await wait(800);
-    B(1); add('#wsheet', 'x-scroll'); await wait(700); await go('#ws-scriptable'); await tap(); add('#wsheet', 'x-app'); await wait(700);
-    B(2); await go('#ws-rect'); await tap(); D.dataset.lw = 'blank'; add('#le-lw', 'x-pop'); await wait(1000);
-    B(3); await go('#ws-close'); await tap(); rem('#wsheet', 'x-on'); hideFinger(); await wait(1200);
-  }
+chip: 'Виджет',
+title: 'Добавь виджет Scriptable',
+txt: 'Нажми на поле под часами. В списке найди <q>Scriptable</q> и выбери <b>прямоугольный</b> виджет. Потом закрой список крестиком.',
+beats: ['Нажми на поле под часами', 'Найди Scriptable', 'Выбери прямоугольный виджет', 'Закрой список'],
+tip: 'Пока скрипт не выбран, виджет пишет «Select script in widget configurator». Это нормально, исправим на следующем шаге.',
+setup(){ show('#s-ledit'); add('#s-home', 'x-has'); },
+async run(B){
+B(0); await go('#le-slot'); await tap(); add('#wsheet', 'x-on'); await wait(800);
+B(1); add('#wsheet', 'x-scroll'); await wait(700); await go('#ws-scriptable'); await tap(); add('#wsheet', 'x-app'); await wait(700);
+B(2); await go('#ws-rect'); await tap(); D.dataset.lw = 'blank'; add('#le-lw', 'x-pop'); await wait(1000);
+B(3); await go('#ws-close'); await tap(); rem('#wsheet', 'x-on'); hideFinger(); await wait(1200);
+}
 },
 {
-  chip: 'Выбор скрипта',
-  title: 'Выбери скрипт «Звонок»',
-  txt: 'Нажми на новый виджет. В строке <q>Script</q> нажми <q>Choose</q> и выбери <q>Звонок</q>. Нажми <q>Готово</q> справа сверху. Всё, таймер на экране блокировки.',
-  beats: ['Нажми на виджет', 'Script → Choose', 'Выбери «Звонок»', 'Нажми «Готово»', 'Таймер тикает сам'],
-  tip: 'Виджет показывает урок, кабинет и сколько осталось до звонка. Дальше по желанию: виджет на рабочий стол.',
-  setup(){ show('#s-ledit'); D.dataset.lw = 'blank'; add('#s-home', 'x-has'); },
-  async run(B){
-    B(0); await go('#le-lw'); await tap(); add('#config', 'x-on'); await wait(650);
-    B(1); await go('#cfg-choose'); await tap(); add('#config', 'x-list'); await wait(650);
-    B(2); await go('#cfg-zvonok'); await tap(); rem('#config', 'x-list'); $('#cfg-choose').textContent = 'Звонок'; add('#cfg-choose', 'set'); await wait(800);
-    await go('#le-empty'); await tap(); rem('#config', 'x-on'); D.dataset.lw = 'real'; rem('#le-lw', 'x-pop'); void $('#le-lw').offsetWidth; add('#le-lw', 'x-pop'); await wait(1000);
-    B(3); await go('#le-done'); await tap(); await open('#s-gallery', 'shrink'); await wait(450); await go('#g-card'); await tap(); hideFinger(); add('#s-lock', 'x-unlocked'); await open('#s-lock', 'grow');
-    B(4); await wait(300); add('#lw', 'x-glow'); await wait(3400);
-  }
+chip: 'Выбор скрипта',
+title: 'Выбери скрипт «Звонок»',
+txt: 'Нажми на новый виджет. В строке <q>Script</q> нажми <q>Choose</q> и выбери <q>Звонок</q>. Нажми <q>Готово</q> справа сверху. Всё, таймер на экране блокировки.',
+beats: ['Нажми на виджет', 'Script → Choose', 'Выбери «Звонок»', 'Нажми «Готово»', 'Таймер тикает сам'],
+tip: 'Виджет показывает урок, кабинет и сколько осталось до звонка. Дальше по желанию: виджет на рабочий стол.',
+setup(){ show('#s-ledit'); D.dataset.lw = 'blank'; add('#s-home', 'x-has'); },
+async run(B){
+B(0); await go('#le-lw'); await tap(); add('#config', 'x-on'); await wait(650);
+B(1); await go('#cfg-choose'); await tap(); add('#config', 'x-list'); await wait(650);
+B(2); await go('#cfg-zvonok'); await tap(); rem('#config', 'x-list'); $('#cfg-choose').textContent = 'Звонок'; add('#cfg-choose', 'set'); await wait(800);
+await go('#le-empty'); await tap(); rem('#config', 'x-on'); D.dataset.lw = 'real'; rem('#le-lw', 'x-pop'); void $('#le-lw').offsetWidth; add('#le-lw', 'x-pop'); await wait(1000);
+B(3); await go('#le-done'); await tap(); await open('#s-gallery', 'shrink'); await wait(450); await go('#g-card'); await tap(); hideFinger(); add('#s-lock', 'x-unlocked'); await open('#s-lock', 'grow');
+B(4); await wait(300); add('#lw', 'x-glow'); await wait(3400);
+}
 },
 {
-  chip: 'Рабочий стол',
-  opt: true,
-  title: 'Виджет на рабочий стол',
-  txt: 'Это не обязательно: таймер на экране блокировки уже работает. Если хочешь ещё и на рабочем столе, зажми пустое место, нажми <q>Изменить</q> → <q>Добавить виджет</q>. Найди <q>Scriptable</q>, выбери размер и нажми <q>Добавить виджет</q>. Потом зажми виджет → <q>Изменить виджет</q> → Script → <q>Звонок</q>.',
-  beats: ['Посмотри, как он будет выглядеть', 'Зажми пустое место', '«Изменить» → «Добавить виджет»', 'Scriptable → размер → «Добавить»', 'Зажми виджет → «Изменить виджет»', 'Script → «Звонок»', 'Готово: так он выглядит'],
-  tip: 'Есть три размера: маленький, средний и большой (с расписанием на весь день). Как они выглядят, показано ниже. На iOS 17 вместо «Изменить» сверху слева будет кнопка «+».',
-  setup(){ show('#s-home'); add('#s-home', 'x-has'); D.dataset.lw = 'real'; },
-  async run(B){
-    B(0); add('#promo', 'x-on'); await wait(1300); add('#promo-mw', 'x-glow'); await wait(3400);
-    await go('#promo-go'); await tap(); rem('#promo', 'x-on'); await wait(650);
-    B(1); await go('#h-empty'); await hold(1000); add('#s-home', 'x-jiggle'); await wait(600);
-    B(2); await go('#h-edit'); await tap(); add('#h-menu', 'x-on'); await wait(550); await go('#hm-add'); await tap(); rem('#h-menu', 'x-on'); add('#wgal', 'x-on'); await wait(800);
-    B(3); await go('#wg-scriptable'); await tap(); add('#wgal', 'x-app'); await wait(800);
-    await go('#wgal .wg-view', { dx: 70 }); await drag(-150); add('#wgal', 'x-medium'); finger.classList.remove('x-press'); await wait(700);
-    await go('#wg-add'); await tap(); rem('#wgal', 'x-on'); D.dataset.hw = 'blank'; add('#s-home', 'x-widget'); await wait(900);
-    await go('#h-done'); await tap(); rem('#s-home', 'x-jiggle'); await wait(600);
-    B(4); await go('#h-mw'); await hold(700); add('#s-home', 'x-ctx'); await wait(600); await go('#ctx-edit'); await tap(); rem('#s-home', 'x-ctx'); add('#config', 'x-home', 'x-on'); await wait(650);
-    B(5); await go('#cfg-choose'); await tap(); add('#config', 'x-list'); await wait(650);
-    await go('#cfg-zvonok'); await tap(); rem('#config', 'x-list'); $('#cfg-choose').textContent = 'Звонок'; add('#cfg-choose', 'set'); await wait(800);
-    await go('#cfg-back', { dy: -230 }); await tap(); rem('#config', 'x-on'); hideFinger(); await wait(350); rem('#config', 'x-home'); D.dataset.hw = 'real'; add('#h-mw', 'x-pop'); await wait(900);
-    B(6); add('#h-mw', 'x-glow'); await wait(3600);
-  }
+chip: 'Рабочий стол',
+opt: true,
+title: 'Виджет на рабочий стол',
+txt: 'Это не обязательно: таймер на экране блокировки уже работает. Если хочешь ещё и на рабочем столе, зажми пустое место, нажми <q>Изменить</q> → <q>Добавить виджет</q>. Найди <q>Scriptable</q>, выбери размер и нажми <q>Добавить виджет</q>. Потом зажми виджет → <q>Изменить виджет</q> → Script → <q>Звонок</q>.',
+beats: ['Посмотри, как он будет выглядеть', 'Зажми пустое место', '«Изменить» → «Добавить виджет»', 'Scriptable → размер → «Добавить»', 'Зажми виджет → «Изменить виджет»', 'Script → «Звонок»', 'Готово: так он выглядит'],
+tip: 'Есть три размера: маленький, средний и большой (с расписанием на весь день). Как они выглядят, показано ниже. На iOS 17 вместо «Изменить» сверху слева будет кнопка «+».',
+setup(){ show('#s-home'); add('#s-home', 'x-has'); D.dataset.lw = 'real'; },
+async run(B){
+B(0); add('#promo', 'x-on'); await wait(1300); add('#promo-mw', 'x-glow'); await wait(3400);
+await go('#promo-go'); await tap(); rem('#promo', 'x-on'); await wait(650);
+B(1); await go('#h-empty'); await hold(1000); add('#s-home', 'x-jiggle'); await wait(600);
+B(2); await go('#h-edit'); await tap(); add('#h-menu', 'x-on'); await wait(550); await go('#hm-add'); await tap(); rem('#h-menu', 'x-on'); add('#wgal', 'x-on'); await wait(800);
+B(3); await go('#wg-scriptable'); await tap(); add('#wgal', 'x-app'); await wait(800);
+await go('#wgal .wg-view', { dx: 70 }); await drag(-150); add('#wgal', 'x-medium'); finger.classList.remove('x-press'); await wait(700);
+await go('#wg-add'); await tap(); rem('#wgal', 'x-on'); D.dataset.hw = 'blank'; add('#s-home', 'x-widget'); await wait(900);
+await go('#h-done'); await tap(); rem('#s-home', 'x-jiggle'); await wait(600);
+B(4); await go('#h-mw'); await hold(700); add('#s-home', 'x-ctx'); await wait(600); await go('#ctx-edit'); await tap(); rem('#s-home', 'x-ctx'); add('#config', 'x-home', 'x-on'); await wait(650);
+B(5); await go('#cfg-choose'); await tap(); add('#config', 'x-list'); await wait(650);
+await go('#cfg-zvonok'); await tap(); rem('#config', 'x-list'); $('#cfg-choose').textContent = 'Звонок'; add('#cfg-choose', 'set'); await wait(800);
+await go('#cfg-back', { dy: -230 }); await tap(); rem('#config', 'x-on'); hideFinger(); await wait(350); rem('#config', 'x-home'); D.dataset.hw = 'real'; add('#h-mw', 'x-pop'); await wait(900);
+B(6); add('#h-mw', 'x-glow'); await wait(3600);
+}
 }
 ];
-
-/* ---------- panel ---------- */
 const chips = $('#chips'), stepEl = $('#step'), beatsEl = $('#beats'), capText = $('#cap-text'), capNum = $('#cap-num'), bar = $('#bar');
-// колёсико мыши листает шаги вбок (на ПК)
 chips.addEventListener('wheel', e => {
-  if (chips.scrollWidth <= chips.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-  e.preventDefault(); chips.scrollLeft += e.deltaY;
+if (chips.scrollWidth <= chips.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+e.preventDefault(); chips.scrollLeft += e.deltaY;
 }, { passive: false });
 const check = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5 4.5-5.5"/></svg>';
 const tipIcon = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="7.2"/><path d="M9 8.2v4.6M9 5.4v.1" stroke-linecap="round"/></svg>';
 STEPS.forEach((s, i) => {
-  const b = document.createElement('button');
-  b.className = 'chip'; b.type = 'button';
-  b.innerHTML = `<b>${i + 1}</b>${s.chip}${s.opt ? '<i>по желанию</i>' : ''}`;
-  b.addEventListener('click', () => play(i));
-  chips.appendChild(b);
+const b = document.createElement('button');
+b.className = 'chip'; b.type = 'button';
+b.innerHTML = `<b>${i + 1}</b>${s.chip}${s.opt ? '<i>по желанию</i>' : ''}`;
+b.addEventListener('click', () => play(i));
+chips.appendChild(b);
 });
 let idx = 0, done = new Set();
 function render(i){
-  const s = STEPS[i];
-  $$('.chip', chips).forEach((c, j) => { c.classList.toggle('on', j === i); c.classList.toggle('done', done.has(j) && j !== i); });
-  const on = $$('.chip', chips)[i];
-  chips.scrollTo({ left: on.offsetLeft - 16, behavior: RM ? 'auto' : 'smooth' });
-  stepEl.classList.add('swap');
-  setTimeout(() => {
-    $('#step-of').innerHTML = `Шаг ${i + 1} из ${STEPS.length}` + (s.opt ? '<span class="opt-badge">по желанию</span>' : '');
-    $('#step-title').textContent = s.title;
-    $('#step-txt').innerHTML = s.txt;
-    beatsEl.innerHTML = s.beats.map((b, j) => `<li><span class="dot"><span>${j + 1}</span>${check}</span>${b}</li>`).join('');
-    $('#tip').innerHTML = s.tip ? tipIcon + `<span>${s.tip}</span>` : '';
-    stepEl.classList.remove('swap');
-  }, 180);
-  setCap(i, s.beats[0], true);
-  bar.style.transform = 'scaleX(0)';
+const s = STEPS[i];
+$$('.chip', chips).forEach((c, j) => { c.classList.toggle('on', j === i); c.classList.toggle('done', done.has(j) && j !== i); });
+const on = $$('.chip', chips)[i];
+chips.scrollTo({ left: on.offsetLeft - 16, behavior: RM ? 'auto' : 'smooth' });
+stepEl.classList.add('swap');
+setTimeout(() => {
+$('#step-of').innerHTML = `Шаг ${i + 1} из ${STEPS.length}` + (s.opt ? '<span class="opt-badge">по желанию</span>' : '');
+$('#step-title').textContent = s.title;
+$('#step-txt').innerHTML = s.txt;
+beatsEl.innerHTML = s.beats.map((b, j) => `<li><span class="dot"><span>${j + 1}</span>${check}</span>${b}</li>`).join('');
+$('#tip').innerHTML = s.tip ? tipIcon + `<span>${s.tip}</span>` : '';
+stepEl.classList.remove('swap');
+}, 180);
+setCap(i, s.beats[0], true);
+bar.style.transform = 'scaleX(0)';
 }
 function setCap(i, text, quiet){
-  capNum.textContent = i + 1;
-  capText.classList.add('swap');
-  setTimeout(() => { capText.textContent = text; capText.classList.remove('swap'); }, quiet ? 0 : 160);
+capNum.textContent = i + 1;
+capText.classList.add('swap');
+setTimeout(() => { capText.textContent = text; capText.classList.remove('swap'); }, quiet ? 0 : 160);
 }
 function beat(i, j){
-  const s = STEPS[i];
-  $$('li', beatsEl).forEach((li, k) => { li.classList.toggle('ok', k < j); li.classList.toggle('now', k === j); });
-  setCap(i, s.beats[j]);
-  bar.style.transform = 'scaleX(' + (j / s.beats.length) + ')';
+const s = STEPS[i];
+$$('li', beatsEl).forEach((li, k) => { li.classList.toggle('ok', k < j); li.classList.toggle('now', k === j); });
+setCap(i, s.beats[j]);
+bar.style.transform = 'scaleX(' + (j / s.beats.length) + ')';
 }
 function finishBeats(i){
-  $$('li', beatsEl).forEach(li => { li.classList.remove('now'); li.classList.add('ok'); });
-  bar.style.transform = 'scaleX(1)';
-  done.add(i);
-  $$('.chip', chips)[i].classList.add('done');
+$$('li', beatsEl).forEach(li => { li.classList.remove('now'); li.classList.add('ok'); });
+bar.style.transform = 'scaleX(1)';
+done.add(i);
+$$('.chip', chips)[i].classList.add('done');
 }
-
-/* ---------- playback ---------- */
 const bPlay = $('#b-play');
 function setPaused(p){
-  paused = p;
-  D.classList.toggle('is-paused', p);
-  $('#i-pause').hidden = p; $('#i-play').hidden = !p;
-  bPlay.setAttribute('aria-label', p ? 'Смотреть' : 'Пауза');
-  wakeAll();
+paused = p;
+D.classList.toggle('is-paused', p);
+$('#i-pause').hidden = p; $('#i-play').hidden = !p;
+bPlay.setAttribute('aria-label', p ? 'Смотреть' : 'Пауза');
+wakeAll();
 }
 let ended = false;
 async function play(i){
-  const id = ++runId;
-  wakeAll(); // прошлый показ просыпается и тихо заканчивается
-  idx = i; ended = false;
-  if (paused) setPaused(false);
-  hardReset();
-  render(i);
-  STEPS[i].setup();
-  settle();
-  try {
-    await wait(900);
-    await STEPS[i].run(j => beat(i, j));
-    finishBeats(i);
-    if (i < STEPS.length - 1) { await wait(1300); if (id === runId) play(i + 1); }
-    else { ended = true; setCap(i, 'Готово! Можно смотреть сначала'); setPaused(true); }
-  } catch (e) { if (e !== CANCEL) console.error(e); }
+const id = ++runId;
+wakeAll();
+idx = i; ended = false;
+if (paused) setPaused(false);
+hardReset();
+render(i);
+STEPS[i].setup();
+settle();
+try {
+await wait(900);
+await STEPS[i].run(j => beat(i, j));
+finishBeats(i);
+if (i < STEPS.length - 1) { await wait(1300); if (id === runId) play(i + 1); }
+else { ended = true; setCap(i, 'Готово! Можно смотреть сначала'); setPaused(true); }
+} catch (e) { if (e !== CANCEL) console.error(e); }
 }
 bPlay.addEventListener('click', () => { if (ended) { done.clear(); play(0); } else setPaused(!paused); });
 $('#b-next').addEventListener('click', () => play(Math.min(STEPS.length - 1, idx + 1)));
 $('#b-prev').addEventListener('click', () => play(Math.max(0, idx - 1)));
 $('#b-again').addEventListener('click', () => play(idx));
 addEventListener('keydown', e => {
-  if (e.target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
-  if (e.key === 'ArrowRight') play(Math.min(STEPS.length - 1, idx + 1));
-  else if (e.key === 'ArrowLeft') play(Math.max(0, idx - 1));
-  else if (e.key === ' ') { e.preventDefault(); bPlay.click(); }
+if (e.target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
+if (e.key === 'ArrowRight') play(Math.min(STEPS.length - 1, idx + 1));
+else if (e.key === 'ArrowLeft') play(Math.max(0, idx - 1));
+else if (e.key === ' ') { e.preventDefault(); bPlay.click(); }
 });
-
-/* ---------- за кадром не играем ----------
-   Гайд начинается, когда до него долистали, замирает, когда ушёл с экрана или вкладку свернули,
-   и продолжает с того же места, когда вернулись. Свою паузу пользователь снимает сам. */
 let seen = false, onScreen = false, autoPaused = false;
 function sync(){
-  const v = onScreen && !document.hidden;
-  clock(v);
-  if (!seen) { if (v) { seen = true; play(0); } return; }
-  if (!v && !paused && !ended) { autoPaused = true; setPaused(true); }
-  else if (v && autoPaused) { autoPaused = false; if (paused && !ended) setPaused(false); }
+const v = onScreen && !document.hidden;
+clock(v);
+if (!seen) { if (v) { seen = true; play(0); } return; }
+if (!v && !paused && !ended) { autoPaused = true; setPaused(true); }
+else if (v && autoPaused) { autoPaused = false; if (paused && !ended) setPaused(false); }
 }
 fit();
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => {
-  fit();
-  document.addEventListener('visibilitychange', sync);
-  if ('IntersectionObserver' in window) new IntersectionObserver(es => { onScreen = es[es.length - 1].intersectionRatio >= .3; sync(); }, {threshold: [0, .3]}).observe(pwrap);
-  else { onScreen = true; sync(); }
+fit();
+document.addEventListener('visibilitychange', sync);
+if ('IntersectionObserver' in window) new IntersectionObserver(es => { onScreen = es[es.length - 1].intersectionRatio >= .3; sync(); }, {threshold: [0, .3]}).observe(pwrap);
+else { onScreen = true; sync(); }
 });
 })();
 </script>

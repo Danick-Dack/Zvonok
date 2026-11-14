@@ -179,6 +179,82 @@ def bundle_css(names):
     return min_css(css.replace("/*@ACCENTS@*/", accent_css()).replace("/*@ART@*/", art_css()))
 
 
+REGEX_AFTER = set("(,=:[!&|?{};+-*%<>~^")
+REGEX_WORDS = ("return", "typeof", "case", "in", "of", "void", "delete", "new", "else", "do", "throw", "yield", "await")
+
+
+def min_js(js):
+    """Сжатие кода сайта: без комментариев, отступов и пустых строк. Переводы строк остаются (автоточки с запятой
+    работают как раньше), строки, шаблоны `…` и регулярные выражения копируются как есть."""
+    out, i, n = [], 0, len(js)
+
+    def regex_ok():
+        tail = "".join(out[-12:]).rstrip()
+        return not tail or tail[-1] in REGEX_AFTER or re.search(r"(?<![\w$.])(%s)$" % "|".join(REGEX_WORDS), tail)
+
+    while i < n:
+        c = js[i]
+        if c in "\"'`":  # строка или шаблон: до закрывающей кавычки, с учётом \
+            j = i + 1
+            while j < n and js[j] != c:
+                j += 2 if js[j] == "\\" else 1
+            if c != "`" and j < n and "\n" in js[i:j]:
+                raise ValueError("перевод строки внутри строки: %r" % js[i:i + 40])
+            out.append(js[i:j + 1])
+            i = j + 1
+        elif js.startswith("//", i):
+            i = js.find("\n", i)
+            i = n if i < 0 else i
+        elif js.startswith("/*", i):
+            j = js.find("*/", i + 2)
+            if j < 0:
+                raise ValueError("незакрытый комментарий")
+            out.append(" ")  # a/*…*/b не должно склеиться в ab
+            i = j + 2
+        elif c == "/" and regex_ok():  # регулярное выражение: до / вне [...]
+            j, cls = i + 1, False
+            while j < n and (js[j] != "/" or cls):
+                if js[j] == "\n":
+                    raise ValueError("не похоже на регулярное выражение: %r" % js[i:i + 40])
+                cls = (cls or js[j] == "[") and js[j] != "]"
+                j += 2 if js[j] == "\\" else 1
+            out.append(js[i:j + 1])
+            i = j + 1
+        else:
+            j = i
+            while j < n and js[j] not in "\"'`/":
+                j += 1
+            j = max(j, i + 1)
+            out.append(js[i:j])
+            i = j
+    return _trim_lines(out)
+
+
+def _trim_lines(chunks):
+    """Убирает пробелы в начале и конце строк и пустые строки, не заходя внутрь строк и шаблонов."""
+    res, at_line_start = [], True
+    for ch in chunks:
+        if ch[:1] in "\"'`" or (ch[:1] == "/" and len(ch) > 1):
+            res.append(ch)
+            at_line_start = False
+            continue
+        parts = ch.split("\n")
+        for k, part in enumerate(parts):
+            if k:
+                # перевод строки: сначала срезаем хвостовые пробелы прошлой строки
+                while res and res[-1] and res[-1][-1] in " \t" and res[-1][:1] not in "\"'`":
+                    res[-1] = res[-1].rstrip(" \t")
+                if res and not at_line_start:
+                    res.append("\n")
+                at_line_start = True
+            if at_line_start:
+                part = part.lstrip(" \t")
+            if part:
+                res.append(part)
+                at_line_start = False
+    return "".join(res).strip() + "\n"
+
+
 def bundle_js(names):
     js = "\n".join(read("site", "src", "js", n + ".js") for n in names)
     return js.replace("/*@ACCENTS@*/null", js_literal([{"id": a[0], "name": a[1], "light": a[2], "dark": a[4]} for a in ACCENTS]))
@@ -650,6 +726,7 @@ def page(name, css, js, extra=None, connect="'self'", common=None):
         assert k in js_text or k in t, k
         js_text = js_text.replace(k, v)
         t = t.replace(k, v)
+    js_text = min_js(js_text) if js_text else ""
     t = t.replace("@JS@", js_text)
     rep = {"@CSS@": bundle_css(css) if css else "", "@HEAD_JS@": HEAD_JS, "@HEADER@": header(), "@FOOTER@": FOOTER, "@MARK@": MARK}
     rep.update(common)

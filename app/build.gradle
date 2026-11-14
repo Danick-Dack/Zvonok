@@ -33,7 +33,7 @@ android {
             // R8 ужимает и оптимизирует код: APK меньше, работает быстрее
             minifyEnabled true
             shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig ks.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
