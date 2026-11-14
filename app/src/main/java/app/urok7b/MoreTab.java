@@ -1,6 +1,5 @@
 package app.urok7b;
 
-import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -178,7 +177,7 @@ final class MoreTab {
                 Updates.KEY_AUTO, false));
 
         LinearLayout about = section("О «Звонке»", R.drawable.ic_info, 12);
-        about.addView(Ui.linkRow(a, "Сайт «Звонка»", "Все классы, установка для iPhone", null, v -> open(Uri.parse(Updates.SITE))));
+        about.addView(Ui.linkRow(a, "Сайт «Звонка»", "Все классы, установка для iPhone", null, v -> web(Updates.SITE)));
         about.addView(Ui.linkRow(a, "Исходный код", "Только для просмотра, все права защищены", null, v -> open(Uri.parse("https://github.com/Danick-Dack/Zvonok"))));
         age = note(ageText());
         age.setPadding(0, a.dp(12), 0, a.dp(4));
@@ -198,7 +197,7 @@ final class MoreTab {
         view.post(() -> view.scrollTo(0, y));
     }
 
-    /** Поделиться с классом: QR-код и ссылка сразу на класс, приложение без интернета, плакат. */
+    /** Поделиться с классом: QR-код и ссылка сразу на класс, плакат. APK приложение не раздаёт: ставить только с официального сайта. */
     private void shareSection() {
         LinearLayout share = section("Поделиться с классом", R.drawable.ic_share, 3);
         String cls = Schedule.isCustom() ? "" : Schedule.title();
@@ -220,16 +219,8 @@ final class MoreTab {
                 + "Работает без интернета.\n" + (cls.isEmpty() ? "" : "Сразу на " + cls + ": ") + url;
         share.addView(Ui.linkRow(a, "Отправить ссылку", cls.isEmpty() ? "На сайт «Звонка»" : "Сразу на расписание " + cls, null,
                 v -> open(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, msg), "Поделиться"))));
-        share.addView(Ui.linkRow(a, "Отправить приложение", "По Bluetooth, Quick Share или в Telegram, можно без интернета", null, v -> {
-            Intent i = new Intent(Intent.ACTION_SEND).setType(ApkProvider.MIME)
-                    .putExtra(Intent.EXTRA_STREAM, ApkProvider.URI)
-                    .putExtra(Intent.EXTRA_TEXT, "Это «Звонок», расписание лицея №165. Сайт: " + Updates.SITE)
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            i.setClipData(ClipData.newRawUri("Звонок", ApkProvider.URI));
-            open(Intent.createChooser(i, "Отправить приложение"));
-        }));
         share.addView(Ui.linkRow(a, "Плакат для класса", "Лист A4 с QR-кодом, откроется на сайте", null,
-                v -> open(Uri.parse(Updates.SITE + "poster.html" + (cls.isEmpty() ? "" : "#" + slug(cls))))));
+                v -> web(Updates.SITE + "poster.html" + (cls.isEmpty() ? "" : "#" + slug(cls)))));
     }
 
     static String slug(String cls) {
@@ -312,6 +303,10 @@ final class MoreTab {
 
     private boolean open(Uri u) {
         return open(new Intent(Intent.ACTION_VIEW, u));
+    }
+
+    private void web(String url) {
+        Ui.web(a, url);
     }
 
     private boolean open(Intent i) {

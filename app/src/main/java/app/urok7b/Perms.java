@@ -3,7 +3,6 @@ package app.urok7b;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
-import android.app.AppOpsManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -14,7 +13,6 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
-import android.os.Process;
 import android.provider.Settings;
 
 import java.util.ArrayList;
@@ -83,19 +81,6 @@ final class Perms {
         return isXiaomi() || isVivo() || isOppo() || isHuawei();
     }
 
-    /** Состояние скрытого разрешения MIUI (10020 — экран блокировки, 10008 — автозапуск). null — не узнать. */
-    static Boolean miuiOp(Context c, int op) {
-        if (!isXiaomi()) return null;
-        try {
-            AppOpsManager ops = c.getSystemService(AppOpsManager.class);
-            java.lang.reflect.Method m = AppOpsManager.class.getMethod("checkOpNoThrow", int.class, int.class, String.class);
-            int r = (int) m.invoke(ops, op, Process.myUid(), c.getPackageName());
-            return r == AppOpsManager.MODE_ALLOWED;
-        } catch (Throwable e) {
-            return null;
-        }
-    }
-
     static List<Item> list(Activity a) {
         List<Item> out = new ArrayList<>();
         NotificationManager nm = a.getSystemService(NotificationManager.class);
@@ -141,10 +126,11 @@ final class Perms {
         // 6. батарея
         PowerManager pm = a.getSystemService(PowerManager.class);
         out.add(new Item("battery", "Без ограничений батареи",
-                "Без этого система может закрыть уведомление и сбить время в виджетах",
+                "Без этого система может закрыть уведомление и сбить время в виджетах. В списке выбери «Все приложения» → «Звонок» → «Не экономить»",
                 pm != null && pm.isIgnoringBatteryOptimizations(a.getPackageName()), () -> {
-            if (!open(a, new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg(a))))
-                open(a, new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+            // список приложений в настройках: прямой запрос требовал бы разрешения, которое настораживает Play Защиту
+            if (!open(a, new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)))
+                open(a, new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg(a)));
         }));
 
         // 7. показ поверх экрана блокировки (MIUI, Vivo, Oppo/Realme, Huawei/Honor)
@@ -154,14 +140,14 @@ final class Perms {
                             + "Открой «Другие разрешения» → «Экран блокировки» → «Разрешить»"
                             : "Чтобы по нажатию на уведомление открывался большой таймер без разблокировки. "
                             + "Найди в разрешениях «Экран блокировки» или «Показ на заблокированном экране» и разреши",
-                    miuiOp(a, 10020), () -> openOtherPerms(a)));
+                    null, () -> openOtherPerms(a)));
         }
 
         // 8. автозапуск
         if (isXiaomi() || isVivo() || isOppo() || isHuawei() || isTranssion()) {
             out.add(new Item("autostart", "Автозапуск",
                     "Чтобы уведомление вернулось после перезагрузки телефона",
-                    miuiOp(a, 10008), () -> openAutostart(a)));
+                    null, () -> openAutostart(a)));
         }
 
         // 9. Samsung усыпляет «неиспользуемые» приложения, даже если батарея без ограничений

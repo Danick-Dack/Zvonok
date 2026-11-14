@@ -17,7 +17,7 @@ import java.util.ArrayDeque;
 import java.util.Random;
 
 /**
- * Пасхалка, как на сайте: десять нажатий на «Звонок» открывают змейку, скоротать перемену.
+ * Пасхалка, как на сайте: три быстрых нажатия на «Звонок» открывают змейку, скоротать перемену.
  * Цвета змейки как у предметов, рекорд хранится на телефоне. Игра идёт, только пока окно открыто.
  */
 final class Snake extends View {
@@ -56,27 +56,48 @@ final class Snake extends View {
         Snake game = new Snake(a, score);
         android.util.DisplayMetrics m = a.getResources().getDisplayMetrics();
         // экран набок: поле по высоте, чтобы под ним поместились счёт и кнопки
-        int side = Math.min(m.heightPixels > m.widthPixels ? m.widthPixels - Ui.dp(a, 88) : m.heightPixels - Ui.dp(a, 200), Ui.dp(a, 360));
+        int side = Math.min(m.heightPixels > m.widthPixels ? Math.min(m.widthPixels - Ui.dp(a, 88), m.heightPixels - Ui.dp(a, 420))
+                : m.heightPixels - Ui.dp(a, 200), Ui.dp(a, 360));
         box.addView(game, new LinearLayout.LayoutParams(side, side));
         box.addView(score, Ui.mw(a, 10));
-        LinearLayout pad = Ui.horizontal(a);
-        pad.setGravity(Gravity.CENTER);
-        String[][] keys = {{"←", "-1", "0", "Влево"}, {"↑", "0", "-1", "Вверх"}, {"↓", "0", "1", "Вниз"}, {"→", "1", "0", "Вправо"}};
+        // крестовина, как на геймпаде: вверх, влево и вправо, вниз. Поворот сразу при касании, без ожидания отпускания
+        android.widget.GridLayout pad = new android.widget.GridLayout(a);
+        pad.setColumnCount(3);
+        String[][] keys = {{"↑", "0", "-1", "Вверх", "0", "1"}, {"←", "-1", "0", "Влево", "1", "0"},
+                {"→", "1", "0", "Вправо", "1", "2"}, {"↓", "0", "1", "Вниз", "2", "1"}};
         for (String[] k : keys) {
-            TextView b = Ui.text(a, k[0], 22, Ui.TEXT, "sans-serif-medium");
+            TextView b = Ui.text(a, k[0], 24, Ui.TEXT, "sans-serif-medium");
             b.setGravity(Gravity.CENTER);
-            b.setBackground(Ui.round(a, Ui.RAISED, 14, Ui.LINE));
+            b.setBackground(Ui.round(a, Ui.RAISED, 16, Ui.LINE));
             b.setContentDescription(k[3]);
-            b.setOnClickListener(v -> { Ui.tick(v); game.turn(Integer.parseInt(k[1]), Integer.parseInt(k[2])); });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.dp(a, 56), Ui.dp(a, 48));
-            lp.setMargins(Ui.dp(a, 4), 0, Ui.dp(a, 4), 0);
+            b.setClickable(true);
+            b.setOnTouchListener((v, e) -> {
+                if (e.getAction() == MotionEvent.ACTION_DOWN) { Ui.tick(v); game.turn(Integer.parseInt(k[1]), Integer.parseInt(k[2])); }
+                return false;
+            });
+            b.setOnClickListener(v -> { if (!v.isInTouchMode()) game.turn(Integer.parseInt(k[1]), Integer.parseInt(k[2])); }); // TalkBack и клавиатура
+            android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams(
+                    android.widget.GridLayout.spec(Integer.parseInt(k[4])), android.widget.GridLayout.spec(Integer.parseInt(k[5])));
+            lp.width = Ui.dp(a, 72);
+            lp.height = Ui.dp(a, 56);
+            lp.setMargins(Ui.dp(a, 3), Ui.dp(a, 3), Ui.dp(a, 3), Ui.dp(a, 3));
             pad.addView(b, lp);
         }
-        box.addView(pad, Ui.mw(a, 10));
-        AlertDialog d = new AlertDialog.Builder(a, Ui.dialogTheme()).setTitle("Змейка на перемене").setView(box)
+        LinearLayout.LayoutParams padLp = Ui.mw(a, 8);
+        padLp.width = LinearLayout.LayoutParams.WRAP_CONTENT;
+        padLp.gravity = Gravity.CENTER_HORIZONTAL;
+        box.addView(pad, padLp);
+        AlertDialog d = new AlertDialog.Builder(a, Ui.dialogTheme()).setTitle("Змейка на перемене").setView(scroll(box))
                 .setNegativeButton("Закрыть", null).create();
         d.setOnDismissListener(x -> game.stop());
         d.show();
+    }
+
+    /** Экран набок: поле и крестовина не помещаются по высоте, окно прокручивается. */
+    private static android.widget.ScrollView scroll(View box) {
+        android.widget.ScrollView s = new android.widget.ScrollView(box.getContext());
+        s.addView(box);
+        return s;
     }
 
     private void start() {

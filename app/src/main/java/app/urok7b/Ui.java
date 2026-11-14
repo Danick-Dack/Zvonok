@@ -465,4 +465,17 @@ final class Ui {
             }
         }
     }
+
+    /** Страница сайта в браузере: ссылки сайта ловит и сам «Звонок», поэтому выбираем только браузеры. */
+    static void web(android.app.Activity a, String url) {
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                .addCategory(android.content.Intent.CATEGORY_BROWSABLE);
+        i.setSelector(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https:"))
+                .addCategory(android.content.Intent.CATEGORY_BROWSABLE));
+        try {
+            a.startActivity(i);
+        } catch (RuntimeException e) {
+            android.widget.Toast.makeText(a, "Не нашлось браузера, чтобы это открыть", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
 }

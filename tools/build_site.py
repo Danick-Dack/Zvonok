@@ -596,14 +596,17 @@ def calendar(data, changes, cls):
 
 # ---------- страницы ----------
 NAV = [("./#now", "Сейчас"), ("./#week", "Неделя"), ("./#rooms", "Кабинеты"), ("./#news", "Новости"), ("./#more", "Ещё"), ("./#get", "Скачать на телефон")]
+TABBAR = [("./#now", "now", "Сейчас"), ("./#week", "week", "Неделя"), ("./#rooms", "door", "Кабинеты"), ("./#news", "news", "Новости"), ("./#more", "more", "Ещё")]
 
 
 def header(active=None):
-    """Шапка отдельных страниц: тот же знак и меню, что на главной."""
+    """Шапка отдельных страниц: тот же знак и меню, что на главной. На телефоне вкладки внизу, как в приложении."""
     links = "".join('<a href="%s"%s>%s</a>' % (h, ' aria-current="page"' if h == active else "", t) for h, t in NAV)
+    tabs = "".join('<a href="%s"><svg class="icon" aria-hidden="true"><use href="#i-%s"/></svg><span>%s</span></a>' % t for t in TABBAR)
     return ('<header class="top"><div class="wrap top-in"><a class="brand" href="about" aria-label="Звонок, о проекте">%s<span>Звонок</span></a>'
             '<nav class="nav-top" aria-label="Разделы">%s</nav>'
-            '<button class="icon-btn" id="schemeBtn" type="button" aria-label="Тема"></button></div></header>' % (MARK, links))
+            '<button class="icon-btn" id="schemeBtn" type="button" aria-label="Тема"></button></div></header>'
+            '<nav class="tabbar" aria-label="Разделы">%s</nav>' % (MARK, links, tabs))
 
 
 FOOTER = ('<footer class="foot"><div class="wrap"><nav aria-label="Ссылки"><a href="./">Расписание</a><a href="./#news">Новости</a><a href="./#olymp">Олимпиады</a><a href="about">О проекте</a><a href="make.html">Конструктор</a>'
@@ -717,6 +720,8 @@ def main():
     page("iphone.html", ["iphone_guide", "iphone"], ["core", "schedule", "rules", "iphone", "iphone_guide"],
          dict(data_js, **{"/*@IOSVER@*/null": js_literal(versions)}), common=common)
     page("poster.html", ["tokens", "poster"], ["poster"], {"/*@QRS@*/null": js_literal(qrs), "/*@CLASSES@*/[]": js_literal(classes)}, common=common)
+    # панель объявлений: ходит только на api.github.com, в поиск не попадает
+    page("panel.html", ["tokens", "base", "components", "pages"], ["core", "pages", "panel"], connect="'self' https://api.github.com", common=common)
     page("404.html", ["tokens", "base", "components", "pages"], ["core", "pages", "notfound"], {"/*@CLASSES@*/[]": js_literal(classes)}, common=common)
 
     icon(180).save(os.path.join(OUT, "apple-touch-icon.png"), optimize=True)

@@ -958,11 +958,13 @@ async function checkNews() {
   try {
     const r = new Request(SITE + "news.json");
     r.timeoutInterval = 6;
-    const j = await r.loadJSON(), top = j && Array.isArray(j.items) ? j.items[0] : null;
-    if (!top || !Number.isInteger(top.id)) return;
-    const seen = NET.st.news || 0;
-    NET.st.news = Math.max(seen, top.id); saveNet();
-    if (!seen || top.id <= seen) return; // первый запуск: просто запоминаем, с чего начать
+    // свежий пост ищем по времени: объявления «Звонка» идут вперемешку с постами канала
+    const j = await r.loadJSON(), at = p => p && typeof p.date === "string" ? Date.parse(p.date) || 0 : 0;
+    const top = (j && Array.isArray(j.items) ? j.items : []).reduce((a, p) => at(p) > at(a) ? p : a, null);
+    if (!top) return;
+    const seen = NET.st.newsAt || 0;
+    NET.st.newsAt = Math.max(seen, at(top)); saveNet();
+    if (!seen || at(top) <= seen) return; // первый запуск: просто запоминаем, с чего начать
     const n = new Notification();
     n.title = "Новости лицея";
     n.body = clean(String(top.text || "Новый пост в канале").split("\n")[0]).slice(0, 120);

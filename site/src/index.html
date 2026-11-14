@@ -118,6 +118,12 @@
         <section class="card" id="nextFree" aria-labelledby="nextFreeH" hidden><h2 class="card-title" id="nextFreeH">На следующем уроке</h2><p class="note" id="nextFreeNote"></p><div class="free" id="nextFreeList"></div></section>
       </div>
     </div>
+    <section class="card teach" aria-labelledby="teachH">
+      <h2 class="card-title" id="teachH">Для учителей: неделя кабинета или предмета</h2>
+      <p class="note">Ближайшие пять учебных дней с заменами. Имён учителей в расписании лицея нет, поэтому ищи по кабинету или предмету.</p>
+      <div class="rooms-bar"><select class="field" id="tWhat" aria-label="Кабинет или предмет"></select><select class="field" id="tMode" aria-label="Что показать"><option value="room">Кабинет</option><option value="subj">Предмет</option></select></div>
+      <div class="teach-week" id="tWeek"></div>
+    </section>
   </section>
 
   <section class="view" id="v-exams" aria-labelledby="examsH" hidden>
@@ -286,7 +292,6 @@
               <ol class="steps" id="brandSteps" hidden></ol>
             </details>
           </div>
-          <p class="note" style="margin-top:12px">Без интернета? Друг может отправить приложение прямо из «Звонка»: ⚙ → «Отправить приложение другу».</p>
         </div>
 
         <div id="osIos" hidden>
@@ -375,7 +380,7 @@
   <div class="sheet-body game">
     <canvas id="gameCv" width="300" height="300" role="img" aria-label="Поле змейки: стрелки на клавиатуре или свайпы"></canvas>
     <p class="note" id="gameScore" aria-live="polite"></p>
-    <div class="pad" role="group" aria-label="Управление"><span></span><button type="button" data-d="0,-1" aria-label="Вверх">↑</button><span></span><button type="button" data-d="-1,0" aria-label="Влево">←</button><button type="button" data-d="0,1" aria-label="Вниз">↓</button><button type="button" data-d="1,0" aria-label="Вправо">→</button></div>
+    <div class="pad" role="group" aria-label="Управление"><button type="button" class="up" data-d="0,-1" aria-label="Вверх">↑</button><button type="button" class="lt" data-d="-1,0" aria-label="Влево">←</button><button type="button" class="rt" data-d="1,0" aria-label="Вправо">→</button><button type="button" class="dn" data-d="0,1" aria-label="Вниз">↓</button></div>
   </div>
 </dialog>
 <dialog class="sheet" id="logSheet" aria-labelledby="logSheetH">

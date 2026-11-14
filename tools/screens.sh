@@ -38,6 +38,7 @@ prefs dark
 at 111010202026.00
 adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 3; shot dark_0_setup
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
+adb shell appops set $PKG SCHEDULE_EXACT_ALARM allow 2>/dev/null   # с Android 14 точные будильники включает сам пользователь
 adb shell dumpsys deviceidle whitelist +$PKG >/dev/null
 
 for scheme in dark light; do

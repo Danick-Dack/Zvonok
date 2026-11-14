@@ -6,15 +6,15 @@
         и раз в несколько часов скачать со своего сайта замены в расписании и новости лицея. И когда пользователь сам
         отправляет письмо в «Написать нам» (уходят только его текст, тип и класс, без имени и контактов).
         Аккаунтов, аналитики и рекламы нет; телефон, номер и место не узнаём.
+        Только обычные разрешения: точные будильники пользователь включает сам в «Проверке телефона»,
+        батарею тоже (приложение лишь открывает нужный экран настроек). Приложение не ставит и не раздаёт APK.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Android 16: таймер урока чипом в строке состояния (Live Updates). Обычное разрешение, без вопросов -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
@@ -146,13 +146,6 @@
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
-
-        <!-- Отдаёт только APK самого приложения и только по явному «Поделиться» -->
-        <provider
-            android:name=".ApkProvider"
-            android:authorities="app.urok7b.apk"
-            android:exported="false"
-            android:grantUriPermissions="true" />
 
         <receiver
             android:name=".LessonWidget"

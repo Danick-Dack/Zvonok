@@ -104,6 +104,7 @@ public class MainActivity extends Activity {
             });
             t.setOnClickListener(v -> {
                 Ui.tick(v);
+                if (k == NEWS && newsTab != null) newsTab.tabTap();
                 if (tab == k) pages[k].smoothScrollTo(0, 0); // повторное нажатие: наверх, как в системных приложениях
                 else show(k);
             });
@@ -217,7 +218,7 @@ public class MainActivity extends Activity {
 
     /** Точка у «Новостей», пока есть пост, которого во вкладке ещё не видели. */
     void newsDot() {
-        boolean fresh = Feed.top(this) > Updater.prefs(this).getInt(Feed.KEY_SEEN, 0);
+        boolean fresh = Feed.top(this) > Updater.prefs(this).getLong(Feed.KEY_SEEN, 0);
         ((TextView) tabs[NEWS].getChildAt(1)).setText(TAB_NAMES[NEWS] + (fresh ? " •" : ""));
         tabs[NEWS].setContentDescription(TAB_NAMES[NEWS] + (fresh ? ", есть новые" : ""));
     }

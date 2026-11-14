@@ -51,7 +51,10 @@ function snake() {
     if (Math.max(Math.abs(dx), Math.abs(dy)) > 20) turn(Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]);
   };
   cv.onclick = () => { if (over) start(); };
-  $$("#game .pad button").forEach(b => { b.onclick = () => turn(b.dataset.d.split(",").map(Number)); });
+  $$("#game .pad button").forEach(b => {
+    b.onpointerdown = e => { e.preventDefault(); turn(b.dataset.d.split(",").map(Number)); };
+    b.onclick = e => { if (!e.detail) turn(b.dataset.d.split(",").map(Number)); }; // Enter и пробел с клавиатуры
+  });
   document.addEventListener("keydown", keys);
   dlg.addEventListener("close", () => { clearInterval(timer); timer = 0; document.removeEventListener("keydown", keys); }, {once: true});
   dlg.addEventListener("click", e => { if (e.target === dlg || e.target.closest("[data-close]")) dlg.close(); });

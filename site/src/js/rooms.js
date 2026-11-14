@@ -3,6 +3,7 @@
 let rDay = null, rSlot = null, rRoom = "";
 function dateOfDay(d) { const n = new Date(); n.setHours(12, 0, 0, 0); n.setDate(n.getDate() + (d - dow(n) + 7) % 7); return n; }
 function renderRooms() {
+  renderTeach();
   const now = new Date(), today = dow(now), nowMin = now.getHours() * 60 + now.getMinutes();
   if (rDay == null) rDay = today < 5 ? today : 0;
   const sel = $("rday");
@@ -65,3 +66,32 @@ $("rday").onchange = e => { rDay = +e.target.value; rSlot = null; renderRooms();
 // печатают быстро: рисуем не чаще раза за кадр, а не на каждую букву
 let rqFrame = 0;
 $("rq").addEventListener("input", () => { cancelAnimationFrame(rqFrame); rqFrame = requestAnimationFrame(() => { rRoom = $("rq").value; renderRooms(); }); });
+
+/* ---------- для учителей: неделя одного кабинета или все уроки одного предмета у всех классов ----------
+   Данных об учителях в расписании нет, поэтому только то, что в нём точно есть: кабинет, класс, предмет, время. */
+let teachKey = "";
+function renderTeach() {
+  const mode = $("tMode").value, sel = $("tWhat");
+  const list = mode === "room" ? ROOMS : [...new Set(CLASSES.flatMap(c => classWeek(c).flat().map(l => l.subject)))].sort((a, b) => a.localeCompare(b, "ru"));
+  if (sel.dataset.mode !== mode) {
+    sel.replaceChildren(...list.map(x => h("option", {value: x, text: mode === "room" && /^\d/.test(x) ? "Кабинет " + x : x})));
+    sel.dataset.mode = mode;
+  }
+  const what = sel.value, key = mode + "|" + what + "|" + iso(new Date()) + "|" + chVer;
+  if (key === teachKey) return;
+  teachKey = key;
+  const days = [0, 1, 2, 3, 4].map(dateOfDay).sort((a, b) => a - b);
+  $("tWeek").replaceChildren(...days.map(date => {
+    const off = dayOff(date), bells = dayBells(date), rows = [];
+    if (mode === "room") (roomDay(date)[what] || []).forEach(u => rows.push({num: u.num, start: u.start, end: u.end, who: u.cls, what: lowFirst(u.subject)}));
+    else CLASSES.forEach(c => (off ? classWeek(c)[dow(date)] : dayLessons(c, date)).filter(l => l.subject === what)
+      .forEach(l => rows.push({num: l.num, start: l.start, end: l.end, who: c, what: l.room ? "каб. " + l.room : ""})));
+    rows.sort((a, b) => a.num - b.num || a.who.localeCompare(b.who, "ru"));
+    return h("div", null, h("h3", {text: DAYN[dow(date)] + ", " + dm(date) + (off ? " · " + off[2].toLowerCase() + ", обычное расписание" : "")}),
+      rows.length ? rows.map(r => h("div", {class: "slot-row"}, h("span", {class: "t", text: r.num + " · " + hm(r.start) + "–" + hm(r.end)}),
+        h("span", null, h("b", {text: r.who}), r.what ? " " + r.what : "")))
+        : h("p", {class: "note", text: mode === "room" ? "Весь день свободен" : "Уроков нет"}));
+  }));
+}
+$("tMode").onchange = () => renderTeach();
+$("tWhat").onchange = () => renderTeach();

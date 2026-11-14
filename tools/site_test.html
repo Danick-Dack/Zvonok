@@ -150,16 +150,28 @@ async function main() {
   });
 
   run("новости", () => {
-    const items = w.cleanFeed({items: [{id: 7, date: "2026-11-06T09:45:54+00:00", text: "Привет https://example.com/a. <b>x</b>", photo: "news/7.jpg", w: 640, h: 800},
-      {id: 6, date: "2026-11-05T09:00:00+00:00", text: "б", photo: "https://evil.example/x.jpg"}, {id: "5", date: "x"}, null]});
-    ok(items.length === 2 && items[0].photo === "news/7.jpg" && items[1].photo === "", "из news.json берётся только понятное, чужие картинки отбрасываются");
-    ev('FEED=cleanFeed({items:[{id:7,date:"2026-11-06T09:45:54+00:00",text:"Привет https://example.com/a. <b>x</b>"}]});store.del("newsSeen");newsDot()');
+    const items = w.cleanFeed({items: [{id: 7, date: "2026-11-06T09:45:54+00:00", text: "Привет https://example.com/a. <b>x</b>", photo: "news/7.jpg", pics: 2},
+      {id: 1000000009, date: "2026-11-07T09:00:00Z", text: "своё", own: true}, {id: "5", date: "x"}, null]});
+    ok(items.length === 2 && items[0].own && items[1].pics === 2 && !("photo" in items[1]), "из news.json берётся только понятное, свежие сверху, фото не грузятся");
+    ev('FEED=cleanFeed({items:[{id:7,date:"2026-11-06T09:45:54+00:00",text:"Привет https://example.com/a. <b>x</b>",pics:2},{id:1000000009,date:"2026-11-05T09:00:00Z",text:"своё",own:true}]});store.del("newsAt");newsDot()');
     ok(d.querySelector('.tabbar a[data-tab="news"]').classList.contains("dot"), "новый пост: точка на вкладке");
     ev('location.hash="#news";route(false)');
     const post = d.querySelector("#feed .post");
-    ok(!!post && post.querySelector(".post-text a").getAttribute("href") === "https://example.com/a" && !post.querySelector(".post-text b") && post.textContent.includes("<b>x</b>"), "пост: ссылка кликается, HTML из канала остаётся текстом");
-    ok(!d.querySelector('.tabbar a[data-tab="news"]').classList.contains("dot") && ev('store.get("newsSeen",0)') === 7, "после открытия точка пропадает");
+    ok(!!post && post.querySelector(".post-text a").getAttribute("href") === "https://example.com/a" && !post.querySelector(".post-text b") && post.textContent.includes("<b>x</b>")
+      && !post.querySelector("img") && post.textContent.includes("2 фото в Telegram"), "пост: ссылка кликается, HTML из канала остаётся текстом, фото только по ссылке");
+    const own = d.querySelector("#feed .post.own");
+    ok(!!own && !own.querySelector('a[href*="t.me"]'), "своё объявление без ссылки на Telegram");
+    ok(!d.querySelector('.tabbar a[data-tab="news"]').classList.contains("dot") && ev('store.get("newsAt",0)') === Date.parse("2026-11-06T09:45:54+00:00"), "после открытия точка пропадает");
     ev('location.hash="#now";route(false)');
+  });
+
+  run("для учителей и змейка", () => {
+    ev('location.hash="#rooms";route(false)');
+    ok(d.getElementById("tWhat").options.length > 10 && d.querySelectorAll("#tWeek h3").length === 5, "неделя кабинета: пять учебных дней");
+    ev('$("tMode").value="subj";renderTeach()');
+    ok(d.querySelectorAll("#tWeek .slot-row").length > 0 && !/undefined|NaN/.test(d.getElementById("tWeek").textContent), "уроки предмета у всех классов");
+    ev('$("tMode").value="room";renderTeach();location.hash="#now";route(false)');
+    ok(["up", "lt", "rt", "dn"].every(c => d.querySelector("#game .pad ." + c)), "змейка: крестовина из четырёх кнопок");
   });
 
   run("ссылка на класс и вкладки", () => {
@@ -520,11 +532,12 @@ async function iosScript(w) {
     ok(!got(r) && r.notes.length === 0, "битую или чужую версию не ставит");
     r = await run({versions: {classes: {"7B": ver}}, code: F.code}, keyed);
     ok(!got(r) && !r.logs.some(u => /ios\/7B\.js/.test(u)), "та же версия: ничего не скачивает");
-    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 5, text: "Привет, лицей\nвторая строка"}]}, files: {"/docs/zvonok-update.json": JSON.stringify({news: 3})}});
-    ok(r.notes.join() === "Новости лицея / Привет, лицей" && JSON.parse(r.files["/docs/zvonok-update.json"]).news === 5, "iPhone: уведомление о новом посте канала, один раз");
-    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 5, text: "Привет"}]}});
-    ok(r.notes.length === 0 && JSON.parse(r.files["/docs/zvonok-update.json"]).news === 5, "iPhone: при первом запуске старые новости не присылает");
-    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 9, text: "x"}]}, files: {"/docs/zvonok-update.json": JSON.stringify({news: 3}), "/docs/zvonok-settings.json": JSON.stringify({cls: "7Б", ntf: {news: false}})}});
+    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 5, date: "2026-11-06T09:00:00Z", text: "старый пост"}, {id: 1000000009, date: "2026-11-07T09:00:00Z", text: "Привет, лицей\nвторая строка", own: true}]},
+      files: {"/docs/zvonok-update.json": JSON.stringify({newsAt: Date.parse("2026-11-06T09:00:00Z")})}});
+    ok(r.notes.join() === "Новости лицея / Привет, лицей" && JSON.parse(r.files["/docs/zvonok-update.json"]).newsAt === Date.parse("2026-11-07T09:00:00Z"), "iPhone: уведомление о самом свежем посте по времени, один раз");
+    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 5, date: "2026-11-06T09:00:00Z", text: "Привет"}]}});
+    ok(r.notes.length === 0 && JSON.parse(r.files["/docs/zvonok-update.json"]).newsAt === Date.parse("2026-11-06T09:00:00Z"), "iPhone: при первом запуске старые новости не присылает");
+    r = await run({versions: {classes: {"7B": ver}}, news: {items: [{id: 9, date: "2026-11-08T09:00:00Z", text: "x"}]}, files: {"/docs/zvonok-update.json": JSON.stringify({newsAt: 1}), "/docs/zvonok-settings.json": JSON.stringify({cls: "7Б", ntf: {news: false}})}});
     ok(r.notes.length === 0, "iPhone: уведомления о новостях выключаются");
     ok(r.logs.filter(u => /ping\.json$/.test(u)).length === 1 && JSON.parse(r.files["/docs/zvonok-update.json"]).ping.length === 10, "iPhone: счётчик устройств раз в сутки");
     r = await run({siri: true, versions: {classes: {"7B": ver}}});

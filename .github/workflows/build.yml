@@ -10,6 +10,7 @@ on:
       - 'LICENSE'
       - '*.cmd'
       - 'data/olympiads.json'
+      - 'data/news_admin.json'   # объявления из панели: приложению не нужны, оно берёт news.json с сайта
       - '.github/CODEOWNERS'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/dependabot.yml'

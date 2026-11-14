@@ -14,8 +14,13 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /** Вкладка «Кабинеты»: свободные на любом уроке любого дня и кто сидит в кабинете, с заменами (как на сайте). */
 final class RoomsTab {
@@ -77,6 +82,60 @@ final class RoomsTab {
         nextFree = Ui.card(a);
         nextFree.setPadding(a.dp(16), a.dp(14), a.dp(16), a.dp(16));
         root.addView(nextFree, Ui.mw(a, 12));
+        root.addView(Ui.linkRow(a, "Для учителей: уроки предмета", "Все уроки предмета у всех классов на пять дней", null, v -> pickSubject()), Ui.mw(a, 12));
+    }
+
+    /** Ближайшие пять учебных дней по порядку. */
+    private static List<LocalDate> fiveDays() {
+        List<LocalDate> out = new ArrayList<>();
+        for (int d = 0; d < 5; d++) out.add(dateOf(LocalDate.now(), d));
+        Collections.sort(out);
+        return out;
+    }
+
+    private void pickSubject() {
+        TreeSet<String> all = new TreeSet<>();
+        for (LocalDate date : fiveDays())
+            for (List<Schedule.Use> us : Schedule.roomDay(date).values()) for (Schedule.Use u : us) all.add(u.subject);
+        String[] list = all.toArray(new String[0]);
+        new android.app.AlertDialog.Builder(a, Ui.dialogTheme()).setTitle("Какой предмет")
+                .setItems(list, (d, i) -> week(list[i], false)).setNegativeButton("Отмена", null).show();
+    }
+
+    /**
+     * Для учителей: неделя одного кабинета или все уроки одного предмета у всех классов, с заменами.
+     * Имён учителей в расписании лицея нет, поэтому только кабинет, класс, предмет и время.
+     */
+    private void week(String what, boolean room) {
+        LinearLayout box = Ui.vertical(a);
+        box.setPadding(a.dp(22), 0, a.dp(22), a.dp(8));
+        for (LocalDate date : fiveDays()) {
+            String off = Schedule.offDay(date);
+            TextView h = Ui.text(a, Schedule.dayName(date.getDayOfWeek()) + ", " + Schedule.dateText(date)
+                    + (off != null ? " · " + off.toLowerCase(Locale.ROOT) + ", обычное расписание" : ""), 15, Ui.TEXT, "sans-serif-medium");
+            h.setPadding(0, a.dp(14), 0, a.dp(4));
+            box.addView(h);
+            // урок и класс → строка; урок в двух кабинетах (42/21) одной строкой
+            TreeMap<String, String> rows = new TreeMap<>();
+            for (Map.Entry<String, List<Schedule.Use>> e : Schedule.roomDay(date).entrySet()) {
+                for (Schedule.Use u : e.getValue()) {
+                    if (room ? !e.getKey().equals(what) : !u.subject.equals(what)) continue;
+                    String key = String.format(Locale.ROOT, "%02d %02d %s", u.num, u.cls.length(), u.cls), old = rows.get(key);
+                    rows.put(key, old != null ? old + "/" + e.getKey() : u.num + " · " + Schedule.hm(u.start) + "–" + Schedule.hm(u.end) + "   " + u.cls
+                            + (room ? " " + Schedule.lowFirst(u.subject) : Character.isDigit(e.getKey().charAt(0)) ? ", каб. " + e.getKey() : ", " + e.getKey()));
+                }
+            }
+            if (rows.isEmpty()) box.addView(note(room ? "Весь день свободен" : "Уроков нет"));
+            for (String r : rows.values()) {
+                TextView t = Ui.text(a, r, 15, Ui.TEXT, null);
+                t.setPadding(0, a.dp(5), 0, a.dp(5));
+                box.addView(t);
+            }
+        }
+        ScrollView sv = new ScrollView(a);
+        sv.addView(box);
+        new android.app.AlertDialog.Builder(a, Ui.dialogTheme()).setTitle(room ? (Character.isDigit(what.charAt(0)) ? "Кабинет " + what : "Спортзал") : what)
+                .setView(sv).setPositiveButton("Закрыть", null).show();
     }
 
     void focusSearch() {
@@ -256,6 +315,11 @@ final class RoomsTab {
             r.setContentDescription(n + " урок: " + w.getText());
             roomCard.addView(r);
         }
+        String found = room;
+        TextView wk = Ui.text(a, "Неделя кабинета ›", 15, Ui.ACCENT, "sans-serif-medium");
+        wk.setPadding(a.dp(8), a.dp(12), a.dp(8), a.dp(4));
+        wk.setOnClickListener(v -> week(found, true));
+        roomCard.addView(wk);
     }
 
     private static String find(String x) {

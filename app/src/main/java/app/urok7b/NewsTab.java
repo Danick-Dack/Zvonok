@@ -1,14 +1,12 @@
 package app.urok7b;
 
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.util.Linkify;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -21,7 +19,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
-/** Вкладка «Новости»: посты канала лицея, текст и фото. Газетная шапка, как на сайте. */
+/** Вкладка «Новости»: посты канала лицея и объявления «Звонка». Фото остаются в Telegram. Газетная шапка, как на сайте. */
 final class NewsTab {
 
     private static final String TG = "https://t.me/sl165_official";
@@ -44,6 +42,7 @@ final class NewsTab {
         TextView h = Ui.heading(Ui.text(a, "Новости", 30, Ui.TEXT, null));
         h.setTypeface(Typeface.create(Typeface.SERIF, Typeface.BOLD));
         h.setPadding(0, a.dp(6), 0, 0);
+        h.setOnClickListener(v -> head());
         root.addView(h);
         TextView sub = Ui.text(a, "Канал лицея в Telegram", 14, Ui.MUTED, null);
         sub.setTypeface(Typeface.create(Typeface.SERIF, Typeface.ITALIC));
@@ -53,6 +52,30 @@ final class NewsTab {
         list = Ui.vertical(a);
         root.addView(list, Ui.mw(a, 6));
         root.addView(Ui.button(a, "Открыть канал в Telegram", false, v -> open(TG)), Ui.mw(a, 16));
+    }
+
+    // Вход в панель объявлений: три нажатия на заголовок «Новости», потом три нажатия на вкладку «Новости» внизу.
+    // Панель открывается на сайте и просит код; без ключа GitHub, сохранённого на этом устройстве, она ничего не может.
+    private int heads, tabs;
+    private long headAt, tabAt, armed;
+
+    private void head() {
+        long now = System.currentTimeMillis();
+        heads = now - headAt < 1500 ? heads + 1 : 1;
+        headAt = now;
+        if (heads >= 3) { heads = 0; armed = now; }
+    }
+
+    /** Нажатие на вкладку «Новости» в нижней панели. */
+    void tabTap() {
+        long now = System.currentTimeMillis();
+        if (now - armed > 15_000) return;
+        tabs = now - tabAt < 1500 ? tabs + 1 : 1;
+        tabAt = now;
+        if (tabs < 3) return;
+        tabs = 0;
+        armed = 0;
+        Ui.web(a, Updates.SITE + "panel.html");
     }
 
     private android.view.View rule() {
@@ -97,32 +120,17 @@ final class NewsTab {
             if (!loading) list.addView(Ui.button(a, "Загрузить новости", true, v -> { load(); render(); }), Ui.mw(a, 12));
             return;
         }
-        Updater.prefs(a).edit().putInt(Feed.KEY_SEEN, items.optJSONObject(0) == null ? 0 : items.optJSONObject(0).optInt("id")).apply();
+        Updater.prefs(a).edit().putLong(Feed.KEY_SEEN, Feed.top(a)).apply();
         a.newsDot();
         LocalDate today = LocalDate.now();
         for (int i = 0; i < items.length() && i < 30; i++) {
             JSONObject p = items.optJSONObject(i);
             if (p == null || p.optInt("id") <= 0) continue;
             String link = TG + "/" + p.optInt("id");
+            boolean own = p.optBoolean("own");
             LinearLayout card = Ui.card(a);
             card.setPadding(0, 0, 0, a.dp(14));
-            card.setClipToOutline(true);
-            String photo = p.optString("photo");
-            if (!photo.isEmpty()) {
-                ImageView img = new ImageView(a);
-                img.setAdjustViewBounds(true);
-                img.setMaxHeight(a.dp(420));
-                img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                img.setContentDescription("Фото поста. Открыть в Telegram");
-                img.setOnClickListener(v -> open(link));
-                card.addView(img, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                android.content.Context app = a.getApplicationContext();
-                Feed.IO.execute(() -> {
-                    Bitmap b = Feed.photo(app, photo);
-                    if (b != null) main.post(() -> img.setImageBitmap(b));
-                });
-            }
-            TextView when = Ui.text(a, date(p.optString("date"), today), 13, Ui.MUTED, null);
+            TextView when = Ui.text(a, (own ? "Объявление «Звонка» · " : "") + date(p.optString("date"), today), 13, own ? Ui.ACCENT : Ui.MUTED, null);
             when.setPadding(a.dp(16), a.dp(12), a.dp(16), 0);
             card.addView(when);
             String text = p.optString("text");
@@ -142,10 +150,14 @@ final class NewsTab {
                     card.addView(more);
                 } else card.addView(t);
             }
-            TextView tg = Ui.text(a, "В Telegram ›", 14, Ui.ACCENT, "sans-serif-medium");
-            tg.setPadding(a.dp(16), a.dp(10), a.dp(16), 0);
-            tg.setOnClickListener(v -> open(link));
-            card.addView(tg);
+            if (!own) {
+                int pics = p.optInt("pics");
+                TextView tg = Ui.text(a, (p.optBoolean("video") ? "Видео в Telegram" : pics > 0
+                        ? Schedule.word(pics, "фото", "фото", "фото") + " в Telegram" : "В Telegram") + " ›", 14, Ui.ACCENT, "sans-serif-medium");
+                tg.setPadding(a.dp(16), a.dp(10), a.dp(16), 0);
+                tg.setOnClickListener(v -> open(link));
+                card.addView(tg);
+            }
             list.addView(card, Ui.mw(a, 12));
         }
     }

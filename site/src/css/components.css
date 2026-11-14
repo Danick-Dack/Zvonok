@@ -14,12 +14,19 @@
 .nav-top a[aria-current="page"]{color:var(--text)}
 .nav-top a[aria-current="page"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-9px;height:2px;border-radius:2px;background:var(--accent)}
 @media (min-width:760px){.nav-top{display:flex;align-items:center;gap:4px;margin-right:auto}.brand{margin-right:18px}}
-@media (max-width:759px){
-  body:not(.has-tabbar) .top-in{flex-wrap:wrap;height:auto;min-height:var(--header-h);padding-top:6px;padding-bottom:8px}
-  body:not(.has-tabbar) .nav-top{display:flex;order:3;width:100%;gap:2px;overflow-x:auto;scrollbar-width:none;padding-top:6px;border-top:1px solid var(--line)}
-  body:not(.has-tabbar) .nav-top::-webkit-scrollbar{display:none}
-  body:not(.has-tabbar) .nav-top a{flex:1;padding:6px 8px;font-size:13.5px;min-height:34px}
-}
+
+/* нижняя панель на телефоне */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--bar-bg);
+  -webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);border-top:1px solid var(--line);
+  padding:5px max(6px,env(safe-area-inset-left)) calc(5px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-right))}
+.tabbar a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;border-radius:12px;
+  text-decoration:none;color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap;transition:color .15s}
+.tabbar a .icon{width:25px;height:25px;stroke-width:1.7}
+.tabbar a[aria-current="page"]{color:var(--accent)}
+.tabbar a[aria-current="page"] .icon{stroke-width:2.1}
+body.has-tabbar{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
+body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
+@media (min-width:760px){.tabbar{display:none}body.has-tabbar{padding-bottom:0}body.has-tabbar .zv-toast{bottom:28px}}
 
 /* кнопки */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:var(--r-md);

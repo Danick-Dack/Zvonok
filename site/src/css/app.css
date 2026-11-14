@@ -1,17 +1,5 @@
 /* Звонок · главная: «Сейчас», «Неделя», «Кабинеты», «Ещё» */
 
-/* нижняя панель на телефоне */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--bar-bg);
-  -webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);border-top:1px solid var(--line);
-  padding:5px max(6px,env(safe-area-inset-left)) calc(5px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-right))}
-.tabbar a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;border-radius:12px;
-  text-decoration:none;color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap;transition:color .15s}
-.tabbar a .icon{width:25px;height:25px;stroke-width:1.7}
-.tabbar a[aria-current="page"]{color:var(--accent)}
-.tabbar a[aria-current="page"] .icon{stroke-width:2.1}
-body.has-tabbar{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom))}
-body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom))}
-@media (min-width:760px){.tabbar{display:none}body.has-tabbar{padding-bottom:0}body.has-tabbar .zv-toast{bottom:28px}}
 .top .install-btn{display:inline-flex;gap:4px;padding-inline:10px;margin-right:2px} /* «Загрузить» видна и на телефоне */
 #schemeBtn{display:none}
 @media (min-width:760px){#schemeBtn{display:inline-grid}}
@@ -213,6 +201,10 @@ body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-ins
 .slot-row b{font-weight:650}
 .slot-row.now .t{color:var(--accent);font-weight:600}
 .slot-row .free-txt{color:var(--ok);font-weight:550}
+.teach{margin-top:16px}
+.teach-week{display:grid;gap:14px;margin-top:14px}
+@media (min-width:900px){.teach-week{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}}
+.teach-week h3{font-size:15px;margin:0 0 2px}
 
 /* ещё: меню с раскрывающимися разделами, как настройки телефона */
 .menu{display:grid;gap:10px;max-width:780px}
@@ -269,8 +261,10 @@ body.has-tabbar .zv-toast{bottom:calc(var(--tabbar-h) + 14px + env(safe-area-ins
 /* змейка */
 .game canvas{display:block;width:100%;max-width:320px;aspect-ratio:1;margin:0 auto;border-radius:16px;touch-action:none;cursor:pointer}
 .game .note{text-align:center;margin:10px 0 4px;min-height:2.9em}
-.pad{display:grid;grid-template-columns:repeat(3,58px);gap:6px;justify-content:center}
-.pad button{height:48px;border-radius:12px;background:var(--surface-2);font-size:20px;font-weight:700}
+/* крестовина: вверх, влево и вправо по бокам, вниз под ними, как на геймпаде */
+.pad{display:grid;grid-template:". up ." 56px "lt . rt" 56px ". dn ." 56px/72px 72px 72px;gap:6px;justify-content:center;margin-top:4px;touch-action:manipulation}
+.pad button{border-radius:16px;background:var(--surface-2);font-size:24px;font-weight:700;-webkit-user-select:none;user-select:none}
+.pad .up{grid-area:up}.pad .lt{grid-area:lt}.pad .rt{grid-area:rt}.pad .dn{grid-area:dn}
 .pad button:active{background:var(--surface-3)}
 @media (hover:hover) and (pointer:fine){.pad{display:none}}
 
@@ -414,9 +408,7 @@ body.flip{transition:transform .8s var(--ease);transform:rotate(180deg)}
 /* новости: газетная полоса */
 .feed{display:grid;gap:16px;max-width:680px;margin-top:6px}
 .post{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
-.post-pic{position:relative;display:block;background:var(--surface-2)}
-.post-pic img{display:block;width:100%;height:auto}
-.post-more{position:absolute;right:10px;bottom:10px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font-size:13px;font-weight:600}
+.post.own{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent),var(--shadow)}
 .post-in{padding:14px 16px 16px;display:grid;gap:10px}
 .post time{color:var(--muted);font-size:13.5px}
 .post-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;line-height:1.5}

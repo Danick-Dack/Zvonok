@@ -13,4 +13,3 @@ __pycache__/
 tools/_sig_fixture.js
 tools/_script_for_preview.js
 site/news.json
-site/news/

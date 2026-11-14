@@ -12,7 +12,7 @@ jobs:
       - name: Тесты сайта
         run: python3 tools/test_site.py
       - name: Сборщик новостей на вредном HTML
-        run: pip install pillow && python3 tools/test_news.py
+        run: python3 tools/test_news.py
       - name: Эталон Android совпадает с правилами сайта
         run: python3 tools/golden.py --check
       - name: Ключ подписи iPhone

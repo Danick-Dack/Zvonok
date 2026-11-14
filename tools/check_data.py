@@ -192,5 +192,18 @@ sc = os.path.join(ROOT, "site", "changes.json")
 if not os.path.exists(sc) or json.load(open(sc, encoding="utf-8")) != changes:
     errors.append("site/changes.json устарел: запусти python tools/build_site.py")
 
+# объявления из панели: только известные поля, свои номера от миллиарда, простой текст до 2000 знаков
+na = json.load(open(os.path.join(ROOT, "data", "news_admin.json"), encoding="utf-8"))
+if set(na) != {"posts", "hidden"} or not isinstance(na["posts"], list) or not isinstance(na["hidden"], list):
+    errors.append("news_admin.json: нужны только списки posts и hidden")
+else:
+    for i, p in enumerate(na["posts"]):
+        if not (isinstance(p, dict) and set(p) == {"id", "date", "text"} and isinstance(p["id"], int) and 10 ** 9 < p["id"] < 2 ** 31
+                and isinstance(p["date"], str) and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", p["date"])
+                and isinstance(p["text"], str) and 0 < len(p["text"].strip()) <= 2000):
+            errors.append(f"news_admin.json, объявление {i + 1}: нужны id (от 10^9), date (ГГГГ-ММ-ДДTЧЧ:ММ:ССZ) и text до 2000 знаков")
+    if not all(isinstance(x, int) and 0 < x < 2 ** 31 for x in na["hidden"]):
+        errors.append("news_admin.json: hidden только из номеров постов")
+
 print("\n".join(errors) or f"OK: {len(classes)} классов, {len(bells)} звонков")
 sys.exit(1 if errors else 0)
