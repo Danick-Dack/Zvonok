@@ -117,7 +117,7 @@ public class Setup extends Activity {
                 Toast.makeText(this, "Не нашлось браузера. Открой сайт «Звонка» и скачай оттуда", Toast.LENGTH_LONG).show();
             }
         }), Ui.mw(this, 16));
-        TextView note = Ui.text(this, "Уведомление с таймером и виджеты пока работают как раньше.", 13, Ui.MUTED, null);
+        TextView note = Ui.text(this, "Уведомление с таймером и виджеты пока работают как раньше", 13, Ui.MUTED, null);
         note.setPadding(Ui.dp(this, 4), Ui.dp(this, 12), Ui.dp(this, 4), 0);
         root.addView(note);
     }

@@ -49,7 +49,6 @@ adb shell am start -W -n $PKG/.MainActivity >/dev/null; sleep 3; shot dark_0_set
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS 2>/dev/null
 adb shell appops set $PKG SCHEDULE_EXACT_ALARM allow 2>/dev/null   # с Android 14 точные будильники включает сам пользователь
 adb shell dumpsys deviceidle whitelist +$PKG >/dev/null
-adb shell appops set $PKG POST_PROMOTED_NOTIFICATIONS allow 2>/dev/null   # Android 16: таймер в строке состояния тоже обязателен
 
 for scheme in dark light; do
   prefs $scheme
