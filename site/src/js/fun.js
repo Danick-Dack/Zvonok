@@ -116,7 +116,7 @@ function preBuzz(now) {
   buzzFor = +M.target;
   navigator.vibrate([300, 150, 300]); toast("Через 3 минуты звонок");
 }
-$("buzzRow").hidden = !navigator.vibrate;
+$("buzzRow").hidden = !navigator.vibrate || EMBED; // в приложении iPhone своя вибрация: уведомления Scriptable (plus.js)
 $("buzzToggle").checked = !!store.get("buzz", false);
 $("buzzToggle").onchange = e => { store.set("buzz", e.target.checked); if (e.target.checked) navigator.vibrate([300, 150, 300]); };
 

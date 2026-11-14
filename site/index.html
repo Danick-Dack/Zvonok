@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-LEWjtUb6f75qDnqgY9YkFGsXz3JHvab3YYEwN8ZU23I=' 'sha256-RX7kMDXlFw9jGBVSU4ziaGcwRFataUi1U4KBNz/L9lk=' 'sha256-nQ5VHXIpG7T4G0K16QszDA1kLtsFUzOwvne+lt0bB2E='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://codeforces.com https://github.com https://objects.githubusercontent.com https://release-assets.githubusercontent.com; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-LEWjtUb6f75qDnqgY9YkFGsXz3JHvab3YYEwN8ZU23I=' 'sha256-caygzK3TRRVCidzKg4inZp43LRLGPuZVpE1gkkm/YEI=' 'sha256-nQ5VHXIpG7T4G0K16QszDA1kLtsFUzOwvne+lt0bB2E='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://codeforces.com https://github.com https://objects.githubusercontent.com https://release-assets.githubusercontent.com; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F4F4F1" data-c="#F4F4F1" media="(prefers-color-scheme: light)">
@@ -2667,7 +2667,7 @@ if (left <= 170000 || left > 180000 || buzzFor === +M.target || !store.get("buzz
 buzzFor = +M.target;
 navigator.vibrate([300, 150, 300]); toast("Через 3 минуты звонок");
 }
-$("buzzRow").hidden = !navigator.vibrate;
+$("buzzRow").hidden = !navigator.vibrate || EMBED;
 $("buzzToggle").checked = !!store.get("buzz", false);
 $("buzzToggle").onchange = e => { store.set("buzz", e.target.checked); if (e.target.checked) navigator.vibrate([300, 150, 300]); };
 function streak() {
