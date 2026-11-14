@@ -1,7 +1,7 @@
 """Тесты сборщика новостей (tools/update_news.py) на вредном и кривом HTML.  python tools/test_news.py
 
 Превью канала Telegram для нас чужой текст: что бы там ни оказалось, в news.json должен попасть только
-обычный текст, номер поста, дата и число фото. Фото на сайт не копируются.
+обычный текст, номер поста, дата и картинка, пересохранённая без метаданных.
 """
 import os
 import sys
@@ -55,24 +55,50 @@ ok(len(p[7]["text"]) == n.MAX_TEXT and "\x00" not in p[7]["text"] and " " not 
 ok(p[8]["text"] == "много\n\nпустых строк и пробелов", "лишние пустые строки и пробелы схлопнуты: %r" % p[8]["text"])
 ok(all(set(x) <= {"id", "date", "text", "src", "more", "video"} for x in p.values()), "в записи только известные поля")
 
-# свои объявления из панели и скрытые посты: data/news_admin.json проверяется как чужой текст
-import json, tempfile
+# картинки канала: только https и только серверы Telegram; до скачивания дело дойти не должно
+calls = []
+real = n.fetch
+n.fetch = lambda url, limit: calls.append(url) or (_ for _ in ()).throw(OSError("сеть в тесте выключена"))
+try:
+    bad = ["http://cdn4.telesco.pe/file/a.jpg", "https://evil.example/a.jpg", "https://telesco.pe.evil.example/a.jpg", "file:///etc/passwd",
+           "https://cdn4.telesco.pe@evil.example/a.jpg", "javascript:alert(1)", "", "https://127.0.0.1/a.jpg"]
+    ok(all(n.tg_image(u, 1) is None for u in bad) and not calls, "чужие адреса картинок отброшены без запроса: %s" % calls)
+    ok(n.tg_image("https://cdn4.telesco.pe/file/a.jpg", 1) is None and len(calls) == 1, "адрес Telegram разрешён (и ошибка сети не роняет сборку)")
+finally:
+    n.fetch = real
+
+# свои объявления и скрытые посты: data/news.json проверяется как чужой текст, фото пересохраняется
+import io, json, tempfile
+from PIL import Image
+
+
+def jpeg(size=(1600, 900)):
+    b = io.BytesIO()
+    ex = Image.Exif()
+    ex[0x010F] = "секретная камера"
+    Image.new("RGB", size, (200, 30, 30)).save(b, "JPEG", exif=ex)
+    return b.getvalue()
+
+
 tmp = tempfile.mkdtemp()
-os.makedirs(os.path.join(tmp, "data")); os.makedirs(os.path.join(tmp, "site"))
+os.makedirs(os.path.join(tmp, "data", "news")); os.makedirs(os.path.join(tmp, "site"))
 B = n.OWN_BASE
-with open(os.path.join(tmp, "data", "news_admin.json"), "w", encoding="utf-8") as f:
+with open(os.path.join(tmp, "data", "news", "%d.jpg" % (B + 5)), "wb") as f:
+    f.write(jpeg())
+with open(os.path.join(tmp, "data", "news.json"), "w", encoding="utf-8") as f:
     json.dump({"posts": [
-        {"id": B + 5, "date": "2026-11-07T08:00:00Z", "text": "<b>Завтра</b> линейка\n\n\n\nв 8:00 \x00"},
+        {"id": B + 5, "date": "2026-11-07T08:00:00Z", "text": "<b>Завтра</b> линейка\n\n\n\nв 8:00 \x00", "photo": "%d.jpg" % (B + 5)},
+        {"id": B + 9, "date": "2026-11-07T07:00:00Z", "text": "", "photo": "../../secret.jpg"},
         {"id": 77, "date": "2026-11-07T08:00:00Z", "text": "номер из чужого диапазона"},
         {"id": B + 6, "date": "вчера", "text": "кривая дата"},
         {"id": B + 7, "date": "2026-11-07T09:00:00Z", "text": 5},
-        {"id": B + 8, "date": "2026-11-07T10:00:00Z", "text": "скрыт панелью"},
-        "не объект"], "hidden": [4, B + 8, "x"]}, f, ensure_ascii=False)
+        {"id": B + 8, "date": "2026-11-07T10:00:00Z", "text": "скрыт"},
+        "не объект"], "hidden": [2, B + 8, "x"]}, f, ensure_ascii=False)
 real = (n.fetch, n.ROOT, n.OUT)
 n.ROOT, n.OUT = tmp, os.path.join(tmp, "site")
-old_site = {"items": [{"id": 30, "date": "2026-11-01T09:00:00+00:00", "text": "старый", "photo": "news/3.jpg", "w": 1, "h": 1, "more": 2},
+old_site = {"items": [{"id": 30, "date": "2026-11-01T09:00:00+00:00", "text": "старый", "photo": "news/30.jpg", "w": 1, "h": 1, "more": 2},
                       {"id": B + 1, "date": "2026-11-01T09:00:00+00:00", "text": "свой пост, которого уже нет в файле"}]}
-n.fetch = lambda url, limit: (page.encode() if "t.me" in url else json.dumps(old_site).encode())
+n.fetch = lambda url, limit: page.encode() if "t.me" in url else json.dumps(old_site).encode() if url.endswith("news.json") else jpeg()
 try:
     n.main()
     with open(os.path.join(tmp, "site", "news.json"), encoding="utf-8") as f:
@@ -80,15 +106,16 @@ try:
 finally:
     n.fetch, n.ROOT, n.OUT = real
 ids = [x["id"] for x in out]
+by = {x["id"]: x for x in out}
 own = [x for x in out if x.get("own")]
 ok([x["id"] for x in own] == [B + 5] and own[0]["text"] == "<b>Завтра</b> линейка\n\nв 8:00",
-   "в ленту попал только правильный свой пост, его текст остался текстом: %r" % own)
-ok(4 not in ids and B + 8 not in ids and B + 1 not in ids, "скрытые посты и удалённые свои объявления пропали: %s" % ids)
-ok(not any("photo" in x or "src" in x or "w" in x for x in out), "фото канала на сайт не копируются")
-ok(next(x for x in out if x["id"] == 30)["pics"] == 3 and next(x for x in out if x["id"] == 5).get("pics") == 1,
-   "у поста осталось только число фото для ссылки на Telegram")
-ok(ids == sorted(ids, key=lambda i: n.when(next(x for x in out if x["id"] == i)), reverse=True), "лента по времени, свежие сверху")
-ok(not os.path.exists(os.path.join(tmp, "site", "news")), "папки с картинками больше нет")
+   "в ленту попал только правильный свой пост, его текст остался текстом, чужой путь к фото отброшен: %r" % own)
+ok(2 not in ids and B + 8 not in ids and B + 1 not in ids, "скрытые посты и удалённые свои объявления пропали: %s" % ids)
+ok(by[4]["photo"] == "news/4.jpg" and by[4]["more"] == 1 and by[30]["photo"] == "news/30.jpg" and by[B + 5]["photo"] == "news/%d.jpg" % (B + 5),
+   "фото канала, старого поста и своего объявления лежат на сайте")
+im = Image.open(os.path.join(tmp, "site", "news", "%d.jpg" % (B + 5)))
+ok(im.size == (960, 540) and (by[B + 5]["w"], by[B + 5]["h"]) == im.size and not im.getexif(), "фото уменьшено и пересохранено без метаданных")
+ok(ids == sorted(ids, key=lambda i: n.when(by[i]), reverse=True), "лента по времени, свежие сверху")
 
 print("\n%d упало" % len(fails) if fails else "\nвсё прошло")
 sys.exit(1 if fails else 0)

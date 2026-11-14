@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-s6h3OI0sRZxE+j4ETfKF6zT5uOJL3ioRmDJ2t313JX4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-nr393PFb8S8kX4tzIw1KqOQn5qFtIkjV3va7LFWyOLM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="description" content="«Звонок» на iPhone: виджет с таймером до звонка на экране блокировки, ответ Siri и напоминания перед уроком. Скрипт для своего класса и пошаговая анимация.">
 <meta name="theme-color" content="#09090a">
 <title>Звонок на iPhone: виджет, Siri и напоминания</title>
@@ -794,7 +794,7 @@ function festive(d) {
 const t = iso(d).slice(5);
 return (DATA.themes || []).find(x => Array.isArray(x) && (x[0] <= x[1] ? t >= x[0] && t <= x[1] : t >= x[0] || t <= x[1])) || null;
 }
-const IOS_VERSIONS = {"7A":"cdd754cfd5","7B":"cbf2301931","7V":"24ff16bd5b","8A":"359e501c16","8B":"7ab0f5ad81","8V":"0b24f4506f","8G":"0364904555","9A":"f98ef711a4","9B":"81e1db22f7","9V":"0639733957","9G":"250a2a5fac","10A":"c1a7420610","10B":"144f12e784","10V":"057f2ea357","10G":"acb1d1013b","11A":"a5c264deff","11B":"55fce9161a","11V":"1007177a05","11G":"5847c17b25"} || {};
+const IOS_VERSIONS = {"7A":"6c01edd0d0","7B":"ef8a9c8cc5","7V":"fdb86b93f1","8A":"0f2215566f","8B":"bc6989c751","8V":"78ee31ed5d","8G":"ae0e4352db","9A":"37214cf967","9B":"021fea81b0","9V":"44997939d9","9G":"4a7eb722a8","10A":"13f438e525","10B":"1ab722cda8","10V":"95a8de2bf8","10G":"223e708006","11A":"bcf8176b8c","11B":"9e57abffd2","11V":"d6845b1058","11G":"b5b70ffe76"} || {};
 const SITE_URL = "https://danick-dack.github.io/Zvonok/";
 const OWN = "__own__";
 const upSlug = c => c.replace(/[АБВГ]/g, x => LAT[x].toUpperCase());

@@ -44,6 +44,7 @@ jobs:
           # закрытый ключ подписи новых версий скрипта iPhone (Settings → Secrets → Actions)
           IOS_SIGN_KEY: ${{ secrets.IOS_SIGN_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # только чтение счётчика скачиваний релизов
+          SITE_EXTRA: ${{ secrets.SITE_EXTRA }}
         run: |
           # без ключа виджеты iPhone тихо перестали бы обновляться: они ставят только подписанные версии
           if [ -z "$IOS_SIGN_KEY" ] && [ "$GITHUB_REPOSITORY" = "Danick-Dack/Zvonok" ]; then

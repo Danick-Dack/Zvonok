@@ -408,6 +408,9 @@ body.flip{transition:transform .8s var(--ease);transform:rotate(180deg)}
 /* новости: газетная полоса */
 .feed{display:grid;gap:16px;max-width:680px;margin-top:6px}
 .post{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
+.post-pic{position:relative;display:block;background:var(--surface-2)}
+.post-pic img{display:block;width:100%;height:auto}
+.post-more{position:absolute;right:10px;bottom:10px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font-size:13px;font-weight:600}
 .post.own{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent),var(--shadow)}
 .post-in{padding:14px 16px 16px;display:grid;gap:10px}
 .post time{color:var(--muted);font-size:13.5px}

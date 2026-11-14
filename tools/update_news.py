@@ -1,18 +1,20 @@
-"""Новости лицея для вкладки «Новости»: публичное превью канала Telegram и свои объявления → site/news.json.
+"""Новости лицея для вкладки «Новости»: публичное превью канала Telegram и свои объявления → site/news.json и site/news/<номер>.jpg.
 
   python tools/update_news.py
 
 Запускает GitHub Actions раз в час (pages.yml), в репозиторий ничего не коммитит. Сайт и приложения читают только
-news.json со своего сайта: в Telegram с телефонов никто не ходит. Из поста берём только текст, дату и число фото:
-сами фото остаются в Telegram (на них ученики), у поста есть ссылка на оригинал. Свои объявления и список скрытых постов
-лежат в data/news_admin.json (их правит панель «Звонка»). Если Telegram не ответил, остаются прошлые новости с сайта.
+news.json со своего сайта: в Telegram с телефонов никто не ходит. Из поста берём текст и одну картинку. Картинку
+пересохраняем через Pillow: в файле остаются только пиксели, без метаданных и без того, что могло быть спрятано в оригинале.
+Свои объявления (с фото из data/news/) и скрытые посты лежат в data/news.json. Если Telegram не ответил, остаются прошлые новости с сайта.
 """
 import datetime
 import html
+import io
 import json
 import os
 import re
 import sys
+import urllib.parse
 import urllib.request
 from html.parser import HTMLParser
 
@@ -22,6 +24,8 @@ CHANNEL = "sl165_official"
 SITE_URL = "https://danick-dack.github.io/Zvonok/"
 KEEP = 30               # сколько последних постов держим
 MAX_TEXT = 4000
+MAX_IMAGE = 8 << 20     # больше 8 МБ картинку не качаем
+IMAGE_HOSTS = (".telesco.pe", ".telegram-cdn.org", ".cdn-telegram.org")
 UA = {"User-Agent": "Mozilla/5.0 (compatible; zvonok-news)"}
 
 
@@ -91,14 +95,41 @@ def parse(page):
     return posts
 
 
-OWN_BASE = 1_000_000_000  # номера постов из панели «Звонка»: от миллиарда, с номерами канала не пересекаются
+OWN_BASE = 1_000_000_000  # номера своих объявлений: от миллиарда, с номерами канала не пересекаются
+
+
+def save_image(data, pid):
+    """Картинка поста: пересохраняем в JPEG не шире 960 px, в файле остаются только пиксели. → (ширина, высота) или None."""
+    from PIL import Image
+    try:
+        im = Image.open(io.BytesIO(data))
+        im = im.convert("RGB")
+        im.thumbnail((960, 1280))
+        os.makedirs(os.path.join(OUT, "news"), exist_ok=True)
+        im.save(os.path.join(OUT, "news", "%d.jpg" % pid), "JPEG", quality=78, optimize=True, progressive=True)
+        return im.size
+    except Exception as e:  # битая картинка: пост останется без неё
+        print("картинка поста %d не сохранилась: %s" % (pid, e))
+        return None
+
+
+def tg_image(url, pid):
+    """Картинка канала: только https с серверов Telegram."""
+    u = urllib.parse.urlsplit(url)
+    if u.scheme != "https" or not u.hostname or not u.hostname.endswith(IMAGE_HOSTS):
+        return None
+    try:
+        return save_image(fetch(url, MAX_IMAGE), pid)
+    except Exception as e:
+        print("картинка поста %d не скачалась: %s" % (pid, e))
+        return None
 
 
 def admin():
-    """data/news_admin.json: свои объявления из панели «Звонка» и номера постов канала, которые убрали с сайта.
+    """data/news.json: свои объявления (фото к ним в data/news/<номер>.jpg) и номера постов канала, которые убрали с сайта.
     Файл правят через GitHub, поэтому каждое поле проверяем, как чужой текст: в ленту попадает только простой текст."""
     try:
-        with open(os.path.join(ROOT, "data", "news_admin.json"), encoding="utf-8-sig") as f:
+        with open(os.path.join(ROOT, "data", "news.json"), encoding="utf-8-sig") as f:
             j = json.load(f)
     except FileNotFoundError:
         return [], set()
@@ -107,9 +138,18 @@ def admin():
         if not (isinstance(p, dict) and isinstance(p.get("id"), int) and p["id"] > OWN_BASE and isinstance(p.get("text"), str)
                 and isinstance(p.get("date"), str) and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|[+-]\d\d:\d\d)", p["date"])):
             continue
-        text = plain(html.escape(p["text"]).replace("\n", "<br>"))
-        if text:
-            own.append({"id": p["id"], "date": p["date"], "text": text, "own": True})
+        post = {"id": p["id"], "date": p["date"], "text": plain(html.escape(p["text"]).replace("\n", "<br>")), "own": True}
+        if p.get("photo") == "%d.jpg" % p["id"]:
+            try:
+                with open(os.path.join(ROOT, "data", "news", p["photo"]), "rb") as f:
+                    data = f.read(MAX_IMAGE + 1)
+                size = len(data) <= MAX_IMAGE and save_image(data, p["id"])
+                if size:
+                    post.update(photo="news/%d.jpg" % p["id"], w=size[0], h=size[1])
+            except OSError as e:
+                print("фото объявления %d не найдено: %s" % (p["id"], e))
+        if post["text"] or post.get("photo"):
+            own.append(post)
     hidden = {x for x in j.get("hidden", []) if isinstance(x, int)}
     return own, hidden
 
@@ -144,14 +184,25 @@ def main():
     for p in fresh + [p for p in old if p["id"] not in seen]:
         if p["id"] in hidden:
             continue
-        # Фото канала на сайт не копируем: на них ученики, а чужие снимки без согласия выкладывать нельзя.
-        # Остаётся только число фото и ссылка на пост в Telegram.
-        n = 1 + p.get("more", 0) if p.pop("src", None) or p.get("photo") else p.get("pics", 0)
-        for k in ("photo", "w", "h", "more"):
-            p.pop(k, None)
-        if n:
-            p["pics"] = n
-        if p.get("text") or n:
+        src = p.pop("src", None)
+        p.pop("pics", None)
+        if src:
+            size = tg_image(src, p["id"])
+            if size:
+                p.update(photo="news/%d.jpg" % p["id"], w=size[0], h=size[1])
+        elif p.get("photo"):  # старый пост: его картинка уже лежит на сайте
+            try:
+                data = fetch(SITE_URL + "news/%d.jpg" % p["id"], MAX_IMAGE)
+                os.makedirs(os.path.join(OUT, "news"), exist_ok=True)
+                with open(os.path.join(OUT, "news", "%d.jpg" % p["id"]), "wb") as f:
+                    f.write(data)
+                p["photo"] = "news/%d.jpg" % p["id"]
+            except Exception:
+                for k in ("photo", "w", "h"):
+                    p.pop(k, None)
+        if not p.get("photo"):
+            p.pop("more", None)
+        if p.get("text") or p.get("photo"):
             items.append(p)
     own = [p for p in own if p["id"] not in hidden]
     items = sorted(items + own, key=when, reverse=True)[:KEEP]

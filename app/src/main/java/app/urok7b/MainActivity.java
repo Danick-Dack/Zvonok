@@ -104,7 +104,6 @@ public class MainActivity extends Activity {
             });
             t.setOnClickListener(v -> {
                 Ui.tick(v);
-                if (k == NEWS && newsTab != null) newsTab.tabTap();
                 if (tab == k) pages[k].smoothScrollTo(0, 0); // повторное нажатие: наверх, как в системных приложениях
                 else show(k);
             });

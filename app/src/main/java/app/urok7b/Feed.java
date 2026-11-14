@@ -7,6 +7,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 
 import org.json.JSONArray;
@@ -14,12 +16,18 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 /**
  * Новости лицея и олимпиады: файлы news.json и olympiads.json со своего сайта (в Telegram приложение не ходит,
- * посты раз в час собирает сборка сайта, фото остаются в Telegram). Скачанное хранится на телефоне и открывается без интернета.
+ * посты раз в час собирает сборка сайта вместе с фото). Скачанное хранится на телефоне и открывается без интернета.
  * В сеть только с разрешения (как обновления) или по явному нажатию «Загрузить».
  */
 final class Feed {
@@ -30,6 +38,9 @@ final class Feed {
     private static final String KEY_TOLD = "news_told_at", KEY_UPDATE_TOLD = "update_told";
     private static final String CHANNEL = "school_news";
     private static final int NEWS_ID = 21, UPDATE_ID = 22;
+    private static final Pattern PHOTO = Pattern.compile("^news/\\d{1,10}\\.jpg$");
+    /** Картинки грузятся по одной: не десять соединений сразу. */
+    static final ExecutorService IO = Executors.newSingleThreadExecutor();
 
     private Feed() {}
 
@@ -58,12 +69,50 @@ final class Feed {
                 out.write(r[0].getBytes(StandardCharsets.UTF_8));
             }
             p.edit().putString("etag_" + name, r[1]).apply();
-            // фото постов раньше хранились в кэше: теперь они остаются в Telegram, место освобождаем
-            File[] old = app.getCacheDir().listFiles((dir, f) -> f.startsWith("news_"));
-            if (old != null) for (File f : old) f.delete();
+            if (NEWS.equals(name)) { // фото постов, которых в ленте больше нет, освобождают место
+                File[] old = app.getCacheDir().listFiles((dir, f) -> f.startsWith("news_") && !r[0].contains("\"news/" + f.substring(5) + "\""));
+                if (old != null) for (File f : old) f.delete();
+            }
             return true;
         } catch (Exception e) {
             return false; // нет сети: остаётся сохранённое
+        }
+    }
+
+    /**
+     * Картинка поста: только из папки news/ своего сайта, не больше 600 КБ, с диска после первого раза.
+     * Декодируется уменьшенной (не шире ~720 px): в память не попадает лишнего. null, если не получилось.
+     */
+    static Bitmap photo(Context c, String path) {
+        if (path == null || !PHOTO.matcher(path).matches()) return null;
+        File f = new File(c.getCacheDir(), path.replace('/', '_'));
+        try {
+            if (!f.exists()) {
+                HttpURLConnection con = (HttpURLConnection) new URL(Updates.SITE + path).openConnection();
+                try {
+                    con.setConnectTimeout(6000);
+                    con.setReadTimeout(10000);
+                    if (con.getResponseCode() != 200 || con.getContentLength() > 600_000) return null;
+                    File tmp = new File(f.getPath() + ".part");
+                    try (InputStream in = con.getInputStream(); FileOutputStream out = new FileOutputStream(tmp)) {
+                        byte[] buf = new byte[8192];
+                        int n, total = 0;
+                        while ((n = in.read(buf)) > 0 && (total += n) <= 600_000) out.write(buf, 0, n);
+                        if (total > 600_000) return null;
+                    }
+                    if (!tmp.renameTo(f)) return null;
+                } finally {
+                    con.disconnect();
+                }
+            }
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(f.getPath(), o);
+            o.inSampleSize = Math.max(1, o.outWidth / 720);
+            o.inJustDecodeBounds = false;
+            return BitmapFactory.decodeFile(f.getPath(), o);
+        } catch (Exception e) {
+            return null;
         }
     }
 

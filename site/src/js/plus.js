@@ -34,13 +34,14 @@ function renderExams() {
 /* ---------- новости: канал лицея в Telegram. Сайт сам в Telegram не ходит, сборка раз в час кладёт посты в news.json ---------- */
 const TG = "https://t.me/sl165_official";
 let FEED = null, feedAt = 0, feedFail = false;
-/** Из файла берём только то, что умеем показать: номер, дату, текст, число фото в Telegram и пометку своего объявления.
+/** Из файла берём только то, что умеем показать: номер, дату, текст, картинку из нашей же папки и пометку своего объявления.
     Свежие сверху по времени: свои объявления (номера от миллиарда) идут вперемешку с постами канала. */
 function cleanFeed(j) {
   const items = j && Array.isArray(j.items) ? j.items : [];
   return items.filter(p => p && Number.isInteger(p.id) && p.id > 0 && typeof p.date === "string" && !isNaN(Date.parse(p.date))).slice(0, 40).map(p => ({
     id: p.id, date: p.date, at: Date.parse(p.date), text: typeof p.text === "string" ? p.text.slice(0, 4000) : "", own: p.own === true,
-    pics: Number.isInteger(p.pics) && p.pics > 0 ? p.pics : 0, video: p.video === true})).sort((a, b) => b.at - a.at);
+    photo: typeof p.photo === "string" && /^news\/\d+\.jpg$/.test(p.photo) ? p.photo : "", w: p.w > 0 ? +p.w : 0, h: p.h > 0 ? +p.h : 0,
+    more: Number.isInteger(p.more) && p.more > 0 ? p.more : 0, video: p.video === true})).sort((a, b) => b.at - a.at);
 }
 function loadNews() {
   if (!ONLINE_SITE || Date.now() - feedAt < 600000) return;
@@ -77,17 +78,19 @@ function renderNews() {
   store.set("newsAt", FEED[0].at); newsDot();
   const now = new Date();
   box.replaceChildren(...FEED.map(p => {
-    // фото канала на сайт не копируем (на них ученики): только ссылка на пост, где они есть
     const d = new Date(p.date), link = TG + "/" + p.id, long = p.text.length > 420;
     const body = h("p", {class: "post-text" + (long ? " clamp" : "")}, postText(p.text));
+    const img = p.photo ? h("img", {src: p.photo, alt: "", loading: "lazy", decoding: "async", width: p.w || null, height: p.h || null}) : null;
     return h("article", {class: "post" + (p.own ? " own" : "")},
+      !img ? null : p.own ? h("div", {class: "post-pic"}, img)
+        : h("a", {class: "post-pic", href: link, target: "_blank", rel: "noopener noreferrer", "aria-label": "Открыть пост в Telegram"}, img,
+          p.more || p.video ? h("span", {class: "post-more", text: p.video ? "видео" : "ещё " + p.more + " фото"}) : null),
       h("div", {class: "post-in"},
         h("time", {datetime: p.date, text: (p.own ? "Объявление «Звонка» · " : "") + (iso(d) === iso(now) ? "Сегодня" : dm(d) + (d.getFullYear() === now.getFullYear() ? "" : " " + d.getFullYear())) + ", " + hm(d.getHours() * 60 + d.getMinutes())}),
         p.text ? body : null,
         h("div", {class: "row"},
           long ? h("button", {class: "btn btn-quiet btn-sm", type: "button", text: "Читать целиком", onclick: e => { body.classList.remove("clamp"); e.target.remove(); }}) : null,
-          p.own ? null : h("a", {class: "btn btn-line btn-sm", href: link, target: "_blank", rel: "noopener noreferrer"},
-            p.video ? "Видео в Telegram" : p.pics ? word(p.pics, "фото", "фото", "фото") + " в Telegram" : "В Telegram", icon("out", "sm")))));
+          p.own ? null : h("a", {class: "btn btn-line btn-sm", href: link, target: "_blank", rel: "noopener noreferrer"}, "В Telegram", icon("out", "sm")))));
   }));
 }
 
@@ -246,20 +249,6 @@ const QUOTES = ["Звонок для учителя. Но таймер для т
     store.set("fool", now.getFullYear());
     document.body.classList.add("flip"); setTimeout(() => document.body.classList.remove("flip"), 2200);
   }
-  // 6. вход в панель объявлений: во вкладке «Новости» три нажатия на заголовок, потом три нажатия на вкладку «Новости».
-  //    Это не защита (код открыт): панель просит код, а без ключа GitHub на этом устройстве ничего не может.
-  let heads = 0, headAt = 0, armed = 0, tabs = 0, tabAt = 0;
-  $("newsH").addEventListener("click", () => {
-    const now = Date.now();
-    heads = now - headAt < 1500 ? heads + 1 : 1; headAt = now;
-    if (heads >= 3) { heads = 0; armed = now; }
-  });
-  $$('a[data-tab="news"]').forEach(a => a.addEventListener("click", () => {
-    const now = Date.now();
-    if (now - armed > 15000) return;
-    tabs = now - tabAt < 1500 ? tabs + 1 : 1; tabAt = now;
-    if (tabs >= 3) { tabs = 0; armed = 0; location.href = "panel.html"; }
-  }));
   // 5. в консоли для любопытных
   try { console.log("%cЗвонок", "font:700 28px system-ui", "\nЛюбишь заглядывать под капот? Нам такие нужны: " + SITE + "feedback.html"); } catch (e) {}
 })();

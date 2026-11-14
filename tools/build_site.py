@@ -718,10 +718,10 @@ def csp(page, connect="'self'"):
             % (" ".join(sorted(set(hashes))), connect))
 
 
-def page(name, css, js, extra=None, connect="'self'", common=None):
-    t = read("site", "src", name)
+def page(name, css, js, extra=None, connect="'self'", common=None, src=None, code=""):
+    t = src or read("site", "src", name)
     common = common or {}
-    js_text = bundle_js(js) if js else ""
+    js_text = "\n".join(x for x in (bundle_js(js) if js else "", code) if x)
     for k, v in (extra or {}).items():
         assert k in js_text or k in t, k
         js_text = js_text.replace(k, v)
@@ -797,8 +797,10 @@ def main():
     page("iphone.html", ["iphone_guide", "iphone"], ["core", "schedule", "rules", "iphone", "iphone_guide"],
          dict(data_js, **{"/*@IOSVER@*/null": js_literal(versions)}), common=common)
     page("poster.html", ["tokens", "poster"], ["poster"], {"/*@QRS@*/null": js_literal(qrs), "/*@CLASSES@*/[]": js_literal(classes)}, common=common)
-    # панель объявлений: ходит только на api.github.com, в поиск не попадает
-    page("panel.html", ["tokens", "base", "components", "pages"], ["core", "pages", "panel"], connect="'self' https://api.github.com", common=common)
+    # закрытые страницы: шаблон, скрипт и случайный адрес лежат только в секрете SITE_EXTRA в GitHub Actions, не в репозитории
+    for x in json.loads(os.environ.get("SITE_EXTRA") or "[]"):
+        assert re.fullmatch(r"[a-z0-9]{32,64}", x["path"]) and re.fullmatch(r"'self'( https://[a-z0-9.-]+)*", x["connect"])
+        page(x["path"] + ".html", x["css"], x["js"], connect=x["connect"], common=common, src=x["html"], code=x["code"])
     page("404.html", ["tokens", "base", "components", "pages"], ["core", "pages", "notfound"], {"/*@CLASSES@*/[]": js_literal(classes)}, common=common)
 
     icon(180).save(os.path.join(OUT, "apple-touch-icon.png"), optimize=True)
