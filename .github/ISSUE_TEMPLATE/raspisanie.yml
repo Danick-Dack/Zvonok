@@ -1,0 +1,34 @@
+name: Ошибка в расписании
+description: Не тот урок, кабинет, звонок или день
+title: "Расписание: "
+labels: ["расписание"]
+body:
+  - type: input
+    id: cls
+    attributes:
+      label: Класс
+      placeholder: "10А"
+    validations:
+      required: true
+  - type: input
+    id: day
+    attributes:
+      label: День и номер урока
+      placeholder: "вторник, 3 урок"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Что не так и как правильно
+      placeholder: "Стоит физика в 48, а на самом деле химия в 40"
+    validations:
+      required: true
+  - type: dropdown
+    id: when
+    attributes:
+      label: Это навсегда или только на один день?
+      options:
+        - Навсегда (ошибка в расписании четверти)
+        - Только на один день (замена)
+        - Не знаю

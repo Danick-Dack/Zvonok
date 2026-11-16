@@ -1,0 +1,75 @@
+name: Site
+
+# Сайт собирается из закрытого кода (приватный репозиторий, ключ только для чтения SRC_KEY) и сразу уходит
+# в GitHub Pages. В этот репозиторий собранный сайт не коммитится.
+on:
+  push:
+    branches: [ci]
+  schedule:
+    - cron: '17 * * * *'   # раз в час: новости канала лицея; раз в сутки заодно счётчики на странице «О проекте»
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Что собирать
+        id: p
+        run: |
+          if [ "${{ github.event_name }}" != "push" ]; then echo "site=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          curl -sfL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/ci.json" -o ci.json
+          echo "site=$(jq -r .site ci.json)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.p.outputs.site == 'true'
+        with:
+          repository: Danick-Dack/Zvonok-src
+          ref: main
+          ssh-key: ${{ secrets.SRC_KEY }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        if: steps.p.outputs.site == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Собрать сайт из расписания
+        if: steps.p.outputs.site == 'true'
+        env:
+          # закрытый ключ подписи новых версий скрипта iPhone
+          IOS_SIGN_KEY: ${{ secrets.IOS_SIGN_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # только чтение счётчика скачиваний релизов этого репозитория
+        run: |
+          # без ключа виджеты iPhone тихо перестали бы обновляться: они ставят только подписанные версии
+          if [ -z "$IOS_SIGN_KEY" ]; then echo "::error::Нет секрета IOS_SIGN_KEY"; exit 1; fi
+          pip install -q qrcode pillow
+          python tools/update_olympiads.py
+          python tools/build_site.py
+          python tools/update_news.py   # после сборки: новости лежат рядом с сайтом
+          rm -rf site/src   # на сайт уходит только собранное: исходники страниц не публикуются
+
+      - uses: actions/configure-pages@v5
+        if: steps.p.outputs.site == 'true'
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.p.outputs.site == 'true'
+        with:
+          path: site
+
+      - id: deployment
+        if: steps.p.outputs.site == 'true'
+        uses: actions/deploy-pages@v4

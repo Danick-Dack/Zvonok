@@ -1,0 +1,43 @@
+name: Checks
+
+# Проверки закрытого кода на каждый пуш в приватном репозитории: данные расписания, правила дня сайта и Android,
+# сборщик новостей, ключ подписи iPhone, сервер панели. В журнал попадают только итоги, код не печатается.
+on:
+  push:
+    branches: [ci]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Какой коммит
+        id: p
+        run: |
+          curl -sfL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/ci.json" -o ci.json || echo '{"sha":"main"}' > ci.json
+          echo "sha=$(jq -r .sha ci.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: Danick-Dack/Zvonok-src
+          ref: ${{ steps.p.outputs.sha }}
+          ssh-key: ${{ secrets.SRC_KEY }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Сборка сайта
+        run: pip install -q qrcode pillow && python3 tools/build_site.py > /dev/null
+      - name: Данные расписания
+        run: python3 tools/check_data.py
+      - name: Тесты сайта
+        run: python3 tools/test_site.py
+      - name: Сборщик новостей на вредном HTML
+        run: python3 tools/test_news.py
+      - name: Эталон Android совпадает с правилами сайта
+        run: python3 tools/golden.py --check
+      - name: Ключ подписи iPhone
+        env:
+          IOS_SIGN_KEY: ${{ secrets.IOS_SIGN_KEY }}
+        run: python3 tools/ed25519.py
+      - name: Сервер панели (роли, лимиты, замены)
+        run: cd panel && npm ci --no-audit --no-fund -q && node test_worker.mjs

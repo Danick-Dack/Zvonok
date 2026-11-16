@@ -1,0 +1,117 @@
+name: Build APK
+
+# Исходники закрыты: код забирается из приватного репозитория по ключу только для чтения (секрет SRC_KEY).
+# Запуск: приватный репозиторий кладёт сюда ветку ci с ci.json (какая ветка и коммит, нужна ли сборка приложения).
+on:
+  push:
+    branches: [ci]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Ветка приватного репозитория
+        default: main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.p.outputs.app }}
+      ref: ${{ steps.p.outputs.ref }}
+      sha: ${{ steps.p.outputs.sha }}
+    steps:
+      - id: p
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "app=true" >> "$GITHUB_OUTPUT"; echo "ref=${{ inputs.ref }}" >> "$GITHUB_OUTPUT"; echo "sha=${{ inputs.ref }}" >> "$GITHUB_OUTPUT"; exit 0; fi
+          curl -sfL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/ci.json" -o ci.json
+          echo "app=$(jq -r .app ci.json)" >> "$GITHUB_OUTPUT"
+          echo "ref=$(jq -r .ref ci.json)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(jq -r .sha ci.json)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Danick-Dack/Zvonok-src
+          ref: ${{ needs.plan.outputs.sha }}
+          ssh-key: ${{ secrets.SRC_KEY }}
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a   # v4.4.3; сторонние действия закреплены по коммиту
+        with:
+          gradle-version: '8.7'
+
+      - name: Version
+        id: ver
+        run: echo "name=$(grep -oP 'versionName "\K[^"]+' app/build.gradle)" >> "$GITHUB_OUTPUT"
+
+      - name: Signing key
+        env:
+          SIGNING_KEY_B64: ${{ secrets.SIGNING_KEY_B64 }}
+          # релиз «Звонка» без ключа был бы подписан другим ключом и не встал бы поверх уже установленного приложения
+          MUST_SIGN: ${{ needs.plan.outputs.ref == 'main' || contains(steps.ver.outputs.name, '-beta') }}
+        run: |
+          if [ -n "$SIGNING_KEY_B64" ]; then echo "$SIGNING_KEY_B64" | base64 -d > app/zvonok.jks
+          elif [ "$MUST_SIGN" = "true" ]; then echo "::error::Нет секрета SIGNING_KEY_B64: релиз без ключа не обновится у людей"; exit 1; fi
+
+      # Android считает день так же, как сайт: эталон снят с site/src/js/rules.js (tools/golden.py)
+      - name: Tests
+        run: |
+          set -o pipefail
+          gradle testReleaseUnitTest --no-daemon -q 2>&1 | tee tests.log || {
+            grep -E "FAILED|не совпало|ждали" tests.log | head -20 | sed 's/^/::error::/'; exit 1; }
+
+      - name: Lint
+        run: gradle lintDebug --no-daemon -q   # отчёт lint остаётся внутри сборки: в публичном репозитории он показал бы код
+
+      - name: Build
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: gradle assembleRelease --no-daemon -q
+
+      - name: Collect files
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk Zvonok-165.apk
+          cp site/index.html Zvonok-165.html
+          # номер версии для проверки обновлений в приложении; число его скачиваний = сколько телефонов проверяли обновление
+          printf '{"tag":"v%s-build-%s"}\n' "${{ steps.ver.outputs.name }}" "${{ github.run_number }}" > version.json
+          # пустой файл: раз в сутки его скачивают сайт и приложение iPhone, по числу скачиваний видно, сколько устройств пользуется «Звонком»
+          echo '{}' > ping.json
+          size=$(stat -c %s Zvonok-165.apk)
+          echo "APK: $size байт" >> "$GITHUB_STEP_SUMMARY"
+          # на сайте и в приложении написано «меньше 300 КБ»: если APK вырос, сборка падает, пока тексты не поправят
+          [ "$size" -lt 300000 ] || { echo "::error::APK $size байт, а на сайте написано «меньше 300 КБ»"; exit 1; }
+          cp .github/release-notes.md notes.md
+          printf '\n\n**SHA-256** `Zvonok-165.apk`: `%s`\n' "$(sha256sum Zvonok-165.apk | cut -d' ' -f1)" >> notes.md
+
+      - name: Release
+        # Релиз только из main (основной) или пробный (-beta) из любой ветки: приложение обновляется до releases/latest
+        if: needs.plan.outputs.ref == 'main' || contains(steps.ver.outputs.name, '-beta')
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2
+        with:
+          tag_name: v${{ steps.ver.outputs.name }}-build-${{ github.run_number }}
+          target_commitish: main   # тег на публичный main: в «Source code» только README и лицензия
+          name: Звонок v${{ steps.ver.outputs.name }} (сборка ${{ github.run_number }})
+          body_path: notes.md
+          files: |
+            Zvonok-165.apk
+            Zvonok-165.html
+            version.json
+            ping.json
+          prerelease: ${{ contains(steps.ver.outputs.name, '-beta') }}
+          make_latest: ${{ !contains(steps.ver.outputs.name, '-beta') }}
