@@ -60,7 +60,7 @@ jobs:
           python tools/update_news.py   # после сборки: новости лежат рядом с сайтом
           rm -rf site/src   # на сайт уходит только собранное: исходники страниц не публикуются
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
         if: steps.p.outputs.site == 'true'
         with:
           enablement: true
