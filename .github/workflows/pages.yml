@@ -40,7 +40,7 @@ jobs:
           ssh-key: ${{ secrets.SRC_KEY }}
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.p.outputs.site == 'true'
         with:
           python-version: '3.12'
