@@ -102,7 +102,7 @@ jobs:
       - name: Release
         # Релиз только из main (основной) или пробный (-beta) из любой ветки: приложение обновляется до releases/latest
         if: needs.plan.outputs.ref == 'main' || contains(steps.ver.outputs.name, '-beta')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3   # v3.0.4
         with:
           tag_name: v${{ steps.ver.outputs.name }}-build-${{ github.run_number }}
           target_commitish: main   # тег на публичный main: в «Source code» только README и лицензия
