@@ -87,7 +87,6 @@ jobs:
       - name: Collect files
         run: |
           cp app/build/outputs/apk/release/app-release.apk Zvonok-165.apk
-          cp site/index.html Zvonok-165.html
           # номер версии для проверки обновлений в приложении; число его скачиваний = сколько телефонов проверяли обновление
           printf '{"tag":"v%s-build-%s"}\n' "${{ steps.ver.outputs.name }}" "${{ github.run_number }}" > version.json
           # пустой файл: раз в сутки его скачивают сайт и приложение iPhone, по числу скачиваний видно, сколько устройств пользуется «Звонком»
@@ -110,7 +109,6 @@ jobs:
           body_path: notes.md
           files: |
             Zvonok-165.apk
-            Zvonok-165.html
             version.json
             ping.json
           prerelease: ${{ contains(steps.ver.outputs.name, '-beta') }}

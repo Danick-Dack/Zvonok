@@ -1,12 +1,12 @@
 name: Site
 
-# Сайт собирается из закрытого кода (приватный репозиторий, ключ только для чтения SRC_KEY) и сразу уходит
-# в GitHub Pages. В этот репозиторий собранный сайт не коммитится.
+# Старый адрес danick-dack.github.io/Zvonok: сайт переехал, здесь остаются только данные для старых версий
+# приложения и скриптов iPhone (замены, расписание, обновления скриптов) и переадресация на новый адрес.
 on:
   push:
     branches: [ci]
   schedule:
-    - cron: '17 * * * *'   # раз в час: новости канала лицея; раз в сутки заодно счётчики на странице «О проекте»
+    - cron: '41 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -55,10 +55,9 @@ jobs:
           # без ключа виджеты iPhone тихо перестали бы обновляться: они ставят только подписанные версии
           if [ -z "$IOS_SIGN_KEY" ]; then echo "::error::Нет секрета IOS_SIGN_KEY"; exit 1; fi
           pip install -q qrcode pillow
-          python tools/update_olympiads.py
           python tools/build_site.py
-          python tools/update_news.py   # после сборки: новости лежат рядом с сайтом
-          rm -rf site/src   # на сайт уходит только собранное: исходники страниц не публикуются
+          python tools/update_news.py
+          python tools/legacy_mirror.py site mirror   # данные и скрипты iPhone остаются, страницы заменены переадресацией
 
       - uses: actions/configure-pages@v5
         if: steps.p.outputs.site == 'true'
@@ -68,7 +67,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         if: steps.p.outputs.site == 'true'
         with:
-          path: site
+          path: mirror
 
       - id: deployment
         if: steps.p.outputs.site == 'true'
