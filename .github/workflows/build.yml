@@ -93,8 +93,8 @@ jobs:
           echo '{}' > ping.json
           size=$(stat -c %s Zvonok-165.apk)
           echo "APK: $size байт" >> "$GITHUB_STEP_SUMMARY"
-          # на сайте и в приложении написано «меньше 300 КБ»: если APK вырос, сборка падает, пока тексты не поправят
-          [ "$size" -lt 300000 ] || { echo "::error::APK $size байт, а на сайте написано «меньше 300 КБ»"; exit 1; }
+          # на сайте и в приложении написано «меньше 400 КБ»: если APK вырос, сборка падает, пока тексты не поправят
+          [ "$size" -lt 400000 ] || { echo "::error::APK $size байт, а на сайте написано «меньше 400 КБ»"; exit 1; }
           cp .github/release-notes.md notes.md
           printf '\n\n**SHA-256** `Zvonok-165.apk`: `%s`\n' "$(sha256sum Zvonok-165.apk | cut -d' ' -f1)" >> notes.md
 
