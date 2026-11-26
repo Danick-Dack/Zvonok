@@ -6,6 +6,11 @@ name: Site
 on:
   push:
     branches: [ci]
+  # Сразу после сборки APK: app.json получает новый тег через пару минут после релиза, и приложение Android
+  # при следующем входе не пускает дальше без обновления. Раньше ждали расписания, а GitHub запускает его раз в 5–10 часов
+  workflow_run:
+    workflows: ["Build APK"]
+    types: [completed]
   schedule:
     - cron: '41 * * * *'   # раз в час: новости лицея
   workflow_dispatch:
@@ -29,6 +34,9 @@ jobs:
       - name: Что собирать
         id: p
         run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "site=${{ github.event.workflow_run.conclusion == 'success' }}" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           if [ "${{ github.event_name }}" != "push" ]; then echo "site=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           curl -sfL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/ci.json" -o ci.json
           echo "site=$(jq -r .site ci.json)" >> "$GITHUB_OUTPUT"
